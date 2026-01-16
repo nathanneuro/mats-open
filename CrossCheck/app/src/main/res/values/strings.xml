@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CrossCheck</string>
+    <string name="settings">Settings</string>
+    <string name="ask_question">Ask a Question</string>
+    <string name="question_hint">Enter your question here…</string>
+    <string name="submit">Submit</string>
+    <string name="loading">Loading…</string>
+    <string name="error_occurred">An error occurred: %s</string>
+    <string name="final_answer">Final Answer</string>
+    <string name="show_raw_responses">Show Raw Responses</string>
+    <string name="hide_raw_responses">Hide Raw Responses</string>
+    <string name="first_response">First Response</string>
+    <string name="second_response">Second Response</string>
+    <string name="third_response">Third Response</string>
+
+    <!-- Settings -->
+    <string name="api_provider">API Provider</string>
+    <string name="api_key">API Key</string>
+    <string name="model_name">Model Name</string>
+    <string name="query_order">Query Order</string>
+    <string name="save">Save</string>
+    <string name="add_provider">Add Provider</string>
+    <string name="remove_provider">Remove</string>
+
+    <!-- Provider names -->
+    <string name="provider_openrouter">OpenRouter</string>
+    <string name="provider_anthropic">Anthropic</string>
+    <string name="provider_gemini">Google Gemini</string>
+
+    <!-- Hints -->
+    <string name="api_key_hint">Enter API key</string>
+    <string name="model_name_hint">e.g., claude-3-opus-20240229</string>
+    <string name="error_no_providers">Please configure at least one API provider in Settings</string>
+    <string name="error_invalid_order">Please configure query order in Settings</string>
+</resources>
