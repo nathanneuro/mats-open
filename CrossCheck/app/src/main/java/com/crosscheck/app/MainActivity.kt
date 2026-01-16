@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.crosscheck.app.api.ApiClient
+import com.crosscheck.app.data.QueryRepository
 import com.crosscheck.app.data.SettingsRepository
 import com.crosscheck.app.models.AppSettings
 import com.crosscheck.app.query.QueryManager
@@ -21,11 +22,13 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     private lateinit var settingsRepository: SettingsRepository
+    private lateinit var queryRepository: QueryRepository
     private lateinit var queryManager: QueryManager
 
     private lateinit var questionInput: EditText
     private lateinit var submitButton: Button
     private lateinit var settingsButton: Button
+    private lateinit var retryButton: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
     private lateinit var errorText: TextView
@@ -43,17 +46,20 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         settingsRepository = SettingsRepository(this)
-        queryManager = QueryManager(ApiClient())
+        queryRepository = QueryRepository(this)
+        queryManager = QueryManager(ApiClient(), queryRepository)
 
         initViews()
         setupListeners()
         observeQueryState()
+        checkForCrashRecovery()
     }
 
     private fun initViews() {
         questionInput = findViewById(R.id.questionInput)
         submitButton = findViewById(R.id.submitButton)
         settingsButton = findViewById(R.id.settingsButton)
+        retryButton = findViewById(R.id.retryButton)
         progressBar = findViewById(R.id.progressBar)
         statusText = findViewById(R.id.statusText)
         errorText = findViewById(R.id.errorText)
@@ -74,8 +80,63 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
+        retryButton.setOnClickListener {
+            retryQuery()
+        }
+
         toggleRawButton.setOnClickListener {
             toggleRawResponses()
+        }
+    }
+
+    /**
+     * Check if there's an incomplete query from a crash/interruption
+     */
+    private fun checkForCrashRecovery() {
+        lifecycleScope.launch {
+            val currentQuery = queryRepository.loadCurrentQuery()
+            if (currentQuery != null && currentQuery.canRetry()) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Recovered incomplete query from previous session",
+                    Toast.LENGTH_LONG
+                ).show()
+                // Populate the UI with the failed query
+                questionInput.setText(currentQuery.question)
+                updateUIForRecoveredQuery(currentQuery)
+            }
+        }
+    }
+
+    private fun updateUIForRecoveredQuery(query: com.crosscheck.app.models.QueryHistory) {
+        if (query.firstResponse != null) {
+            responseContainer.visibility = View.VISIBLE
+            firstResponseText.text = query.firstResponse
+        }
+        if (query.secondResponse != null) {
+            secondResponseText.text = query.secondResponse
+        }
+        if (query.lastError != null) {
+            errorText.text = query.lastError
+            errorText.visibility = View.VISIBLE
+            retryButton.visibility = View.VISIBLE
+        }
+    }
+
+    private fun retryQuery() {
+        val currentHistory = queryManager.getCurrentQueryHistory()
+        if (currentHistory != null && currentHistory.canRetry()) {
+            lifecycleScope.launch {
+                hideKeyboard()
+                Toast.makeText(
+                    this@MainActivity,
+                    getString(R.string.resuming_from_stage, currentHistory.getNextStage()),
+                    Toast.LENGTH_SHORT
+                ).show()
+                queryManager.retryQuery(currentHistory)
+            }
+        } else {
+            Toast.makeText(this, "Nothing to retry", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -117,12 +178,21 @@ class MainActivity : AppCompatActivity() {
         progressBar.visibility = View.GONE
         statusText.visibility = View.GONE
         errorText.visibility = View.GONE
+        retryButton.visibility = View.GONE
 
         when {
             state.error != null -> {
                 errorText.text = getString(R.string.error_occurred, state.error)
                 errorText.visibility = View.VISIBLE
+                retryButton.visibility = View.VISIBLE // Show retry button on error!
                 submitButton.isEnabled = true
+
+                // Show any partial responses we have
+                if (state.firstResponse != null || state.secondResponse != null) {
+                    responseContainer.visibility = View.VISIBLE
+                    firstResponseText.text = state.firstResponse ?: ""
+                    secondResponseText.text = state.secondResponse ?: ""
+                }
             }
 
             state.isLoading -> {
@@ -135,6 +205,13 @@ class MainActivity : AppCompatActivity() {
                     else -> getString(R.string.loading)
                 }
                 submitButton.isEnabled = false
+
+                // Show any partial responses we have while loading next stage
+                if (state.firstResponse != null || state.secondResponse != null) {
+                    responseContainer.visibility = View.VISIBLE
+                    firstResponseText.text = state.firstResponse ?: ""
+                    secondResponseText.text = state.secondResponse ?: ""
+                }
             }
 
             state.thirdResponse != null -> {

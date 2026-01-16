@@ -5,8 +5,11 @@
     <string name="ask_question">Ask a Question</string>
     <string name="question_hint">Enter your question here…</string>
     <string name="submit">Submit</string>
+    <string name="retry">Retry</string>
     <string name="loading">Loading…</string>
     <string name="error_occurred">An error occurred: %s</string>
+    <string name="saved_locally">Saved locally</string>
+    <string name="resuming_from_stage">Resuming from stage %d…</string>
     <string name="final_answer">Final Answer</string>
     <string name="show_raw_responses">Show Raw Responses</string>
     <string name="hide_raw_responses">Hide Raw Responses</string>
@@ -33,4 +36,10 @@
     <string name="model_name_hint">e.g., claude-3-opus-20240229</string>
     <string name="error_no_providers">Please configure at least one API provider in Settings</string>
     <string name="error_invalid_order">Please configure query order in Settings</string>
+
+    <!-- History -->
+    <string name="history">History</string>
+    <string name="no_history">No saved queries yet</string>
+    <string name="completed">Completed</string>
+    <string name="failed_at_stage">Failed at stage %d</string>
 </resources>
