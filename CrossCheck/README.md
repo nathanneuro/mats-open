@@ -18,6 +18,31 @@ CrossCheck is an Android application that leverages multiple AI models to provid
 - **Expandable Responses**: View the final answer with the option to expand and see raw responses from each stage
 - **Persistent Settings**: API keys and configurations are securely stored locally
 
+### Reliability Features
+
+**Designed for unreliable internet connections - your data is valuable!**
+
+- **Aggressive Local Saving**: Every query and response is saved immediately to local storage
+  - User questions are saved before making any API calls
+  - Responses are saved after each successful stage
+  - All data persisted as plaintext JSON (plaintext is cheap, data loss is expensive!)
+
+- **Smart Retry**: When a stage fails due to network issues:
+  - A "Retry" button appears automatically
+  - Previous successful responses are preserved
+  - Retry continues from the failed stage (doesn't restart from scratch)
+  - Example: If stage 2 fails, retry only re-runs stage 2 and 3, keeping stage 1 response
+
+- **Crash Recovery**: If the app crashes or is interrupted:
+  - On next launch, incomplete queries are automatically detected
+  - User can continue where they left off with one tap
+  - No data or progress is lost
+
+- **Query History**: All queries are saved locally with:
+  - Full question and all responses
+  - Timestamp and completion status
+  - Ability to view past queries (up to 100 most recent)
+
 ## Architecture
 
 ### Project Structure
@@ -31,14 +56,16 @@ CrossCheck/
 │   │       │   ├── api/
 │   │       │   │   └── ApiClient.kt          # API client for multiple providers
 │   │       │   ├── data/
+│   │       │   │   ├── QueryRepository.kt    # Local query history persistence
 │   │       │   │   └── SettingsRepository.kt # DataStore settings persistence
 │   │       │   ├── models/
 │   │       │   │   ├── ApiProvider.kt        # Provider data models
 │   │       │   │   ├── AppSettings.kt        # App settings model
+│   │       │   │   ├── QueryHistory.kt       # Query history model
 │   │       │   │   └── QueryResponse.kt      # Query response states
 │   │       │   ├── query/
-│   │       │   │   └── QueryManager.kt       # 3-stage query orchestration
-│   │       │   ├── MainActivity.kt           # Main query interface
+│   │       │   │   └── QueryManager.kt       # 3-stage query orchestration with auto-save
+│   │       │   ├── MainActivity.kt           # Main query interface with retry
 │   │       │   └── SettingsActivity.kt       # Settings configuration
 │   │       ├── res/
 │   │       │   ├── layout/                   # UI layouts
@@ -59,10 +86,23 @@ Handles HTTP requests to different AI providers with proper authentication and r
 - Google Gemini API
 
 #### QueryManager (`query/QueryManager.kt`)
-Orchestrates the three-stage query workflow:
+Orchestrates the three-stage query workflow with automatic saving:
 1. Sends initial query with template: "Please answer the following question scientifically, ideally with citations: {question}"
 2. Cross-checks with template: "Please cross-check this answer, flagging anything you are unsure of or believe is incorrect..."
 3. Synthesizes final answer: "Please check these answers, summarize them, and give your own best answer..."
+
+**Key features:**
+- Saves user question immediately before making API calls
+- Saves response after each successful stage
+- Supports resuming from any stage on retry
+- Can skip already-completed stages when retrying
+
+#### QueryRepository (`data/QueryRepository.kt`)
+Manages local persistence of query history using JSON files:
+- Saves all queries and responses to `query_history.json`
+- Maintains separate `current_query.json` for crash recovery
+- Automatically trims history to last 100 queries
+- Provides flow-based access to query history
 
 #### SettingsRepository (`data/SettingsRepository.kt`)
 Manages persistent storage of API providers and query order configuration using DataStore.
@@ -121,6 +161,8 @@ Manages persistent storage of API providers and query order configuration using 
 
 ## Usage
 
+### Normal Query Flow
+
 1. Configure settings (see Configuration above)
 
 2. Enter your question in the text input field
@@ -128,13 +170,44 @@ Manages persistent storage of API providers and query order configuration using 
 3. Tap "Submit"
 
 4. Wait for the three-stage processing:
-   - Stage 1: Initial scientific answer
-   - Stage 2: Cross-checking and verification
-   - Stage 3: Final synthesized answer
+   - Stage 1: Initial scientific answer (saved locally)
+   - Stage 2: Cross-checking and verification (saved locally)
+   - Stage 3: Final synthesized answer (saved locally)
 
 5. View the final answer
 
 6. Optionally tap "Show Raw Responses" to see the individual responses from stages 1 and 2
+
+### Handling Network Failures
+
+**If a stage fails due to network issues:**
+
+1. An error message appears showing which stage failed
+2. A "Retry" button appears automatically
+3. All previous successful responses are preserved and shown
+4. Tap "Retry" to continue from where it failed
+5. Only the failed stage (and subsequent stages) will be re-executed
+6. Your original question and all successful responses remain intact
+
+**Example scenario:**
+- Stage 1 completes successfully → saved
+- Stage 2 fails due to network timeout → error shown, retry button appears
+- User taps "Retry"
+- Stage 1 is skipped (already completed)
+- Stage 2 and 3 are executed
+- All data preserved throughout the process
+
+### Crash Recovery
+
+**If the app crashes or is closed during a query:**
+
+1. On next launch, the app automatically detects the incomplete query
+2. A recovery message appears
+3. Your question and any completed responses are restored
+4. The error state and retry button are shown
+5. Tap "Retry" to complete the query from where it left off
+
+**No manual intervention needed - your data is safe!**
 
 ## Technical Details
 
