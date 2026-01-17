@@ -14,9 +14,21 @@ CrossCheck is an Android application that leverages multiple AI models to provid
   2. **Cross-Check**: Reviews and flags potential issues in the first answer
   3. **Final Synthesis**: Provides a comprehensive, verified answer
 
+- **Query Modes**: Choose which models to use for verification:
+  - **ABC Mode**: All three models (full verification)
+  - **AC Mode**: Skip model B (initial + synthesis only)
+  - **BC Mode**: Skip model A (cross-check + synthesis only)
+
+- **Chat System**: Organize your queries into separate chat sessions
+  - Each chat is a separate conversation thread
+  - JSONL format for accessible storage (one JSON per query line)
+  - Auto-naming chats using a utility model after first query
+  - View chat history with timestamps and query counts
+
 - **Configurable Query Order**: Choose which AI model to use for each stage
 - **Expandable Responses**: View the final answer with the option to expand and see raw responses from each stage
 - **Persistent Settings**: API keys and configurations are securely stored locally
+- **Dark Theme**: Beautiful dark interface with purple (#8B5CF6) highlights and light grey text (#B4B4B4)
 
 ### Reliability Features
 
@@ -38,10 +50,12 @@ CrossCheck is an Android application that leverages multiple AI models to provid
   - User can continue where they left off with one tap
   - No data or progress is lost
 
-- **Query History**: All queries are saved locally with:
+- **Chat History**: All chats and queries are saved locally with:
   - Full question and all responses
   - Timestamp and completion status
-  - Ability to view past queries (up to 100 most recent)
+  - Organized by chat sessions in JSONL format
+  - Accessible storage format (one line per query in chat_<id>.jsonl files)
+  - Browse all previous chats from the History screen
 
 ## Architecture
 
@@ -56,19 +70,25 @@ CrossCheck/
 │   │       │   ├── api/
 │   │       │   │   └── ApiClient.kt          # API client for multiple providers
 │   │       │   ├── data/
-│   │       │   │   ├── QueryRepository.kt    # Local query history persistence
+│   │       │   │   ├── ChatRepository.kt     # JSONL-based chat storage
 │   │       │   │   └── SettingsRepository.kt # DataStore settings persistence
 │   │       │   ├── models/
 │   │       │   │   ├── ApiProvider.kt        # Provider data models
-│   │       │   │   ├── AppSettings.kt        # App settings model
+│   │       │   │   ├── AppSettings.kt        # App settings and query modes
+│   │       │   │   ├── Chat.kt               # Chat metadata model
 │   │       │   │   ├── QueryHistory.kt       # Query history model
 │   │       │   │   └── QueryResponse.kt      # Query response states
 │   │       │   ├── query/
 │   │       │   │   └── QueryManager.kt       # 3-stage query orchestration with auto-save
-│   │       │   ├── MainActivity.kt           # Main query interface with retry
-│   │       │   └── SettingsActivity.kt       # Settings configuration
+│   │       │   ├── service/
+│   │       │   │   └── ChatNamingService.kt  # Auto-naming chats with utility model
+│   │       │   ├── MainActivity.kt           # Main query interface with retry and modes
+│   │       │   ├── SettingsActivity.kt       # Settings configuration with utility model
+│   │       │   ├── HistoryActivity.kt        # Chat history browser
+│   │       │   └── AboutActivity.kt          # About screen with credits
 │   │       ├── res/
-│   │       │   ├── layout/                   # UI layouts
+│   │       │   ├── layout/                   # UI layouts (dark theme)
+│   │       │   ├── menu/                     # Menu resources
 │   │       │   └── values/                   # Strings, colors, themes
 │   │       └── AndroidManifest.xml
 │   └── build.gradle.kts
@@ -92,20 +112,32 @@ Orchestrates the three-stage query workflow with automatic saving:
 3. Synthesizes final answer: "Please check these answers, summarize them, and give your own best answer..."
 
 **Key features:**
+- Respects query mode (ABC/AC/BC) to skip stages as configured
 - Saves user question immediately before making API calls
 - Saves response after each successful stage
 - Supports resuming from any stage on retry
 - Can skip already-completed stages when retrying
 
-#### QueryRepository (`data/QueryRepository.kt`)
-Manages local persistence of query history using JSON files:
-- Saves all queries and responses to `query_history.json`
+#### ChatRepository (`data/ChatRepository.kt`)
+Manages local persistence of chats and queries using JSONL format:
+- Stores each chat in separate `chat_<id>.jsonl` files (one JSON per line per query)
+- Maintains `chats.json` for chat metadata (name, timestamp, query count)
 - Maintains separate `current_query.json` for crash recovery
-- Automatically trims history to last 100 queries
-- Provides flow-based access to query history
+- Provides flow-based access to chat history
+- Accessible storage format for easy data export
+
+#### ChatNamingService (`service/ChatNamingService.kt`)
+Automatically generates descriptive chat names:
+- Runs after first query in a chat completes
+- Uses configured utility model to generate 3-5 word title
+- Updates chat metadata with generated name
+- Handles errors gracefully (leaves chat unnamed on failure)
 
 #### SettingsRepository (`data/SettingsRepository.kt`)
-Manages persistent storage of API providers and query order configuration using DataStore.
+Manages persistent storage using DataStore:
+- API providers and query order configuration
+- Query mode preference (ABC/AC/BC)
+- Utility model configuration for chat auto-naming
 
 ## Setup Instructions
 
@@ -132,17 +164,22 @@ Manages persistent storage of API providers and query order configuration using 
 
 1. Launch the app and tap the "Settings" button
 
-2. Add at least 3 API providers (one for each stage):
+2. Configure utility model (optional, for auto-naming chats):
+   - Select provider type (OpenRouter, Anthropic, or Gemini)
+   - Enter your API key
+   - Enter a fast, cheap model name (e.g., `claude-3-haiku-20240307`)
+
+3. Add at least 3 API providers (one for each stage):
    - Tap "Add Provider"
    - Select provider type (OpenRouter, Anthropic, or Gemini)
    - Enter your API key
    - Enter the model name (examples below)
 
-3. Configure query order:
+4. Configure query order:
    - Select which provider to use for each stage
    - Each stage can use a different provider/model
 
-4. Tap "Save"
+5. Tap "Save"
 
 ### Example Model Names
 
@@ -165,18 +202,32 @@ Manages persistent storage of API providers and query order configuration using 
 
 1. Configure settings (see Configuration above)
 
-2. Enter your question in the text input field
+2. Select query mode from the toolbar spinner:
+   - **ABC**: All three models (full verification)
+   - **AC**: Skip model B (models A and C only)
+   - **BC**: Skip model A (models B and C only)
 
-3. Tap "Submit"
+3. Enter your question in the text input field
 
-4. Wait for the three-stage processing:
-   - Stage 1: Initial scientific answer (saved locally)
-   - Stage 2: Cross-checking and verification (saved locally)
-   - Stage 3: Final synthesized answer (saved locally)
+4. Tap "Submit"
 
-5. View the final answer
+5. Wait for the processing (stages depend on query mode):
+   - ABC Mode: Stage 1 → Stage 2 → Stage 3 (all saved locally)
+   - AC Mode: Stage 1 → Stage 3 (skips stage 2, saved locally)
+   - BC Mode: Stage 2 → Stage 3 (skips stage 1, saved locally)
 
-6. Optionally tap "Show Raw Responses" to see the individual responses from stages 1 and 2
+6. View the final answer
+
+7. Optionally tap "Show Raw Responses" to see the individual responses from earlier stages
+
+### Chat Management
+
+- **New Chat**: Tap the "New Chat" button in the toolbar to start a fresh conversation
+- **History**: Tap the "History" button to view all previous chats
+  - Chats are auto-named after the first query (if utility model configured)
+  - View query count and last updated time for each chat
+  - Delete old chats by tapping the delete button
+- **About**: Access from the menu (three dots) to view credits and how it works
 
 ### Handling Network Failures
 
@@ -211,6 +262,33 @@ Manages persistent storage of API providers and query order configuration using 
 
 ## Technical Details
 
+### Storage Format
+
+**JSONL (JSON Lines) for Chats:**
+- Each chat is stored in a separate file: `chat_<uuid>.jsonl`
+- One line per query (each line is a complete JSON object)
+- Easy to parse, export, and process with standard tools
+- Human-readable and accessible format
+
+**Example chat file structure:**
+```jsonl
+{"id":"query-1","chatId":"chat-123","question":"What is...","firstResponse":"...","secondResponse":"...","thirdResponse":"...","timestamp":1234567890}
+{"id":"query-2","chatId":"chat-123","question":"How does...","firstResponse":"...","secondResponse":"...","thirdResponse":"...","timestamp":1234567900}
+```
+
+**Chat Metadata (`chats.json`):**
+```json
+[
+  {
+    "id": "chat-123",
+    "name": "Science Questions About...",
+    "createdAt": 1234567890,
+    "lastUpdatedAt": 1234567900,
+    "queryCount": 2
+  }
+]
+```
+
 ### Dependencies
 
 - **AndroidX Core & AppCompat**: Modern Android components
@@ -230,6 +308,7 @@ Manages persistent storage of API providers and query order configuration using 
 - API keys are stored locally using DataStore (encrypted on device)
 - All API communications use HTTPS
 - API keys are never logged or exposed in UI (password input type)
+- Chat data stored in app's private storage (not accessible by other apps)
 
 ## Prompt Templates
 
@@ -298,11 +377,11 @@ Prompt templates can be customized in `query/QueryManager.kt`:
 Possible improvements for future versions:
 - Support for additional AI providers (OpenAI direct, Cohere, etc.)
 - Customizable prompt templates in UI
-- Response history and bookmarking
-- Export responses to PDF or text
+- Export chats to PDF or text
 - Streaming responses for real-time feedback
 - Offline caching of responses
-- Dark mode support
+- Chat search and filtering
+- Response bookmarking and favorites
 
 ## License
 
