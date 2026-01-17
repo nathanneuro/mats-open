@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CrossCheck</string>
+    <string name="settings">Settings</string>
+    <string name="ask_question">Ask a Question</string>
+    <string name="question_hint">Enter your question here…</string>
+    <string name="submit">Submit</string>
+    <string name="retry">Retry</string>
+    <string name="loading">Loading…</string>
+    <string name="error_occurred">An error occurred: %s</string>
+    <string name="saved_locally">Saved locally</string>
+    <string name="resuming_from_stage">Resuming from stage %d…</string>
+    <string name="final_answer">Final Answer</string>
+    <string name="show_raw_responses">Show Raw Responses</string>
+    <string name="hide_raw_responses">Hide Raw Responses</string>
+    <string name="first_response">First Response</string>
+    <string name="second_response">Second Response</string>
+    <string name="third_response">Third Response</string>
+
+    <!-- Settings -->
+    <string name="api_provider">API Provider</string>
+    <string name="api_key">API Key</string>
+    <string name="model_name">Model Name</string>
+    <string name="query_order">Query Order</string>
+    <string name="save">Save</string>
+    <string name="add_provider">Add Provider</string>
+    <string name="remove_provider">Remove</string>
+
+    <!-- Provider names -->
+    <string name="provider_openrouter">OpenRouter</string>
+    <string name="provider_anthropic">Anthropic</string>
+    <string name="provider_gemini">Google Gemini</string>
+
+    <!-- Hints -->
+    <string name="api_key_hint">Enter API key</string>
+    <string name="model_name_hint">e.g., claude-3-opus-20240229</string>
+    <string name="error_no_providers">Please configure at least one API provider in Settings</string>
+    <string name="error_invalid_order">Please configure query order in Settings</string>
+
+    <!-- History -->
+    <string name="history">History</string>
+    <string name="no_history">No saved chats yet</string>
+    <string name="completed">Completed</string>
+    <string name="failed_at_stage">Failed at stage %d</string>
+    <string name="new_chat">New Chat</string>
+    <string name="queries_count">%d queries</string>
+    <string name="delete">Delete</string>
+
+    <!-- Query Modes -->
+    <string name="query_mode">Query Mode</string>
+    <string name="mode_abc">ABC (All 3 models)</string>
+    <string name="mode_ac">AC (Models A+C only)</string>
+    <string name="mode_bc">BC (Models B+C only)</string>
+
+    <!-- Settings -->
+    <string name="utility_model">Utility Model (for naming chats)</string>
+    <string name="utility_model_hint">Small fast model for utility tasks</string>
+
+    <!-- About -->
+    <string name="about">About</string>
+    <string name="about_title">About CrossCheck</string>
+    <string name="about_description">An AI-powered fact-checking app that verifies answers through multiple AI models</string>
+    <string name="credits">Created by Claude (AI Assistant)\nWith ideas from Nathan Helm-Burger</string>
+    <string name="version">Version 1.0.0</string>
+</resources>
