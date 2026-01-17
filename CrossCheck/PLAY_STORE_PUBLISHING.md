@@ -36,13 +36,25 @@ Here's a concise, up-to-date checklist you can follow to get your Android app ba
 
 ---
 
-## 4. Wait for review
+## 4. Testing: Sideload the release-ready .aab/.apk yourself
+
+You only need this if you want to test the exact artefact you will upload to Play.
+
+1. **Build → Generate Signed Bundle / APK → choose APK** → fill keystore → give it a versionCode.
+2. Copy the resulting `app-release.apk` to the phone (Google Drive, USB file transfer, etc.).
+3. On the phone open Files, tap the APK, allow "Install unknown apps" for Files, install.
+
+(You can uninstall later; the signed release sits beside any debug build you already have.)
+
+---
+
+## 5. Wait for review
 
 Google's stated turnaround is ≤ 2 days, but allow up to 7. Watch the Console inbox for policy questions.
 
 ---
 
-## 5. Post-publish reminders
+## 6. Post-publish reminders
 
 - **VersionCode** must increment with every new upload.
 - **Target SDK ≥ 35** (Android 15) for any update submitted after 31 Aug 2025.
