@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/dark_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -11,12 +12,39 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Utility Model Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/utility_model"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_white"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/utility_model_hint"
+            android:textSize="14sp"
+            android:textColor="@color/text_medium_grey"
+            android:layout_marginBottom="16dp" />
+
+        <LinearLayout
+            android:id="@+id/utilityModelContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="32dp" />
+
+        <!-- Main Providers Section -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="API Providers"
             android:textSize="20sp"
             android:textStyle="bold"
+            android:textColor="@color/text_white"
             android:layout_marginBottom="16dp" />
 
         <LinearLayout
@@ -30,6 +58,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/add_provider"
+            android:backgroundTint="@color/purple_primary"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="24dp" />
 
@@ -39,6 +68,7 @@
             android:text="Query Order"
             android:textSize="20sp"
             android:textStyle="bold"
+            android:textColor="@color/text_white"
             android:layout_marginBottom="8dp" />
 
         <TextView
@@ -46,6 +76,7 @@
             android:layout_height="wrap_content"
             android:text="Select which provider to use for each stage:"
             android:textSize="14sp"
+            android:textColor="@color/text_medium_grey"
             android:layout_marginBottom="16dp" />
 
         <LinearLayout
@@ -58,6 +89,7 @@
                 android:layout_height="wrap_content"
                 android:text="Stage 1 (Initial Answer):"
                 android:textStyle="bold"
+                android:textColor="@color/text_light_grey"
                 android:layout_marginTop="8dp" />
 
             <Spinner
@@ -71,6 +103,7 @@
                 android:layout_height="wrap_content"
                 android:text="Stage 2 (Cross-check):"
                 android:textStyle="bold"
+                android:textColor="@color/text_light_grey"
                 android:layout_marginTop="16dp" />
 
             <Spinner
@@ -84,6 +117,7 @@
                 android:layout_height="wrap_content"
                 android:text="Stage 3 (Final Synthesis):"
                 android:textStyle="bold"
+                android:textColor="@color/text_light_grey"
                 android:layout_marginTop="16dp" />
 
             <Spinner
@@ -99,6 +133,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/save"
+            android:backgroundTint="@color/purple_primary"
             android:layout_marginTop="32dp" />
 
     </LinearLayout>

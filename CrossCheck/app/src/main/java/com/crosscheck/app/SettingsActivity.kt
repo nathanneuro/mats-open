@@ -21,11 +21,13 @@ import kotlinx.coroutines.launch
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var settingsRepository: SettingsRepository
+    private lateinit var utilityModelContainer: LinearLayout
     private lateinit var providersContainer: LinearLayout
     private lateinit var stage1Spinner: Spinner
     private lateinit var stage2Spinner: Spinner
     private lateinit var stage3Spinner: Spinner
     private val providerViews = mutableListOf<ProviderView>()
+    private var utilityModelView: ProviderView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +37,7 @@ class SettingsActivity : AppCompatActivity() {
         supportActionBar?.title = getString(R.string.settings)
 
         settingsRepository = SettingsRepository(this)
+        utilityModelContainer = findViewById(R.id.utilityModelContainer)
         providersContainer = findViewById(R.id.providersContainer)
         stage1Spinner = findViewById(R.id.stage1Spinner)
         stage2Spinner = findViewById(R.id.stage2Spinner)
@@ -54,6 +57,12 @@ class SettingsActivity : AppCompatActivity() {
     private fun loadSettings() {
         lifecycleScope.launch {
             val settings = settingsRepository.settingsFlow.first()
+
+            // Load utility model if exists, otherwise create empty one
+            val utilityView = LayoutInflater.from(this@SettingsActivity)
+                .inflate(R.layout.item_provider, utilityModelContainer, false)
+            utilityModelView = ProviderView(utilityView, settings.utilityModel, hideRemoveButton = true)
+            utilityModelContainer.addView(utilityView)
 
             if (settings.providers.isEmpty()) {
                 addProviderView()
@@ -134,7 +143,14 @@ class SettingsActivity : AppCompatActivity() {
             stage3Spinner.selectedItemPosition
         )
 
-        val settings = AppSettings(providers, queryOrder)
+        // Get utility model (optional)
+        val utilityModel = utilityModelView?.getProvider()
+
+        val settings = AppSettings(
+            providers = providers,
+            queryOrder = queryOrder,
+            utilityModel = utilityModel
+        )
 
         lifecycleScope.launch {
             settingsRepository.saveSettings(settings)
@@ -148,16 +164,25 @@ class SettingsActivity : AppCompatActivity() {
         return true
     }
 
-    private inner class ProviderView(val view: View, provider: ApiProvider? = null) {
+    private inner class ProviderView(
+        val view: View,
+        provider: ApiProvider? = null,
+        hideRemoveButton: Boolean = false
+    ) {
         private val typeSpinner: Spinner = view.findViewById(R.id.providerTypeSpinner)
         private val apiKeyInput: EditText = view.findViewById(R.id.apiKeyInput)
         private val modelNameInput: EditText = view.findViewById(R.id.modelNameInput)
+        private val removeButton: Button = view.findViewById(R.id.removeButton)
 
         init {
             val types = listOf("OpenRouter", "Anthropic", "Google Gemini")
             val adapter = ArrayAdapter(this@SettingsActivity, android.R.layout.simple_spinner_item, types)
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             typeSpinner.adapter = adapter
+
+            if (hideRemoveButton) {
+                removeButton.visibility = View.GONE
+            }
 
             provider?.let {
                 typeSpinner.setSelection(when (it.type) {
