@@ -5,6 +5,7 @@ import java.util.UUID
 
 data class QueryHistory(
     val id: String = UUID.randomUUID().toString(),
+    val chatId: String, // Group queries into chats
     val question: String,
     val timestamp: Long = System.currentTimeMillis(),
     val firstResponse: String? = null,
