@@ -27,6 +27,16 @@
             android:name=".SettingsActivity"
             android:label="@string/settings"
             android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".HistoryActivity"
+            android:label="@string/history"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".AboutActivity"
+            android:label="@string/about_title"
+            android:parentActivityName=".MainActivity" />
     </application>
 
 </manifest>

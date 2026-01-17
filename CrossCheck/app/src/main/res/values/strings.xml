@@ -39,7 +39,27 @@
 
     <!-- History -->
     <string name="history">History</string>
-    <string name="no_history">No saved queries yet</string>
+    <string name="no_history">No saved chats yet</string>
     <string name="completed">Completed</string>
     <string name="failed_at_stage">Failed at stage %d</string>
+    <string name="new_chat">New Chat</string>
+    <string name="queries_count">%d queries</string>
+    <string name="delete">Delete</string>
+
+    <!-- Query Modes -->
+    <string name="query_mode">Query Mode</string>
+    <string name="mode_abc">ABC (All 3 models)</string>
+    <string name="mode_ac">AC (Models A+C only)</string>
+    <string name="mode_bc">BC (Models B+C only)</string>
+
+    <!-- Settings -->
+    <string name="utility_model">Utility Model (for naming chats)</string>
+    <string name="utility_model_hint">Small fast model for utility tasks</string>
+
+    <!-- About -->
+    <string name="about">About</string>
+    <string name="about_title">About CrossCheck</string>
+    <string name="about_description">An AI-powered fact-checking app that verifies answers through multiple AI models</string>
+    <string name="credits">Created by Claude (AI Assistant)\nWith ideas from Nathan Helm-Burger</string>
+    <string name="version">Version 1.0.0</string>
 </resources>

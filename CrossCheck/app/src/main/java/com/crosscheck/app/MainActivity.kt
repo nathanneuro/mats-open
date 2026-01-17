@@ -12,22 +12,33 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.crosscheck.app.api.ApiClient
-import com.crosscheck.app.data.QueryRepository
+import com.crosscheck.app.data.ChatRepository
 import com.crosscheck.app.data.SettingsRepository
 import com.crosscheck.app.models.AppSettings
+import com.crosscheck.app.models.QueryMode
 import com.crosscheck.app.query.QueryManager
+import com.crosscheck.app.service.ChatNamingService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import android.widget.Spinner
+import android.widget.ArrayAdapter
+import android.widget.AdapterView
+import androidx.appcompat.widget.Toolbar
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var settingsRepository: SettingsRepository
-    private lateinit var queryRepository: QueryRepository
+    private lateinit var chatRepository: ChatRepository
     private lateinit var queryManager: QueryManager
+    private lateinit var chatNamingService: ChatNamingService
 
+    private lateinit var toolbar: Toolbar
+    private lateinit var queryModeSpinner: Spinner
     private lateinit var questionInput: EditText
     private lateinit var submitButton: Button
     private lateinit var settingsButton: Button
+    private lateinit var newChatButton: Button
+    private lateinit var historyButton: Button
     private lateinit var retryButton: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
@@ -46,19 +57,28 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         settingsRepository = SettingsRepository(this)
-        queryRepository = QueryRepository(this)
-        queryManager = QueryManager(ApiClient(), queryRepository)
+        chatRepository = ChatRepository(this)
+        val apiClient = ApiClient()
+        queryManager = QueryManager(apiClient, chatRepository)
+        chatNamingService = ChatNamingService(apiClient, chatRepository)
 
         initViews()
         setupListeners()
+        setupQueryModeSpinner()
         observeQueryState()
         checkForCrashRecovery()
     }
 
     private fun initViews() {
+        toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
+        queryModeSpinner = findViewById(R.id.queryModeSpinner)
         questionInput = findViewById(R.id.questionInput)
         submitButton = findViewById(R.id.submitButton)
         settingsButton = findViewById(R.id.settingsButton)
+        newChatButton = findViewById(R.id.newChatButton)
+        historyButton = findViewById(R.id.historyButton)
         retryButton = findViewById(R.id.retryButton)
         progressBar = findViewById(R.id.progressBar)
         statusText = findViewById(R.id.statusText)
@@ -80,6 +100,14 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
+        newChatButton.setOnClickListener {
+            createNewChat()
+        }
+
+        historyButton.setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
+        }
+
         retryButton.setOnClickListener {
             retryQuery()
         }
@@ -89,12 +117,44 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupQueryModeSpinner() {
+        val modes = arrayOf(
+            getString(R.string.mode_abc),
+            getString(R.string.mode_ac),
+            getString(R.string.mode_bc)
+        )
+
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modes)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        queryModeSpinner.adapter = adapter
+
+        queryModeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                // Query mode will be read from spinner when submitting query
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun createNewChat() {
+        lifecycleScope.launch {
+            chatRepository.createChat()
+            // Clear the UI
+            questionInput.text?.clear()
+            responseContainer.visibility = View.GONE
+            errorText.visibility = View.GONE
+            retryButton.visibility = View.GONE
+            Toast.makeText(this@MainActivity, "Started new chat", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     /**
      * Check if there's an incomplete query from a crash/interruption
      */
     private fun checkForCrashRecovery() {
         lifecycleScope.launch {
-            val currentQuery = queryRepository.loadCurrentQuery()
+            val currentQuery = chatRepository.loadCurrentQuery()
             if (currentQuery != null && currentQuery.canRetry()) {
                 Toast.makeText(
                     this@MainActivity,
@@ -149,7 +209,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            val settings = settingsRepository.settingsFlow.first()
+            var settings = settingsRepository.settingsFlow.first()
 
             if (!settings.isValid()) {
                 Toast.makeText(
@@ -160,8 +220,31 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
 
+            // Get query mode from spinner
+            val queryMode = when (queryModeSpinner.selectedItemPosition) {
+                0 -> QueryMode.ABC
+                1 -> QueryMode.AC
+                2 -> QueryMode.BC
+                else -> QueryMode.ABC
+            }
+
+            // Update settings with selected query mode
+            settings = settings.copy(queryMode = queryMode)
+
             hideKeyboard()
+
+            // Check if this is the first query in the chat for auto-naming
+            val chat = chatRepository.getCurrentChat()
+            val isFirstQuery = chat.queryCount == 0
+
             queryManager.executeQuery(question, settings)
+
+            // Auto-name chat after first query completes
+            if (isFirstQuery && settings.utilityModel != null) {
+                // Wait a bit for the query to complete
+                kotlinx.coroutines.delay(2000)
+                chatNamingService.autoNameChat(chat.id, question, settings.utilityModel!!)
+            }
         }
     }
 
@@ -242,6 +325,21 @@ class MainActivity : AppCompatActivity() {
     private fun hideKeyboard() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.hideSoftInputFromWindow(currentFocus?.windowToken, 0)
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_about -> {
+                startActivity(Intent(this, AboutActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     override fun onResume() {
