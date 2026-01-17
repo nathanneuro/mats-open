@@ -1,7 +1,7 @@
 package com.crosscheck.app.query
 
 import com.crosscheck.app.api.ApiClient
-import com.crosscheck.app.data.QueryRepository
+import com.crosscheck.app.data.ChatRepository
 import com.crosscheck.app.models.AppSettings
 import com.crosscheck.app.models.QueryHistory
 import com.crosscheck.app.models.QueryResponse
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class QueryManager(
     private val apiClient: ApiClient,
-    private val queryRepository: QueryRepository
+    private val chatRepository: ChatRepository
 ) {
 
     private val _queryState = MutableStateFlow(QueryResponse())
@@ -23,13 +23,17 @@ class QueryManager(
      * Execute a new query from scratch
      */
     suspend fun executeQuery(userQuestion: String, settings: AppSettings) {
+        // Get or create current chat
+        val chat = chatRepository.getCurrentChat()
+
         // Create new query history and save immediately (user input is valuable!)
         val queryHistory = QueryHistory(
+            chatId = chat.id,
             question = userQuestion,
             settings = settings
         )
         currentQueryHistory = queryHistory
-        queryRepository.saveQuery(queryHistory)
+        chatRepository.saveQuery(queryHistory)
 
         executeFromHistory(queryHistory, settings)
     }
@@ -53,7 +57,7 @@ class QueryManager(
         if (!settings.isValid()) {
             val updated = queryHistory.updateWithError(0, "Invalid settings configuration")
             currentQueryHistory = updated
-            queryRepository.saveQuery(updated)
+            chatRepository.saveQuery(updated)
             _queryState.value = QueryResponse(error = "Invalid settings configuration")
             return
         }
@@ -61,15 +65,15 @@ class QueryManager(
         val userQuestion = queryHistory.question
         var history = queryHistory
 
-        // Stage 1: Initial scientific answer (skip if already completed)
-        if (history.lastSuccessfulStage < 1) {
+        // Stage 0: Initial scientific answer (skip if already completed OR not needed for query mode)
+        if (settings.shouldRunStage(0) && history.lastSuccessfulStage < 1) {
             _queryState.value = QueryResponse(isLoading = true, currentStage = 1)
 
             val provider1 = settings.getProviderForStage(0)
             if (provider1 == null) {
                 val updated = history.updateWithError(1, "No provider configured for stage 1")
                 currentQueryHistory = updated
-                queryRepository.saveQuery(updated)
+                chatRepository.saveQuery(updated)
                 _queryState.value = QueryResponse(error = "No provider configured for stage 1")
                 return
             }
@@ -81,7 +85,7 @@ class QueryManager(
                 val errorMsg = result1.exceptionOrNull()?.message ?: "Unknown error"
                 val updated = history.updateWithError(1, errorMsg)
                 currentQueryHistory = updated
-                queryRepository.saveQuery(updated)
+                chatRepository.saveQuery(updated)
                 _queryState.value = QueryResponse(
                     error = "Stage 1 error: $errorMsg"
                 )
@@ -91,7 +95,7 @@ class QueryManager(
             val firstResponse = result1.getOrNull()!!
             history = history.updateWithStage1(firstResponse)
             currentQueryHistory = history
-            queryRepository.saveQuery(history) // Save immediately!
+            chatRepository.saveQuery(history) // Save immediately!
         }
 
         val firstResponse = history.firstResponse!!
@@ -101,13 +105,13 @@ class QueryManager(
             currentStage = 2
         )
 
-        // Stage 2: Cross-check (skip if already completed)
-        if (history.lastSuccessfulStage < 2) {
+        // Stage 1: Cross-check (skip if already completed OR not needed for query mode)
+        if (settings.shouldRunStage(1) && history.lastSuccessfulStage < 2) {
             val provider2 = settings.getProviderForStage(1)
             if (provider2 == null) {
                 val updated = history.updateWithError(2, "No provider configured for stage 2")
                 currentQueryHistory = updated
-                queryRepository.saveQuery(updated)
+                chatRepository.saveQuery(updated)
                 _queryState.value = QueryResponse(
                     firstResponse = firstResponse,
                     error = "No provider configured for stage 2"
@@ -122,7 +126,7 @@ class QueryManager(
                 val errorMsg = result2.exceptionOrNull()?.message ?: "Unknown error"
                 val updated = history.updateWithError(2, errorMsg)
                 currentQueryHistory = updated
-                queryRepository.saveQuery(updated)
+                chatRepository.saveQuery(updated)
                 _queryState.value = QueryResponse(
                     firstResponse = firstResponse,
                     error = "Stage 2 error: $errorMsg"
@@ -133,7 +137,7 @@ class QueryManager(
             val secondResponse = result2.getOrNull()!!
             history = history.updateWithStage2(secondResponse)
             currentQueryHistory = history
-            queryRepository.saveQuery(history) // Save immediately!
+            chatRepository.saveQuery(history) // Save immediately!
         }
 
         val secondResponse = history.secondResponse!!
@@ -150,7 +154,7 @@ class QueryManager(
             if (provider3 == null) {
                 val updated = history.updateWithError(3, "No provider configured for stage 3")
                 currentQueryHistory = updated
-                queryRepository.saveQuery(updated)
+                chatRepository.saveQuery(updated)
                 _queryState.value = QueryResponse(
                     firstResponse = firstResponse,
                     secondResponse = secondResponse,
@@ -166,7 +170,7 @@ class QueryManager(
                 val errorMsg = result3.exceptionOrNull()?.message ?: "Unknown error"
                 val updated = history.updateWithError(3, errorMsg)
                 currentQueryHistory = updated
-                queryRepository.saveQuery(updated)
+                chatRepository.saveQuery(updated)
                 _queryState.value = QueryResponse(
                     firstResponse = firstResponse,
                     secondResponse = secondResponse,
@@ -178,8 +182,8 @@ class QueryManager(
             val thirdResponse = result3.getOrNull()!!
             history = history.updateWithStage3(thirdResponse)
             currentQueryHistory = history
-            queryRepository.saveQuery(history) // Save immediately!
-            queryRepository.clearCurrentQuery() // Success! Clear crash recovery file
+            chatRepository.saveQuery(history) // Save immediately!
+            chatRepository.clearCurrentQuery() // Success! Clear crash recovery file
         }
 
         val thirdResponse = history.thirdResponse!!
