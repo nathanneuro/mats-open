@@ -22,6 +22,7 @@ uv.lock
 # Credentials (NEVER commit these)
 *.json
 !package.json
+!data/example_config.json
 service-account*.json
 credentials*.json
 

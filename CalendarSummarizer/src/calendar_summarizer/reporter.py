@@ -9,8 +9,15 @@ from .analyzer import compute_day_of_week_distribution, compute_meeting_time_dis
 
 
 CATEGORY_LABELS = {
-    MeetingCategory.RM_FELLOW_1_1: "RM-Fellow 1:1s",
-    MeetingCategory.RM_TEAM_MEETING: "RM Team Meetings",
+    # RM-Fellow meetings
+    MeetingCategory.RM_OWN_FELLOW_1_1: "1:1s with Own Fellows",
+    MeetingCategory.RM_OTHER_FELLOW_1_1: "1:1s with Other Fellows",
+    MeetingCategory.RM_OWN_FELLOWS_GROUP: "Group Meetings with Own Fellows",
+    # Team meetings
+    MeetingCategory.ALL_STAFF: "All-Staff Meetings",
+    MeetingCategory.RM_COMMUNITY: "RM Community of Practice",
+    MeetingCategory.SUBTEAM: "Subteam Meetings",
+    # Other
     MeetingCategory.INTERNAL_MATS: "Internal MATS",
     MeetingCategory.EXTERNAL: "External Meetings",
     MeetingCategory.SOCIAL: "Social Events",
