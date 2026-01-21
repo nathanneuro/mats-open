@@ -1,19 +1,18 @@
 # Calendar Summarizer
 
-Analyze Google Calendar meeting patterns for MATS Research Managers. Generates weekly reports with AI-powered meeting categorization.
+Analyze Google Calendar meeting patterns for MATS Research Managers. Generates weekly reports with AI-powered meeting categorization that distinguishes between own-Fellow and cross-RM Fellow meetings.
 
 ## Features
 
 - **Google Calendar Integration**: Fetches events via service account authentication
-- **AI-Powered Categorization**: Uses Claude Haiku to classify meetings into categories:
-  - RM-Fellow 1:1s
-  - RM Team Meetings
-  - Internal MATS meetings
-  - External meetings
-  - Workshops/Seminars
-  - Interviews
-  - Social events
-  - Admin/blocked time
+- **Smart Categorization**: Uses Claude Haiku + RM-Fellow assignment data to classify meetings:
+  - **1:1s with Own Fellows** - RM meeting with their assigned Fellows
+  - **1:1s with Other Fellows** - RM meeting with Fellows assigned to other RMs
+  - **Group Meetings with Own Fellows** - RM meeting with multiple of their Fellows
+  - **All-Staff Meetings** - Full team meetings
+  - **RM Community of Practice** - All-RM meetings
+  - **Subteam Meetings** - Defined subteam gatherings
+  - Plus: External, Workshops, Interviews, Social, Admin, Internal MATS
 - **Time Analysis**: Hours per day/week, busiest times, category breakdowns
 - **Markdown Reports**: Clean, shareable summaries saved to files
 
@@ -32,14 +31,32 @@ Analyze Google Calendar meeting patterns for MATS Research Managers. Generates w
    - Add the service account client ID
    - Add scope: `https://www.googleapis.com/auth/calendar.readonly`
 
-### 2. Install
+### 2. Create MATS Config
+
+Create a JSON config file defining your organizational structure. See `data/example_config.json`:
+
+```json
+{
+  "rm_fellow_assignments": {
+    "alice.rm@mats.org": ["fellow1@uni.edu", "fellow2@gmail.com"],
+    "bob.rm@mats.org": ["fellow3@uni.edu", "fellow4@gmail.com"]
+  },
+  "all_rms": ["alice.rm@mats.org", "bob.rm@mats.org"],
+  "all_staff": ["alice.rm@mats.org", "bob.rm@mats.org", "ops@mats.org"],
+  "subteams": {
+    "leadership": ["alice.rm@mats.org", "director@mats.org"]
+  }
+}
+```
+
+### 3. Install
 
 ```bash
 cd CalendarSummarizer
 uv sync
 ```
 
-### 3. Set Anthropic API Key
+### 4. Set Anthropic API Key
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
@@ -52,8 +69,9 @@ Basic usage (current week):
 ```bash
 uv run calendar-summarizer \
   --service-account /path/to/service-account.json \
-  --calendar user@domain.com \
-  --delegated-user user@domain.com
+  --calendar alice.rm@mats.org \
+  --delegated-user alice.rm@mats.org \
+  --config data/mats_config.json
 ```
 
 Analyze multiple weeks:
@@ -61,11 +79,12 @@ Analyze multiple weeks:
 ```bash
 uv run calendar-summarizer \
   --service-account /path/to/service-account.json \
-  --calendar user@domain.com \
-  --delegated-user user@domain.com \
+  --calendar alice.rm@mats.org \
+  --delegated-user alice.rm@mats.org \
+  --config data/mats_config.json \
   --weeks 4 \
-  --output outputs/monthly_report.md \
-  --calendar-name "Research Manager Alice"
+  --output outputs/alice_monthly.md \
+  --calendar-name "Alice (Research Manager)"
 ```
 
 ### Arguments
@@ -73,7 +92,8 @@ uv run calendar-summarizer \
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `--service-account` | Yes | Path to Google service account JSON key |
-| `--calendar` | Yes | Calendar ID (usually email address) |
+| `--calendar` | Yes | Calendar ID (email address of the RM) |
+| `--config` | Yes | Path to MATS config JSON with RM-Fellow assignments |
 | `--delegated-user` | No | Email to impersonate (for domain-wide delegation) |
 | `--weeks` | No | Number of weeks to analyze (default: 1) |
 | `--output` | No | Output file path (default: outputs/report_DATE.md) |
@@ -105,9 +125,10 @@ Example output excerpt:
 
 | Category | Meetings | Hours |
 |----------|----------|-------|
-| RM-Fellow 1:1s | 8 | 8.0 |
-| Internal MATS | 5 | 4.5 |
-| External Meetings | 3 | 2.5 |
+| 1:1s with Own Fellows | 6 | 6.0 |
+| 1:1s with Other Fellows | 2 | 2.0 |
+| RM Community of Practice | 1 | 1.0 |
+| All-Staff Meetings | 1 | 1.5 |
 ...
 ```
 
@@ -119,11 +140,14 @@ CalendarSummarizer/
 │   ├── __init__.py
 │   ├── cli.py          # CLI entry point
 │   ├── auth.py         # Google Calendar authentication
+│   ├── config.py       # MATS organizational config
 │   ├── fetcher.py      # Fetch calendar events
-│   ├── categorizer.py  # Haiku-based categorization
+│   ├── categorizer.py  # Haiku + assignment-based categorization
 │   ├── analyzer.py     # Time analysis
 │   ├── reporter.py     # Markdown report generation
 │   └── models.py       # Data models
+├── data/
+│   └── example_config.json  # Example MATS config
 ├── tests/
 ├── outputs/            # Generated reports
 ├── pyproject.toml

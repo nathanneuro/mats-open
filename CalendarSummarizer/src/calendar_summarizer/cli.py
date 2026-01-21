@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .auth import get_calendar_service
+from .config import MATSConfig
 from .fetcher import fetch_events
 from .categorizer import categorize_events
 from .analyzer import analyze_weekly
@@ -56,11 +57,27 @@ def main() -> int:
         default=None,
         help="Display name for the calendar (default: calendar ID)",
     )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        required=True,
+        help="Path to MATS config JSON (RM-Fellow assignments, staff list, subteams)",
+    )
 
     args = parser.parse_args()
 
     if not args.service_account.exists():
         console.print(f"[red]Error:[/red] Service account file not found: {args.service_account}")
+        return 1
+
+    if not args.config.exists():
+        console.print(f"[red]Error:[/red] Config file not found: {args.config}")
+        return 1
+
+    try:
+        config = MATSConfig.from_json(args.config)
+    except Exception as e:
+        console.print(f"[red]Error loading config:[/red] {e}")
         return 1
 
     calendar_name = args.calendar_name or args.calendar.split("@")[0]
@@ -110,7 +127,7 @@ def main() -> int:
         # Categorize events
         task = progress.add_task("Categorizing meetings with AI...", total=None)
         try:
-            categorized = categorize_events(events)
+            categorized = categorize_events(events, config, args.calendar)
         except Exception as e:
             console.print(f"[red]Categorization failed:[/red] {e}")
             return 1

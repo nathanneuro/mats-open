@@ -1,0 +1,41 @@
+{
+  "rm_fellow_assignments": {
+    "alice.rm@mats.org": [
+      "fellow1@university.edu",
+      "fellow2@gmail.com",
+      "fellow3@research.org"
+    ],
+    "bob.rm@mats.org": [
+      "fellow4@university.edu",
+      "fellow5@gmail.com"
+    ],
+    "carol.rm@mats.org": [
+      "fellow6@university.edu",
+      "fellow7@gmail.com",
+      "fellow8@research.org"
+    ]
+  },
+  "all_rms": [
+    "alice.rm@mats.org",
+    "bob.rm@mats.org",
+    "carol.rm@mats.org"
+  ],
+  "all_staff": [
+    "alice.rm@mats.org",
+    "bob.rm@mats.org",
+    "carol.rm@mats.org",
+    "ops1@mats.org",
+    "ops2@mats.org",
+    "director@mats.org"
+  ],
+  "subteams": {
+    "ops": [
+      "ops1@mats.org",
+      "ops2@mats.org"
+    ],
+    "leadership": [
+      "director@mats.org",
+      "alice.rm@mats.org"
+    ]
+  }
+}
