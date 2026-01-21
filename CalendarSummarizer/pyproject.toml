@@ -19,6 +19,7 @@ dev = [
 
 [project.scripts]
 calendar-summarizer = "calendar_summarizer.cli:main"
+calendar-summarizer-batch = "calendar_summarizer.batch:main"
 
 [build-system]
 requires = ["hatchling"]
