@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+
+# uv
+uv.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Credentials (NEVER commit these)
+*.json
+!package.json
+service-account*.json
+credentials*.json
+
+# Outputs (reports are generated, not tracked)
+outputs/*.md
+
+# OS
+.DS_Store
