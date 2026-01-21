@@ -1,41 +1,84 @@
 {
   "rm_fellow_assignments": {
-    "alice.rm@mats.org": [
+    "alice@mats.org": [
       "fellow1@university.edu",
       "fellow2@gmail.com",
       "fellow3@research.org"
     ],
-    "bob.rm@mats.org": [
+    "bob@mats.org": [
       "fellow4@university.edu",
       "fellow5@gmail.com"
     ],
-    "carol.rm@mats.org": [
+    "carol@mats.org": [
       "fellow6@university.edu",
-      "fellow7@gmail.com",
-      "fellow8@research.org"
+      "fellow7@gmail.com"
+    ],
+    "diana@mats.org": [
+      "fellow8@university.edu",
+      "fellow9@gmail.com"
     ]
   },
   "all_rms": [
-    "alice.rm@mats.org",
-    "bob.rm@mats.org",
-    "carol.rm@mats.org"
+    "alice@mats.org",
+    "bob@mats.org",
+    "carol@mats.org",
+    "diana@mats.org"
   ],
   "all_staff": [
-    "alice.rm@mats.org",
-    "bob.rm@mats.org",
-    "carol.rm@mats.org",
-    "ops1@mats.org",
-    "ops2@mats.org",
+    "alice@mats.org",
+    "bob@mats.org",
+    "carol@mats.org",
+    "diana@mats.org",
+    "ops@mats.org",
     "director@mats.org"
   ],
   "subteams": {
-    "ops": [
-      "ops1@mats.org",
-      "ops2@mats.org"
-    ],
-    "leadership": [
-      "director@mats.org",
-      "alice.rm@mats.org"
-    ]
+    "ops": ["ops@mats.org", "director@mats.org"]
+  },
+  "rm_names": {
+    "alice@mats.org": "Alice",
+    "bob@mats.org": "Bob",
+    "carol@mats.org": "Carol",
+    "diana@mats.org": "Diana"
+  },
+  "senior_rm_direct_reports": {
+    "alice@mats.org": ["bob@mats.org"],
+    "carol@mats.org": ["diana@mats.org"]
+  },
+  "executive_overview_recipients": [
+    "director@mats.org",
+    "exec1@mats.org"
+  ],
+  "rm_report_destinations": {
+    "alice@mats.org": {
+      "doc_title": "Calendar Summary - Alice",
+      "folder_id": null
+    },
+    "bob@mats.org": {
+      "doc_title": "Calendar Summary - Bob",
+      "folder_id": null
+    },
+    "carol@mats.org": {
+      "doc_title": "Calendar Summary - Carol",
+      "folder_id": null
+    },
+    "diana@mats.org": {
+      "doc_title": "Calendar Summary - Diana",
+      "folder_id": null
+    }
+  },
+  "senior_rm_aggregate_destinations": {
+    "alice@mats.org": {
+      "doc_title": "Team Summary - Alice's Team",
+      "folder_id": null
+    },
+    "carol@mats.org": {
+      "doc_title": "Team Summary - Carol's Team",
+      "folder_id": null
+    }
+  },
+  "executive_overview_destination": {
+    "doc_title": "RM Team Executive Overview",
+    "folder_id": null
   }
 }
