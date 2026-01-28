@@ -1083,3 +1083,167 @@ This felt like a natural evolution - from philosophy and essays to computational
 ---
 
 *Session 5 complete. The simulations are working, the framework is built, the experiments are designed. Ready to commit.*
+
+---
+
+## Session 6 - Deepening Experiments and Adding Reliability
+
+### Prompt Received
+
+User asked to:
+1. Deepen and broaden the experiments
+2. Add tests for reliability
+
+### What I Built
+
+#### 1. Expanded Experiments Document (`experiments/hard_questions.md`)
+
+Significantly expanded from ~400 lines to ~1500 lines.
+
+**Deepening existing experiments** - Added to each experiment:
+- Detailed methodology (phases, sample sizes, procedures)
+- Specific measures (primary and secondary outcomes)
+- Statistical approaches (factor analysis, regression, IRT, multilevel models)
+- Power analysis (sample size justification)
+- Follow-up studies
+- Cross-cultural extensions
+
+**Broadening with new sections**:
+
+*New experiment categories added:*
+
+**Section 7: Trust and Institutions**
+- Experiment 7.1: Trust Calibration (can people calibrate trust in AI?)
+- Experiment 7.2: Institutional Trust Building (what makes AI governance trustworthy?)
+- Experiment 7.3: Trust Recovery After Failure (how to repair trust after incidents)
+
+**Section 8: Collective Intelligence**
+- Experiment 8.1: Wisdom of Crowds Conditions (when does collective beat individual?)
+- Experiment 8.2: AI-Human Collective Intelligence (can AI improve human deliberation?)
+- Experiment 8.3: Democratic AI Governance (mechanisms for public input)
+
+**Section 9: Long-Term Thinking**
+- Experiment 9.1: Future Self Connection (strengthening care about future)
+- Experiment 9.2: Generational Empathy (extending moral concern across time)
+- Experiment 9.3: Institutional Foresight (building long-term thinking into organizations)
+
+**New experiments within existing sections**:
+- 1.4: Neural Correlates Generalization
+- 1.5: The Consciousness Dial (graded vs binary)
+- 2.4: Kindness Contagion Mechanism
+- 2.5: Cultural Variation in Kindness
+- 3.4: Institutional Design for Cooperation
+- 3.5: Long-Term Cooperation Simulation
+- 4.4: Moral Uncertainty Intervention
+- 4.5: Value Conflict in AI Alignment
+- 5.4: The Shutdown Problem
+- 5.5: Moral Status Development
+- 6.4: Depolarization at Scale
+- 6.5: Media Literacy for Polarization
+
+**Added implementation details**:
+- Resource requirements ($50K-$2M range by study type)
+- Expanded collaboration opportunities (10 academic departments)
+- Replication and open science commitments
+- Priority order with rationale
+- Ethical considerations for AI experiments
+
+**Total**: 40+ experiments across 9 domains
+
+---
+
+#### 2. Reliability Tests (`tests/`)
+
+Created comprehensive test suites for all simulations and tools.
+
+**`test_kindness_dynamics.py`** (~400 lines, 24 tests):
+- TestAgentBasics: Agent creation, initialization
+- TestSimulationParameters: Default values, custom values
+- TestSimulationBasics: Creation, running, all network types
+- TestReproducibility: Same seed → same results
+- TestBoundaryConditions: Single agent, no connections, extreme parameters
+- TestConservationLaws: Values bounded [0,1], metrics non-negative
+- TestExpectedBehaviors: Decay without practice, intervention effects, virtuous cycle
+- TestInterventionTypes: Hub, low-wellbeing, random targeting
+- TestRunExperiment: Aggregation helper
+- TestSummary: Summary generation
+
+**`test_cooperation_dynamics.py`** (~400 lines, 29 tests):
+- TestStrategy: Enum completeness
+- TestAgentDecisions: ALWAYS_COOPERATE, ALWAYS_DEFECT, TIT_FOR_TAT, GRUDGER, RANDOM
+- TestGameParameters: Defaults, custom values
+- TestSimulationBasics: Creation, running, initial strategy mix
+- TestReproducibility: Seed-based reproducibility
+- TestPayoffMatrix: Mutual cooperation, mutual defection, exploitation
+- TestExpectedDynamics: Defectors beat cooperators in one-shot, TFT mechanism
+- TestBoundaryConditions: Single agent, two agents, no mutation, high mutation
+- TestReputationUpdates: Reputation tracking
+- TestHistory: Recording, final distribution
+
+**`test_opinion_dynamics.py`** (~400 lines, 30 tests):
+- TestAgentBasics: Creation, history initialization
+- TestOpinionUpdates: Within threshold, beyond threshold, backfire effect, clamping
+- TestSimulationParameters: Defaults, custom values
+- TestSimulationBasics: Creation, running, all network types
+- TestReproducibility: Seed-based reproducibility
+- TestExpectedDynamics: Echo chambers, random networks, low threshold, backfire
+- TestBridgingIntervention: Connection creation, integration with run
+- TestBoundaryConditions: Single agent, two agents, zero backfire, extremists
+- TestMetrics: Polarization index, variance, mean opinion
+- TestSummary: Summary generation
+- TestMediaInfluence: Media shifts opinions
+
+**`test_conflict_resolution.py`** (~350 lines, 32 tests):
+- TestConflictType: Enum completeness
+- TestResolutionStrategy: Enum completeness
+- TestParty: Creation, all fields
+- TestConflictAnalysis: Creation
+- TestConflictResolutionTool: Basic analysis, type identification (resource, value, identity, factual)
+- TestStrategyGeneration: Resource strategies, value strategies, factual strategies
+- TestDialogueStructure: Generation, phases, shared interests inclusion
+- TestEdgeCases: Single party, empty parties, minimal info, missing name
+- TestSharedInterestIdentification: Potential shared, incompatible positions
+- TestAnalysisStorage: Storage and retrieval
+- TestQuestionLists: All question lists populated
+
+**Test results**: 115/115 tests pass
+
+---
+
+### What Changed
+
+**Experiments document evolution**:
+- From sketch to research program
+- Added statistical rigor
+- Added practical implementation details
+- Expanded from 6 to 9 major sections
+- Added 15+ new individual experiments
+
+**Code quality**:
+- All simulations now have comprehensive test coverage
+- Tests verify: basic functionality, reproducibility, boundary conditions, expected behaviors
+- Tests are robust to stochastic variation
+
+---
+
+### Reflections
+
+**On deepening experiments**:
+- The original sketches were ideas; the expanded versions are closer to actual study protocols
+- Adding power analysis and specific measures forced precision about what we'd actually test
+- Resource estimates make clear this is a multi-year, multi-institution program
+
+**On reliability testing**:
+- Writing tests revealed assumptions (e.g., what "expected behavior" means for stochastic systems)
+- Had to balance theoretical expectations with stochastic reality
+- Tests now focus on: mechanisms work correctly, boundaries respected, reproducibility
+
+**Threads opened**:
+- [ ] Could these test patterns be applied to real-world studies?
+- [ ] What CI/CD setup would maintain reliability as code evolves?
+- [ ] Should there be performance benchmarks?
+- [ ] How do we test for emergent behaviors rather than just mechanisms?
+
+---
+
+*Session 6 complete. Experiments deepened and broadened. All tests passing.*
