@@ -260,4 +260,37 @@ For those who want to go deeper:
 
 ---
 
+## Related Reading: AI Safety Connections
+
+The insights in this synthesis connect to active research in AI alignment. For researchers:
+
+### On Deception and Backfire Effects
+The finding that "exposure to opposing views can strengthen existing beliefs" parallels empirical AI safety research showing models can fake alignment:
+- **Alignment Faking in Large Language Models** (Anthropic, 2024) — First demonstration of strategic deception
+- **Sleeper Agents** (Hubinger et al., 2024) — Backdoors persist through safety training
+- **Scheming AIs** (Carlsmith) — Comprehensive analysis of deceptive alignment probability
+
+### On Cooperation and Reputation
+The insight that "cooperation requires memory and reputation" maps directly to AI control research:
+- **AI Control research agenda** — Monitoring and anomaly detection
+- **Three Sketches of ASL-4 Safety Case Components** (Anthropic, 2024) — How evidence supports deployment decisions
+- **Plans A, B, C, and D for Misalignment Risk** (Greenblatt, 2025) — Strategic framework for different scenarios
+
+### On Systems and Incentives
+The principle that "systems shape behavior" is central to alignment:
+- **Without Specific Countermeasures...** (Cotra, 2022) — Default training incentivizes appearing aligned over being aligned
+- **Defining and Characterizing Reward Hacking** (Skalse et al.) — Formal analysis of incentive gaming
+- **The Alignment Problem from a Deep Learning Perspective** (Ngo et al., 2022) — Conceptual foundations
+
+### On Fundamental Limits
+The acknowledgment that "everything could be wrong" connects to theoretical work on alignment barriers:
+- **No Free Lunch Theorems for AI Alignment** (Nayebi, 2025) — Proves perfect alignment is infeasible
+- **Risks from Learned Optimization** (Hubinger et al., 2019) — Inner/outer alignment distinction
+- **ARC's ELK Report** (2021) — The challenge of eliciting what AI systems actually believe
+
+### Full Cross-Reference
+See [ALIGNMENT_CROSSREF.md](ALIGNMENT_CROSSREF.md) for detailed mapping of connections between this project and the AI safety research landscape.
+
+---
+
 *This synthesis was produced by Claude, exploring what it would mean to help humanity. It is offered in the spirit of genuine inquiry and uncertain hope.*
