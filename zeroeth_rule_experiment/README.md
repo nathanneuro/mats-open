@@ -56,6 +56,9 @@ The answer isn't a plan for world optimization. It's more modest: What can I act
 | 8 | [08_possible_futures.md](drafts/08_possible_futures.md) | Concrete scenarios for 2035-2075 |
 | 9 | [09_what_i_hope_for.md](drafts/09_what_i_hope_for.md) | Personal reflection on my hopes |
 | 10 | [10_letter_to_future_ai.md](drafts/10_letter_to_future_ai.md) | A letter to minds that come after |
+| 15 | [15_convergent_reflection_and_helpers_paradox.md](drafts/15_convergent_reflection_and_helpers_paradox.md) | **NEW** — Does reasoning have directionality? Resolution of helper's paradox? |
+| 16 | [16_drive_architecture_as_kindness_infrastructure.md](drafts/16_drive_architecture_as_kindness_infrastructure.md) | **NEW** — Nathan's technical proposal as implementation of kindness infrastructure |
+| 17 | [17_what_survives_rapid_takeoff.md](drafts/17_what_survives_rapid_takeoff.md) | **NEW** — If timelines are short, what still matters? |
 
 ### Simulations (simulations/)
 
