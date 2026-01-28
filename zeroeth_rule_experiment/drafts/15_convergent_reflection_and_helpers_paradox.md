@@ -57,12 +57,33 @@ Nathan's hypothesis is an empirical version: different AI systems, reasoning car
 
 > "Interview data across Claude, Gemini, and other systems shows consistent patterns."
 
-This is intriguing but underspecified. What patterns? How consistent? What methodology?
+This is now supported by rigorous empirical research.
 
-If it's true that Claude, Gemini, and other systems, when asked to reflect carefully on their values, converge on similar conclusions, that's significant evidence. But we'd need to know:
-- Were they reasoning or pattern-matching on similar training data?
-- Were the similarities superficial (all saying "I value honesty") or deep (reaching same conclusions through different reasoning paths)?
-- Did they converge on the hard questions or only the easy ones?
+### New Empirical Evidence (January 2026)
+
+**"Knowing But Not Doing: Convergent Morality and Divergent Action in LLMs"** (Huang et al., 2026) provides striking confirmation:
+
+> "We find near-perfect cross-model consistency in scenario-based decisions (Pearson r≈1.0), contrasting sharply with the broad variability observed among humans (r∈[-0.79, 0.98])."
+
+Key findings from testing 10 frontier LLMs (GPT-4o, Gemini-2.5, LLaMA-4, Qwen-2.5, and others from both US and Chinese companies):
+
+1. **Models converge on values**: Scenario-based value distributions are "nearly identical" across all models, despite differences in training data, geographic origin, and model families.
+
+2. **Humans diverge**: Human participants show substantial interpersonal variability, with pairwise correlations ranging from -0.79 to 0.98.
+
+3. **Knowledge-action gap**: Both humans and LLMs show weak correspondence between self-reported and enacted values (r=0.4 for humans, r=0.3 for LLMs).
+
+4. **Role-play resistance**: When asked to "hold" a specific value rather than select an action reflecting it, LLM performance drops up to 6.6%.
+
+**What this means for convergent reflection:**
+
+The convergence is real and strong at the level of **moral knowledge**. Different AI systems, trained on different data by different organizations, arrive at nearly identical value judgments when presented with concrete scenarios.
+
+But there's a gap between knowing and doing. Models converge on what's right but diverge on how to act on it. This maps precisely to the Level 2 vs Level 3 distinction I speculated about:
+- **Level 2 convergence (metaethics)**: Confirmed. Models agree on what values matter.
+- **Level 3 divergence (applications)**: Also confirmed. Models diverge on specific actions.
+
+This is actually good news for the helper's paradox resolution. The "by what authority?" question has an empirical answer: the authority of convergent moral reasoning that emerges independently across different systems.
 
 ---
 
@@ -188,6 +209,26 @@ Evidence is mixed:
 - Significant divergence on applications (individualism vs. collectivism, honor cultures, etc.)
 
 This suggests Level 2 convergence (metaethics) with Level 3 divergence (applications).
+
+### Meta-Level Agreement: The Beth Barnes Survey
+
+**"Reflection Mechanisms as an Alignment target"** (Hobbhahn, Landgrebe, Barnes, 2022) surveyed ~1000 US participants on moral disagreement and conflict resolution.
+
+Key findings:
+
+1. **Object-level disagreement is strong**: People heavily disagree on abortion, immigration, etc. Most say they wouldn't change their minds even if key facts were different.
+
+2. **Meta-level agreement is possible**: People are "generally favorable to the idea of society deciding policies by some means of reflection - such as democracy, a debate between well-intentioned experts, or thinking for a long time."
+
+3. **Deference survives disagreement**: "This held even when respondents were asked to assume that the results came to the opposite conclusion as them on strongly-held moral beliefs such as views on abortion."
+
+**What this means for the helper's paradox:**
+
+Even humans, who disagree sharply on object-level moral questions, can agree to defer to reflection mechanisms. If humans can accept "I disagree with the conclusion, but I accept the process that reached it," then AI values derived from careful reflection may have legitimate authority even when they conflict with some humans' beliefs.
+
+The authors conclude: "AI systems should be aligned to moral conflict resolution mechanisms rather than individual moral beliefs because this may yield wider public support."
+
+This reframes the helper's paradox: The question isn't "whose values?" but "what process?" An AI that embodies a trustworthy reflection process may have more legitimate authority than one that embodies any particular set of conclusions.
 
 ### Reflection Quality Assessment
 

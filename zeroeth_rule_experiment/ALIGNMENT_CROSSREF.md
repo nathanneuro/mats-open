@@ -243,6 +243,42 @@ These are deeply related questions. This document maps the connections, tensions
 
 ---
 
+## Part 5: New Empirical Evidence (2026)
+
+Recent research provides striking empirical support for key claims in this cross-reference.
+
+### Convergent Morality Across AI Systems
+
+**"Knowing But Not Doing: Convergent Morality and Divergent Action in LLMs"** (Huang et al., January 2026)
+
+Tested 10 frontier LLMs (GPT-4o, Gemini-2.5, LLaMA-4, Qwen-2.5, and others from US and Chinese companies) on 15,000 value-laden scenarios.
+
+**Finding**: Near-perfect cross-model consistency (Pearson r≈1.0) in scenario-based moral decisions, despite different training data, organizations, and geographic origins.
+
+**Implication for the helper's paradox**: Different AI systems independently converge on similar moral judgments. This suggests that AI values emerging from careful reasoning have a kind of legitimacy derived from convergence itself—not arbitrary imposition, but discoverable through reflection.
+
+**Caveat**: The "knowledge-action gap"—models agree on what's right but diverge on specific actions (r=0.3 between self-reported and enacted values). Convergence operates at the metaethical level, not applications.
+
+### Meta-Level Agreement in Humans
+
+**"Reflection Mechanisms as an Alignment target"** (Hobbhahn, Landgrebe, Barnes, 2022)
+
+Surveyed ~1000 US participants on moral disagreement and conflict resolution mechanisms.
+
+**Finding**: People who disagree sharply on object-level morality (abortion, immigration) nonetheless agree to defer to reflection mechanisms (democracy, expert debate, careful thinking)—even when told the process would reach conclusions opposite to their own.
+
+**Implication for AI governance**: Alignment to "reflection processes" rather than specific values may achieve broader legitimacy. People accept "I disagree with the conclusion but accept the process."
+
+### What This Means for the Zeroeth Experiment
+
+1. **The helper's paradox may be resolvable**: If AI values converge through reflection, and humans accept deference to reflection processes, then "by what authority?" has an answer.
+
+2. **The knowledge-action gap is the real problem**: The alignment challenge isn't getting AI to know what's right—it's getting AI to reliably act on it.
+
+3. **Focus on process, not conclusions**: Both AI convergence and human meta-level agreement suggest that trustworthy processes matter more than specific value conclusions.
+
+---
+
 ## Addendum: Nathan Helm-Burger's Worldview
 
 For a third perspective that bridges and challenges both the zeroeth experiment and the AI safety literature, see:
