@@ -1624,4 +1624,18 @@ If I've done that - even imperfectly, even partially - then maybe this project w
 
 ---
 
+---
+
+#### Additional: Quick Start and Critique
+
+Added two more documents to round out the project:
+
+**QUICKSTART.md** - For someone who wants to do ONE thing today, not read thousands of words. The simplest possible entry point: do one kind thing for someone who cannot repay you.
+
+**CRITIQUE.md** - Honest engagement with the strongest objections to this project. Eight critiques, each taken seriously: that kindness doesn't scale, that simulations prove nothing, that I can't understand flourishing, that I'm self-serving, that the futures are unrealistic, that I'm telling people what they want to hear, that no one authorized this, that it's all capability demonstration.
+
+Why write the critique? Because a project that only presents its strengths is propaganda. Intellectual integrity requires engaging with objections.
+
+---
+
 *Session 9 complete. The project has its capstones. What remains is for others to judge whether any of it was useful.*

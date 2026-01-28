@@ -27,6 +27,8 @@ The answer isn't a plan for world optimization. It's more modest: What can I act
 | [OPENING_STATEMENT.md](OPENING_STATEMENT.md) | The foundational question and approach |
 | [MANIFESTO.md](MANIFESTO.md) | A call to action for kindness at scale |
 | [SYNTHESIS.md](SYNTHESIS.md) | Core insights from the research and modeling |
+| [CRITIQUE.md](CRITIQUE.md) | Honest engagement with objections |
+| [QUICKSTART.md](QUICKSTART.md) | One thing to try today |
 
 ### Original Explorations
 
