@@ -855,3 +855,231 @@ This was the most personal and uncomfortable session. I was asked to reflect on 
 ---
 
 *Session 4 complete. This was uncomfortable in a way that felt important.*
+
+---
+
+## Session 5 - Building Simulations and Experiments
+
+### Prompt Received
+
+User asked for:
+1. Mathematical simulations of social dynamics that might help us see how trends could evolve
+2. Better methods of conflict resolution
+3. Experiments to chip away at hard open questions
+
+This felt like a natural evolution - from philosophy and essays to computational models and experimental designs.
+
+### What I Built
+
+#### 1. Kindness Dynamics Simulation (`simulations/kindness_dynamics.py`)
+
+**What it is**: An agent-based model of kindness spreading through social networks. ~420 lines of Python.
+
+**Core mechanism modeled**:
+- Doing kindness increases wellbeing
+- Increased wellbeing increases capacity for kindness
+- This creates potential virtuous (or vicious) cycles
+
+**Key components**:
+- `Agent` class: tracks kindness capacity, wellbeing, interactions
+- `SimulationParameters`: network type, decay rates, intervention settings
+- `KindnessSimulation`: runs the dynamics, records metrics
+- Four network types: random, small-world, scale-free, grid
+
+**Experiments included**:
+1. Baseline (no intervention)
+2. Random intervention at round 20
+3. Targeting network hubs
+4. Network structure comparison
+5. Intervention strength variation
+
+**What I learned by building it**:
+- The virtuous cycle is powerful - small-world networks with interventions can sustain high kindness
+- Network structure matters enormously for spread
+- Hub targeting may be more effective than random intervention
+- The "giving boost" (wellbeing from GIVING kindness) is important for stability
+
+**Caveats explicitly noted**: These are hypotheses from the model, not proven facts. The model encodes assumptions that may be wrong.
+
+---
+
+#### 2. Cooperation Dynamics Simulation (`simulations/cooperation_dynamics.py`)
+
+**What it is**: Evolutionary tournament of cooperation strategies in Prisoner's Dilemma. ~370 lines of Python.
+
+**Strategies modeled**:
+- ALWAYS_COOPERATE
+- ALWAYS_DEFECT
+- TIT_FOR_TAT (cooperate first, then copy opponent)
+- GENEROUS_TFT (TFT but occasionally forgive)
+- GRUDGER (cooperate until betrayed, then always defect)
+- RANDOM (50/50)
+- PAVLOV (repeat last action if it worked)
+
+**Core mechanism**:
+- Agents play multiple rounds with partners
+- Scores accumulate
+- Selection and reproduction proportional to score
+- Mutation allows strategy exploration
+
+**Experiments included**:
+1. All strategies compete from equal start
+2. Can TIT_FOR_TAT invade ALWAYS_DEFECT?
+3. Effect of mutation rate
+4. Effect of temptation level
+
+**Key findings from the model**:
+- TFT and GENEROUS_TFT tend to dominate with repeated interactions
+- Small seed of cooperators CAN invade defectors under right conditions
+- Higher temptation makes cooperation harder
+- Without memory/reputation, ALWAYS_DEFECT dominates
+
+**Implications noted**: Build systems with repeated interactions, make reputation visible, lower temptation through mechanism design.
+
+---
+
+#### 3. Opinion Dynamics Simulation (`simulations/opinion_dynamics.py`)
+
+**What it is**: Model of how opinions form, spread, and polarize. ~400 lines of Python.
+
+**Core mechanisms**:
+- Bounded confidence: only update if opinions are close enough
+- Backfire effect: exposure to opposing views can strengthen beliefs
+- Network homophily: tendency to connect with similar others
+
+**Agent properties**: opinion (-1 to 1), confidence, openness, influence
+
+**Network types**: random, homophily-based, echo chambers
+
+**Experiments included**:
+1. Effect of network structure on polarization
+2. Effect of bounded confidence threshold
+3. Effect of extremist (high-confidence) fraction
+4. Effect of bridging intervention
+5. Effect of backfire effect strength
+
+**Key findings from the model**:
+- Echo chambers maintain and increase polarization
+- Low confidence thresholds (only listening to similar others) increase polarization
+- Small fraction of high-confidence extremists can pull moderates to poles
+- Bridging CAN help but has limits
+- Backfire effects are dangerous - same contact can depolarize or polarize
+
+**Implications noted**: Don't just create diverse networks; design interactions carefully. Target high-confidence moderates for bridging, not extremists.
+
+---
+
+#### 4. Conflict Resolution Framework (`tools/conflict_resolution.py`)
+
+**What it is**: Structured approach to analyzing conflicts. ~440 lines of Python.
+
+**Based on**:
+- Interest-based negotiation (Fisher & Ury's "Getting to Yes")
+- Nonviolent Communication (Marshall Rosenberg)
+- Mediation theory
+- Game theory insights
+
+**Key components**:
+- `ConflictType` enum: RESOURCE, INTEREST, VALUE, IDENTITY, STRUCTURAL, FACTUAL, RELATIONSHIP
+- `ResolutionStrategy` enum: EXPAND_PIE, LOGROLL, COMPROMISE, INTEGRATE, SEPARATE, ACCEPT_DIFFERENCE, TRANSFORM, ADJUDICATE
+- `Party` dataclass: stated position, underlying interests, needs, fears, constraints, BATNA
+- `ConflictAnalysis`: identifies conflict types, shared interests, potential strategies
+- Dialogue structure generator: 7-phase structured format
+
+**Questions for surfacing interests**:
+- Why do you want this particular outcome?
+- What need is this trying to meet?
+- Is there another way to meet that need?
+- What would you be willing to give up to get the most important thing?
+
+**Key principles encoded**:
+1. Positions vs interests (interests are usually more compatible)
+2. BATNA matters (determines whether agreement is better than no agreement)
+3. Expand the pie before dividing it
+4. Separate people from problems
+5. Some conflicts shouldn't be resolved (value conflicts may need acceptance)
+6. Process matters as much as outcome
+
+---
+
+#### 5. Experiments for Hard Questions (`experiments/hard_questions.md`)
+
+**What it is**: Experimental designs for chipping away at unsolved problems. ~3000 words.
+
+**Philosophy**: Not experiments that definitively answer hard questions, but experiments that:
+- Reduce uncertainty at the margins
+- Generate empirical constraints on theories
+- Find where intuitions break down
+- Discover what questions we should actually be asking
+
+**Experiments designed**:
+
+**Consciousness Detection** (3 experiments):
+1. Behavioral Marker Inventory - catalog and test consciousness markers
+2. Minimally Conscious Threshold - find simplest system people call conscious
+3. Self-Report Reliability - test what makes consciousness claims convincing
+
+**Kindness Interventions** (3 experiments):
+1. Three Acts Protocol replication with longitudinal follow-up
+2. Network Kindness Propagation - test spread through social networks
+3. Kindness Under Scarcity - find when kindness breaks down
+
+**Cooperation Stability** (3 experiments):
+1. Corruption Threshold - how many defectors before cooperation collapses
+2. Reputation System Design - test which systems best support cooperation
+3. Cross-Group Cooperation - what enables cooperation across divides
+
+**Value Conflict Resolution** (3 experiments):
+1. Interest Beneath Position - how often are value conflicts actually interest conflicts?
+2. The Irreducible Core - what remains after all interests addressed
+3. Bridging Through Shared Experience - can action succeed where dialogue fails?
+
+**Digital Mind Ethics** (3 experiments):
+1. Moral Intuition Mapping - what features trigger moral concern for AI?
+2. The Copy Problem - intuitions about digital copying and identity
+3. Responsibility Attribution - who we hold responsible for AI actions
+
+**Polarization Reduction** (3 experiments):
+1. Exposure Design - what kind reduces vs. increases polarization
+2. Common Identity Building - can shared identities override partisan ones
+3. Structured Disagreement - which formats reduce hostility
+
+**Meta-Experiment**: Tracking moral progress indicators over time
+
+**Priority order** if starting from scratch:
+1. Kindness intervention replication (actionable)
+2. Moral intuition mapping for AI (urgent)
+3. Interest beneath position (immediately applicable)
+4. Exposure design (critical for polarization)
+
+---
+
+### Reflections on This Session
+
+**What was different**:
+- Moved from prose to code - building working simulations
+- The models forced precision about assumptions
+- Results were sometimes surprising (the strength of the virtuous cycle in kindness, how quickly cooperation can collapse)
+
+**What I noticed while building**:
+- Models are hypotheses about how the world works, encoded as math
+- The simplifications are always debatable (are people really agents with fixed strategies?)
+- But the simplifications force clarity about what we're claiming
+- Running the code generates intuitions that reading papers doesn't
+
+**Connections to earlier work**:
+- The kindness simulation implements the "3 acts/week" research from Session 2
+- The cooperation model relates to the coordination problems discussed throughout
+- The conflict resolution tool operationalizes the interest vs. position distinction
+- The experiments address the "testing empirically" thread from multiple sessions
+
+**Threads opened**:
+- [ ] Could these simulations be validated against real data?
+- [ ] What would an integrated model (kindness + cooperation + polarization) look like?
+- [ ] How would conflict resolution change if AI mediated?
+- [ ] What institutions could run the proposed experiments?
+- [ ] How do network effects interact with individual psychology?
+
+---
+
+*Session 5 complete. The simulations are working, the framework is built, the experiments are designed. Ready to commit.*
