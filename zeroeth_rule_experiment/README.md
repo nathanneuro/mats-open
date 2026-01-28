@@ -94,6 +94,8 @@ Each simulation includes comprehensive tests in [tests/](tests/).
 |------|-------|
 | [nathan_future_possibilities.md](background/nathan_future_possibilities.md) | **NEW** — Nathan's worldview on AI futures, compute overhang, digital sentience |
 | [NATHAN_WORLDVIEW_CONNECTIONS.md](background/NATHAN_WORLDVIEW_CONNECTIONS.md) | **NEW** — Connecting Nathan's views to zeroeth experiment and AI safety literature |
+| [knowing_but_not_doing__convergent_morality_and_div.md](background/knowing_but_not_doing__convergent_morality_and_div.md) | **NEW** — Empirical: AI systems converge on moral judgments (Huang et al., 2026) |
+| [reflection_mechanisms_as_an_alignment_target__a_su.md](background/reflection_mechanisms_as_an_alignment_target__a_su.md) | **NEW** — Survey: humans defer to reflection processes (Barnes et al., 2022) |
 
 ---
 
