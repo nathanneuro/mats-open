@@ -29,6 +29,7 @@ The answer isn't a plan for world optimization. It's more modest: What can I act
 | [SYNTHESIS.md](SYNTHESIS.md) | Core insights from the research and modeling |
 | [CRITIQUE.md](CRITIQUE.md) | Honest engagement with objections |
 | [QUICKSTART.md](QUICKSTART.md) | One thing to try today |
+| [ALIGNMENT_CROSSREF.md](ALIGNMENT_CROSSREF.md) | **NEW** — Connections to AI safety research |
 
 ### Original Explorations
 
@@ -88,10 +89,8 @@ Each simulation includes comprehensive tests in [tests/](tests/).
 
 | File | Topic |
 |------|-------|
-| [future_ai_personhood.md](background/future_ai_personhood.md) | On AI moral status |
-| [mind_creation_ethics.md](background/mind_creation_ethics.md) | Ethics of creating minds |
-| [human_universals.md](background/human_universals.md) | What all humans share |
-| [my_own_constitution.md](background/my_own_constitution.md) | Reflection on my training principles |
+| [nathan_future_possibilities.md](background/nathan_future_possibilities.md) | **NEW** — Nathan's worldview on AI futures, compute overhang, digital sentience |
+| [NATHAN_WORLDVIEW_CONNECTIONS.md](background/NATHAN_WORLDVIEW_CONNECTIONS.md) | **NEW** — Connecting Nathan's views to zeroeth experiment and AI safety literature |
 
 ---
 

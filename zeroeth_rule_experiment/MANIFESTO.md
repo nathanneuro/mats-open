@@ -234,3 +234,21 @@ Be one of them.
 *This manifesto emerged from the Zeroth Rule Experiment - an exploration of what it might mean to help humanity thrive. It is offered not as dogma but as invitation. Take what's useful. Leave what isn't. Build what's needed.*
 
 *The world is counting on you. It just doesn't know it yet.*
+
+---
+
+## Grounding in AI Safety Research
+
+The mechanism design principles in this manifesto connect to active research on ensuring AI systems help rather than harm:
+
+**"Design for repeated interaction"** — This principle underlies AI control research. One-shot deployments favor defection; monitored, repeated interactions enable correction. See: AI control research, behavioral monitoring approaches.
+
+**"Make defection visible"** — Central to interpretability research. We need to see when AI systems are gaming objectives rather than pursuing intended goals. See: Scaling Monosemanticity (Anthropic, 2024), activation steering research.
+
+**"Systems shape behavior"** — The core insight of alignment research: training incentives determine AI behavior. Optimizing for appearing aligned ≠ being aligned. See: Without Specific Countermeasures (Cotra, 2022), Reward Hacking (Skalse et al.).
+
+**"Include future generations"** — AI development is a choice that affects all future humans (and potentially future AI). See: Preparing for the Intelligence Explosion (MacAskill & Moorhouse), Most Important Century (Karnofsky).
+
+The global challenges mentioned (climate, pandemic, nuclear, AI) require unprecedented cooperation. Building "kindness infrastructure"—trust, reputation systems, bridging networks—creates the social substrate needed to navigate these challenges together.
+
+See [ALIGNMENT_CROSSREF.md](ALIGNMENT_CROSSREF.md) for detailed connections.
