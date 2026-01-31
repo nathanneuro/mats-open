@@ -49,7 +49,85 @@ Before starting any operation:
 
 ## Tools Available
 
-(TODO: Document the specific CLI/library tools as they're built)
+The primary tool is the `vastai` CLI. Install with `pip install vastai`.
+
+### Essential Commands
+
+```bash
+# Setup (one-time)
+vastai set api-key YOUR_API_KEY
+
+# Search for GPU instances
+vastai search offers 'reliability > 0.95 num_gpus=1 gpu_ram >= 24' --order 'dph'
+# Filters: reliability, num_gpus, gpu_ram, compute_cap, disk_space, dph ($/hr), etc.
+# Order: dph (cheapest first), gpu_ram, num_gpus, etc. Add '-' for descending
+
+# Create an instance (ID from search results)
+vastai create instance 12345678 \
+  --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime \
+  --disk 50 \
+  --ssh \
+  --direct \
+  --onstart-cmd "echo 'ready'"
+
+# List your running instances
+vastai show instances
+vastai show instances --raw  # JSON output for parsing
+
+# Get SSH connection string
+vastai ssh-url INSTANCE_ID
+# Returns something like: ssh -p 12345 root@hostname.vast.ai
+
+# View instance logs
+vastai logs INSTANCE_ID
+
+# Stop/start/reboot (without destroying)
+vastai stop instance INSTANCE_ID
+vastai start instance INSTANCE_ID
+vastai reboot instance INSTANCE_ID
+
+# Destroy instance (permanent - deletes all data)
+vastai destroy instance INSTANCE_ID
+```
+
+### Typical Workflow Commands
+
+```bash
+# 1. Find a cheap 24GB GPU
+vastai search offers 'reliability > 0.95 gpu_ram >= 24 dph < 0.50' --order 'dph' --limit 5
+
+# 2. Create instance with PyTorch
+vastai create instance OFFER_ID --image pytorch/pytorch --disk 50 --ssh --direct
+
+# 3. Wait and check status
+vastai show instances  # Look for status to become "running"
+
+# 4. Get SSH command
+SSH_CMD=$(vastai ssh-url INSTANCE_ID --raw | jq -r '.ssh_command')
+
+# 5. Connect and run
+$SSH_CMD "nvidia-smi"  # Verify GPU
+rsync -avz --exclude '.git' ./ root@host:~/project/  # Sync code
+$SSH_CMD "cd ~/project && python train.py"
+
+# 6. Retrieve results
+rsync -avz root@host:~/project/outputs/ ./outputs/
+
+# 7. Cleanup
+vastai destroy instance INSTANCE_ID
+```
+
+### Parsing JSON Output
+
+Use `--raw` flag to get JSON output for programmatic use:
+
+```bash
+# Get instance details as JSON
+vastai show instances --raw | jq '.[] | {id, status: .actual_status, cost: .dph_total}'
+
+# Get SSH host and port
+vastai ssh-url INSTANCE_ID --raw | jq -r '.ssh_host, .ssh_port'
+```
 
 ## State Files
 

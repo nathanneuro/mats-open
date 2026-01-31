@@ -2,19 +2,17 @@
 
 ## Phase 1: Core Infrastructure
 
-- [ ] Vast.ai API wrapper
-  - [ ] Authentication (API key management)
-  - [ ] Instance search/filtering
-  - [ ] Instance create/destroy
-  - [ ] Instance status polling
-- [ ] SSH utilities
-  - [ ] Connection with retry logic
-  - [ ] Command execution
-  - [ ] File transfer (rsync wrapper)
+Uses the official `vastai` CLI (`pip install vastai`) rather than building a custom wrapper.
+
+- [ ] Helper scripts wrapping vastai CLI
+  - [ ] `scripts/wait-for-instance.sh` - Poll until instance is running
+  - [ ] `scripts/ssh-with-retry.sh` - SSH with exponential backoff
+  - [ ] `scripts/sync-code.sh` - rsync with .gitignore awareness
+  - [ ] `scripts/sync-results.sh` - Pull artifacts back
 - [ ] State management
-  - [ ] Instance tracking
-  - [ ] Experiment state
-  - [ ] Cost tracking
+  - [ ] Instance tracking (JSON files)
+  - [ ] Experiment state (per-experiment dirs)
+  - [ ] Cost tracking (parse from vastai output)
 
 ## Phase 2: Experiment Lifecycle
 
