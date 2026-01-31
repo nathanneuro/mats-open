@@ -129,6 +129,96 @@ vastai show instances --raw | jq '.[] | {id, status: .actual_status, cost: .dph_
 vastai ssh-url INSTANCE_ID --raw | jq -r '.ssh_host, .ssh_port'
 ```
 
+## Hugging Face CLI
+
+For downloading models and datasets. Install with `pip install huggingface_hub`.
+
+### Authentication
+
+Users must have a Hugging Face token for gated/private models. Check if authenticated:
+
+```bash
+# Check local auth
+hf auth whoami
+
+# Check if HF_TOKEN is set
+echo $HF_TOKEN
+```
+
+**For remote instances**, pass the token via environment variable:
+
+```bash
+# On the remote instance, set HF_TOKEN before downloading
+export HF_TOKEN=hf_xxxxxxxxxxxxx
+
+# Or pass inline with commands
+HF_TOKEN=hf_xxx hf download meta-llama/Llama-2-7b-hf
+```
+
+### Downloading Models
+
+```bash
+# Download entire model to cache
+hf download meta-llama/Llama-2-7b-hf
+
+# Download to specific directory (better for Vast.ai - survives cache clears)
+hf download meta-llama/Llama-2-7b-hf --local-dir ./models/llama-2-7b
+
+# Download specific files only
+hf download meta-llama/Llama-2-7b-hf config.json tokenizer.json
+
+# Download with filters (e.g., only safetensors, skip fp16)
+hf download stabilityai/stable-diffusion-xl-base-1.0 \
+  --include "*.safetensors" --exclude "*.fp16.*"
+
+# Quiet mode - just prints final path
+hf download gpt2 --quiet
+```
+
+### Downloading Datasets
+
+```bash
+# Download dataset
+hf download bigcode/the-stack --repo-type dataset
+
+# Specific revision/branch
+hf download bigcode/the-stack --repo-type dataset --revision v1.1
+
+# To local directory
+hf download wikitext --repo-type dataset --local-dir ./data/wikitext
+```
+
+### Workflow: Models on Vast.ai
+
+```bash
+# 1. Check user has HF token locally
+if [ -z "$HF_TOKEN" ] && [ ! -f ~/.cache/huggingface/token ]; then
+    echo "Please set HF_TOKEN or run: hf auth login"
+    exit 1
+fi
+
+# 2. Get token value (prefer env var, fall back to file)
+HF_TOKEN="${HF_TOKEN:-$(cat ~/.cache/huggingface/token 2>/dev/null)}"
+
+# 3. On remote instance, download model with token
+ssh -p PORT root@HOST "HF_TOKEN=$HF_TOKEN hf download meta-llama/Llama-2-7b-hf --local-dir /root/models/llama-2-7b"
+```
+
+### Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `HF_TOKEN` | Auth token (overrides saved token) |
+| `HF_HOME` | Cache directory (default: `~/.cache/huggingface`) |
+| `HF_HUB_DOWNLOAD_TIMEOUT` | Download timeout in seconds |
+
+### Tips for Vast.ai
+
+1. **Use `--local-dir`**: The HF cache can be large and confusing. Explicit directories are clearer.
+2. **Check disk space first**: Models are large. `df -h` before downloading.
+3. **Download early**: Start downloads before running experiments to catch auth issues.
+4. **Gated models**: User must have accepted license on huggingface.co first.
+
 ## State Files
 
 vasticlaude uses simple state files to track active experiments:

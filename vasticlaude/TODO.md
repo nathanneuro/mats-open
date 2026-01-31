@@ -4,11 +4,14 @@
 
 Uses the official `vastai` CLI (`pip install vastai`) rather than building a custom wrapper.
 
-- [ ] Helper scripts wrapping vastai CLI
-  - [ ] `scripts/wait-for-instance.sh` - Poll until instance is running
-  - [ ] `scripts/ssh-with-retry.sh` - SSH with exponential backoff
-  - [ ] `scripts/sync-code.sh` - rsync with .gitignore awareness
-  - [ ] `scripts/sync-results.sh` - Pull artifacts back
+- [x] Helper scripts wrapping vastai CLI
+  - [x] `scripts/wait-for-instance.sh` - Poll until instance is running
+  - [x] `scripts/ssh-with-retry.sh` - SSH with exponential backoff
+  - [x] `scripts/sync-code.sh` - rsync with .gitignore awareness
+  - [x] `scripts/sync-results.sh` - Pull artifacts back
+- [x] Hugging Face integration
+  - [x] Document `hf` CLI in CLAUDE.md
+  - [x] `scripts/hf-download-remote.sh` - Download models/datasets to instance
 - [ ] State management
   - [ ] Instance tracking (JSON files)
   - [ ] Experiment state (per-experiment dirs)
