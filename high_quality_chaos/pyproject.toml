@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "high-quality-chaos"
+version = "0.1.0"
+description = "Inject entropy into text while preserving semantic content - anti-mode-collapse text transformer"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.39.0",
+    "nltk>=3.8",
+    "requests>=2.31",
+    "rich>=13.0",
+    "click>=8.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+chaos = "high_quality_chaos.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/high_quality_chaos"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
