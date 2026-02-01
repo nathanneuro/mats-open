@@ -1,0 +1,68 @@
+# Example .vasticlaude/config.yaml for a project
+# Place this in your repo's .vasticlaude/ directory
+
+# GPU requirements
+gpu:
+  # Minimum VRAM in GB
+  min_vram: 24
+  # Preferred GPU types (in order of preference)
+  prefer:
+    - RTX_4090
+    - RTX_3090
+    - A100_PCIE
+
+# Instance requirements
+instance:
+  # Minimum disk space in GB
+  min_disk: 50
+  # Minimum RAM in GB
+  min_ram: 32
+  # Preferred regions (for latency)
+  prefer_regions:
+    - US
+    - EU
+
+# Cost limits
+budget:
+  # Max $/hr for instance
+  max_hourly: 1.00
+  # Max total spend per experiment
+  max_per_experiment: 10.00
+  # Prefer interruptible/spot instances
+  prefer_spot: true
+
+# Code sync
+sync:
+  # Files/dirs to always sync
+  include:
+    - "*.py"
+    - "requirements.txt"
+    - "configs/"
+  # Files/dirs to never sync
+  exclude:
+    - ".git/"
+    - "__pycache__/"
+    - "*.pyc"
+    - "data/"  # Usually too large; handle separately
+    - "outputs/"
+
+# Environment setup
+setup:
+  # Docker image to use (optional)
+  docker_image: pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
+  # Or: commands to run after instance is ready
+  commands:
+    - pip install -r requirements.txt
+
+# Checkpointing
+checkpoints:
+  # Where the experiment saves checkpoints
+  path: outputs/checkpoints/
+  # How often to sync checkpoints back (seconds)
+  sync_interval: 300
+
+# Artifacts to retrieve when done
+artifacts:
+  - outputs/
+  - logs/
+  - "*.json"
