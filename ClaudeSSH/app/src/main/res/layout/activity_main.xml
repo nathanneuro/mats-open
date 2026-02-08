@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/terminal_bg"
+    tools:context=".MainActivity">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/surface"
+        app:layout_constraintTop_toTopOf="parent"
+        app:titleTextColor="@color/text_primary">
+
+        <!-- Status indicator -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <View
+                android:id="@+id/statusIndicator"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/status_disconnected" />
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/disconnected"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </com.google.android.material.appbar.MaterialToolbar>
+
+    <!-- Terminal output (scrollable history) -->
+    <com.claudessh.app.terminal.TerminalView
+        android:id="@+id/terminalView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintBottom_toTopOf="@id/extraKeysBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Arrow key overlay (transparent, on top of terminal) -->
+    <com.claudessh.app.ui.ArrowOverlayView
+        android:id="@+id/arrowOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintBottom_toTopOf="@id/extraKeysBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Scroll to bottom FAB -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/scrollBottomFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:src="@drawable/ic_arrow_down"
+        android:visibility="gone"
+        android:contentDescription="@string/scroll_to_bottom"
+        app:fabSize="mini"
+        app:backgroundTint="@color/accent"
+        app:tint="@color/text_primary"
+        app:layout_constraintBottom_toTopOf="@id/extraKeysBar"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Extra keys bar (Tab, Esc, Ctrl combos) -->
+    <HorizontalScrollView
+        android:id="@+id/extraKeysBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface"
+        android:scrollbars="none"
+        app:layout_constraintBottom_toTopOf="@id/inputBar">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="4dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyTab"
+                style="@style/ExtraKeyButton"
+                android:text="TAB" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyEsc"
+                style="@style/ExtraKeyButton"
+                android:text="ESC" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyCtrlC"
+                style="@style/ExtraKeyButton"
+                android:text="^C" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyCtrlD"
+                style="@style/ExtraKeyButton"
+                android:text="^D" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyCtrlZ"
+                style="@style/ExtraKeyButton"
+                android:text="^Z" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyCtrlL"
+                style="@style/ExtraKeyButton"
+                android:text="^L" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyCtrlA"
+                style="@style/ExtraKeyButton"
+                android:text="^A" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyCtrlE"
+                style="@style/ExtraKeyButton"
+                android:text="^E" />
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- Input bar -->
+    <LinearLayout
+        android:id="@+id/inputBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/surface"
+        android:padding="4dp"
+        android:gravity="center_vertical"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/inputEditText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/input_hint"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:background="@drawable/input_background"
+            android:padding="10dp"
+            android:textSize="14sp"
+            android:fontFamily="monospace"
+            android:imeOptions="actionSend"
+            android:inputType="text"
+            android:singleLine="true" />
+
+        <ImageButton
+            android:id="@+id/sendButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_send"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/send"
+            app:tint="@color/accent" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
