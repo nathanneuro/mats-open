@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Terminal colors -->
+    <color name="terminal_bg">#1E1E1E</color>
+    <color name="terminal_fg">#D3D7CF</color>
+
+    <!-- App chrome -->
+    <color name="background">#121212</color>
+    <color name="surface">#1E1E1E</color>
+    <color name="surface_variant">#2D2D2D</color>
+
+    <!-- Accent - Claude orange/amber -->
+    <color name="accent">#D97706</color>
+    <color name="accent_dark">#B45309</color>
+
+    <!-- Text -->
+    <color name="text_primary">#EEEEEE</color>
+    <color name="text_secondary">#B4B4B4</color>
+    <color name="text_hint">#666666</color>
+
+    <!-- Status colors -->
+    <color name="status_connected">#4CAF50</color>
+    <color name="status_connecting">#FFC107</color>
+    <color name="status_disconnected">#666666</color>
+    <color name="error">#EF5350</color>
+
+    <!-- Divider -->
+    <color name="divider">#333333</color>
+</resources>
