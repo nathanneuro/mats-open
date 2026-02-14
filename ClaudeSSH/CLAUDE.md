@@ -3,8 +3,11 @@
 ## Project Overview
 Android app for SSH-ing into a server to use Claude Code via tmux. Not a general-purpose terminal - specifically designed for the Claude Code workflow.
 
+## Versioning Policy
+Keep all build tooling at latest stable versions: AGP, Kotlin, Gradle, compileSdk/targetSdk, and AndroidX dependencies. When upgrading, update everything together.
+
 ## Architecture
-- **Kotlin / Android SDK 34** (minSdk 26)
+- **Kotlin / Android SDK 35** (minSdk 26)
 - **MVVM-ish** with Repository pattern, Kotlin Coroutines + Flow
 - **ViewBinding** (no Compose)
 - **JSch** (`com.github.mwiede:jsch`) for SSH connections
@@ -33,6 +36,10 @@ AnsiParser converts raw terminal output with escape codes into Android Spannable
 
 ### Session History Persistence
 HistoryRepository saves plain-text session output to files on disk, keyed by connection name + timestamp. Users can scroll back through past sessions.
+
+## TODOs
+- [ ] Tmux window control buttons: create window, next window, close window (close only available if >1 window open)
+- [ ] Create cute pixel art app icon
 
 ## Build
 Standard Android Gradle build. No special setup required beyond Android SDK.
