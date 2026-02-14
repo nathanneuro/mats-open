@@ -39,5 +39,10 @@
             android:label="@string/tmux_sessions"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".InstructionsActivity"
+            android:label="@string/instructions"
+            android:parentActivityName=".MainActivity" />
+
     </application>
 </manifest>

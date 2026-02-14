@@ -106,12 +106,17 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun updateStageSpinners() {
         val providerNames = providerViews.mapIndexed { index, pv ->
-            val typeName = when (pv.getProviderType()) {
-                ProviderType.OPENROUTER -> "OpenRouter"
-                ProviderType.ANTHROPIC -> "Anthropic"
-                ProviderType.GEMINI -> "Google Gemini"
+            val modelName = pv.modelNameInput.text.toString().trim()
+            val shortName = if (modelName.isNotEmpty()) {
+                modelName.substringAfterLast("/")
+            } else {
+                when (pv.getProviderType()) {
+                    ProviderType.OPENROUTER -> "OpenRouter"
+                    ProviderType.ANTHROPIC -> "Anthropic"
+                    ProviderType.GEMINI -> "Gemini"
+                }
             }
-            "Provider ${index + 1}: $typeName"
+            shortName
         }
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, providerNames)
@@ -174,7 +179,7 @@ class SettingsActivity : AppCompatActivity() {
     ) {
         private val typeSpinner: Spinner = view.findViewById(R.id.providerTypeSpinner)
         private val apiKeyInput: EditText = view.findViewById(R.id.apiKeyInput)
-        private val modelNameInput: EditText = view.findViewById(R.id.modelNameInput)
+        val modelNameInput: EditText = view.findViewById(R.id.modelNameInput)
         private val removeButton: Button = view.findViewById(R.id.removeButton)
 
         init {
@@ -186,6 +191,12 @@ class SettingsActivity : AppCompatActivity() {
             if (hideRemoveButton) {
                 removeButton.visibility = View.GONE
             }
+
+            modelNameInput.addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: android.text.Editable?) { updateStageSpinners() }
+            })
 
             provider?.let {
                 typeSpinner.setSelection(when (it.type) {

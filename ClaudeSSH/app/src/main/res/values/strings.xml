@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ClaudePortal</string>
+    <string name="app_name">C_Portal</string>
 
     <!-- Connection status -->
     <string name="disconnected">Disconnected</string>
@@ -74,5 +74,33 @@
     <string name="action_connections">Connections</string>
     <string name="action_tmux">Tmux Sessions</string>
     <string name="action_settings">Settings</string>
+    <string name="action_instructions">SSH Key Setup</string>
     <string name="action_disconnect">Disconnect</string>
+
+    <!-- Instructions -->
+    <string name="instructions">SSH Key Setup</string>
+    <string name="instructions_intro">C_Portal uses SSH key authentication to connect to your server. Follow these steps to generate an Ed25519 keypair and set it up.</string>
+
+    <string name="instructions_step1_title">1. Generate the keypair</string>
+    <string name="instructions_step1_body">On your computer (or in Termux on Android), run:</string>
+    <string name="instructions_step1_cmd">ssh-keygen -t ed25519 -C \"my-phone\" -f ~/.ssh/phone_ed25519</string>
+
+    <string name="instructions_step2_title">2. Find your keys</string>
+    <string name="instructions_step2_body">This creates two files:\n\n~/.ssh/phone_ed25519 — your private key (secret!)\n~/.ssh/phone_ed25519.pub — your public key (safe to share)\n\nView the public key to copy it:</string>
+    <string name="instructions_step2_cmd">cat ~/.ssh/phone_ed25519.pub</string>
+
+    <string name="instructions_step3_title">3. Register the public key on your server</string>
+    <string name="instructions_step3_body">Copy the public key to your server\'s authorized_keys file. The easiest way:</string>
+    <string name="instructions_step3_cmd">ssh-copy-id -i ~/.ssh/phone_ed25519.pub user@your-server</string>
+
+    <string name="instructions_step4_title">4. Or add manually on the server</string>
+    <string name="instructions_step4_body">If ssh-copy-id isn\'t available, SSH into your server and paste the public key:</string>
+    <string name="instructions_step4_cmd">mkdir -p ~/.ssh \u0026\u0026 chmod 700 ~/.ssh\necho \"PASTE_YOUR_PUBLIC_KEY_HERE\" >> ~/.ssh/authorized_keys\nchmod 600 ~/.ssh/authorized_keys</string>
+
+    <string name="instructions_step5_title">5. Get the private key onto your phone</string>
+    <string name="instructions_step5_body">Transfer the private key file to your Android device. Some options:\n\n• USB cable: copy to Internal Storage or Downloads\n• ADB: adb push ~/.ssh/phone_ed25519 /sdcard/Download/\n• Email/messaging: send to yourself (delete after saving)\n• Termux: if you generated the key in Termux, it\'s already on your phone\n\nNote the file path where you save it:</string>
+    <string name="instructions_step5_cmd">/sdcard/Download/phone_ed25519</string>
+
+    <string name="instructions_step6_title">6. Configure C_Portal</string>
+    <string name="instructions_step6_body">Open Connections in C_Portal and create a new connection:\n\n• Name: anything you like\n• Host: your server\'s IP or hostname\n• Port: 22 (default)\n• Username: your server username\n• Auth: SSH Key\n• Private key path: the path from step 5\n\nThat\'s it! Tap the connection to connect.</string>
 </resources>

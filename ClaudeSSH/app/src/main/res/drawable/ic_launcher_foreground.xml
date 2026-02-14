@@ -6,37 +6,34 @@
     android:viewportHeight="108">
     <!-- Pixel art wizard hat with purple portal ring -->
 
-    <!-- Purple portal circle (outer, r=30, center 54,54) -->
+    <!-- Purple portal circle (outer, r=36, center 54,54) -->
     <path android:fillColor="#8B5CF6"
-        android:pathData="M24,54a30,30 0 1,0 60,0a30,30 0 1,0 -60,0z"/>
-    <!-- Inner cutout circle (r=24) -->
+        android:pathData="M18,54a36,36 0 1,0 72,0a36,36 0 1,0 -72,0z"/>
+    <!-- Inner cutout circle (r=30) -->
     <path android:fillColor="#B45309"
-        android:pathData="M30,54a24,24 0 1,0 48,0a24,24 0 1,0 -48,0z"/>
+        android:pathData="M24,54a30,30 0 1,0 60,0a30,30 0 1,0 -60,0z"/>
 
-    <!-- Hat tip / point -->
-    <path android:fillColor="#FFFFFF" android:pathData="M51,32h6v3h-6z"/>
-
-    <!-- Hat body (tapers outward) -->
-    <path android:fillColor="#FFFFFF" android:pathData="M48,35h12v3H48z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M45,38h18v3H45z"/>
+    <!-- Narrow pointy wizard hat (triangle) -->
+    <!-- Tip -->
+    <path android:fillColor="#FFFFFF" android:pathData="M52,26h4v3h-4z"/>
+    <!-- Narrowing body -->
+    <path android:fillColor="#FFFFFF" android:pathData="M50,29h8v3h-8z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M48,32h12v3H48z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M46,35h16v3H46z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M44,38h20v3H44z"/>
     <path android:fillColor="#FFFFFF" android:pathData="M42,41h24v3H42z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M39,44h30v3H39z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M36,47h36v3H36z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M33,50h42v3H33z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M31,53h46v3H31z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M40,44h28v3H40z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M38,47h32v3H38z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M36,50h36v3H36z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M34,53h40v3H34z"/>
 
-    <!-- Hat brim -->
-    <path android:fillColor="#FFFFFF" android:pathData="M30,56h48v3H30z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M32,59h44v3H32z"/>
+    <!-- Brim (wide line) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M26,56h56v4H26z"/>
 
     <!-- Star decoration on hat -->
-    <path android:fillColor="#D97706" android:pathData="M52,41h3v3h-3z"/>
-    <path android:fillColor="#D97706" android:pathData="M49,44h9v3H49z"/>
-    <path android:fillColor="#D97706" android:pathData="M52,47h3v3h-3z"/>
-
-    <!-- Second star (lower) -->
-    <path android:fillColor="#D97706" android:pathData="M41,50h3v3h-3z"/>
-    <path android:fillColor="#D97706" android:pathData="M38,53h9v3H38z"/>
+    <path android:fillColor="#D97706" android:pathData="M52,38h3v3h-3z"/>
+    <path android:fillColor="#D97706" android:pathData="M49,41h9v3H49z"/>
+    <path android:fillColor="#D97706" android:pathData="M52,44h3v3h-3z"/>
 
     <!-- Terminal cursor below brim -->
     <path android:fillColor="#D97706" android:pathData="M42,66h3v3h-3z"/>
