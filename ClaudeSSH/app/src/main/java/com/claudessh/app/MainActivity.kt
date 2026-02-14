@@ -293,6 +293,10 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, SettingsActivity::class.java))
                 true
             }
+            R.id.action_instructions -> {
+                startActivity(Intent(this, InstructionsActivity::class.java))
+                true
+            }
             R.id.action_disconnect -> {
                 sshManager.disconnect()
                 true
