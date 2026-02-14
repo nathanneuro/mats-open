@@ -15,10 +15,9 @@ import androidx.lifecycle.lifecycleScope
 import com.crosscheck.app.api.ApiClient
 import com.crosscheck.app.data.ChatRepository
 import com.crosscheck.app.data.SettingsRepository
-import com.crosscheck.app.models.AppSettings
 import com.crosscheck.app.models.QueryMode
-import com.crosscheck.app.query.QueryManager
 import com.crosscheck.app.service.ChatNamingService
+import com.crosscheck.app.service.QueryService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.widget.Spinner
@@ -30,7 +29,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var chatRepository: ChatRepository
-    private lateinit var queryManager: QueryManager
     private lateinit var chatNamingService: ChatNamingService
 
     private lateinit var toolbar: Toolbar
@@ -59,7 +57,6 @@ class MainActivity : AppCompatActivity() {
         settingsRepository = SettingsRepository(this)
         chatRepository = ChatRepository(this)
         val apiClient = ApiClient()
-        queryManager = QueryManager(apiClient, chatRepository)
         chatNamingService = ChatNamingService(apiClient, chatRepository)
 
         initViews()
@@ -135,7 +132,6 @@ class MainActivity : AppCompatActivity() {
     private fun createNewChat() {
         lifecycleScope.launch {
             chatRepository.createChat()
-            // Clear the UI
             questionInput.text?.clear()
             responseContainer.visibility = View.GONE
             errorText.visibility = View.GONE
@@ -144,9 +140,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Check if there's an incomplete query from a crash/interruption
-     */
     private fun checkForCrashRecovery() {
         lifecycleScope.launch {
             val currentQuery = chatRepository.loadCurrentQuery()
@@ -156,7 +149,6 @@ class MainActivity : AppCompatActivity() {
                     "Recovered incomplete query from previous session",
                     Toast.LENGTH_LONG
                 ).show()
-                // Populate the UI with the failed query
                 questionInput.setText(currentQuery.question)
                 updateUIForRecoveredQuery(currentQuery)
             }
@@ -179,20 +171,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun retryQuery() {
-        val currentHistory = queryManager.getCurrentQueryHistory()
-        if (currentHistory != null && currentHistory.canRetry()) {
-            lifecycleScope.launch {
-                hideKeyboard()
-                Toast.makeText(
-                    this@MainActivity,
-                    getString(R.string.resuming_from_stage, currentHistory.getNextStage()),
-                    Toast.LENGTH_SHORT
-                ).show()
-                queryManager.retryQuery(currentHistory)
-            }
-        } else {
-            Toast.makeText(this, "Nothing to retry", Toast.LENGTH_SHORT).show()
+        if (QueryService.isRunning) {
+            Toast.makeText(this, "Query already in progress", Toast.LENGTH_SHORT).show()
+            return
         }
+        hideKeyboard()
+        QueryService.startRetry(this)
     }
 
     private fun submitQuery() {
@@ -200,6 +184,11 @@ class MainActivity : AppCompatActivity() {
 
         if (question.isEmpty()) {
             Toast.makeText(this, "Please enter a question", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (QueryService.isRunning) {
+            Toast.makeText(this, "Query already in progress", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -215,7 +204,6 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
 
-            // Get query mode from spinner
             val queryMode = when (queryModeSpinner.selectedItemPosition) {
                 0 -> QueryMode.ABC
                 1 -> QueryMode.AC
@@ -223,20 +211,14 @@ class MainActivity : AppCompatActivity() {
                 else -> QueryMode.ABC
             }
 
-            // Update settings with selected query mode
             settings = settings.copy(queryMode = queryMode)
-
             hideKeyboard()
 
-            // Check if this is the first query in the chat for auto-naming
+            QueryService.startQuery(this@MainActivity, question, settings)
+
+            // Auto-name chat after first query
             val chat = chatRepository.getCurrentChat()
-            val isFirstQuery = chat.queryCount == 0
-
-            queryManager.executeQuery(question, settings)
-
-            // Auto-name chat after first query completes
-            if (isFirstQuery && settings.utilityModel != null) {
-                // Wait a bit for the query to complete
+            if (chat.queryCount == 0 && settings.utilityModel != null) {
                 kotlinx.coroutines.delay(2000)
                 chatNamingService.autoNameChat(chat.id, question, settings.utilityModel!!)
             }
@@ -245,7 +227,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun observeQueryState() {
         lifecycleScope.launch {
-            queryManager.queryState.collect { state ->
+            QueryService.queryState.collect { state ->
                 updateUI(state)
             }
         }
@@ -262,10 +244,9 @@ class MainActivity : AppCompatActivity() {
             state.error != null -> {
                 errorText.text = getString(R.string.error_occurred, state.error)
                 errorText.visibility = View.VISIBLE
-                retryButton.visibility = View.VISIBLE // Show retry button on error!
+                retryButton.visibility = View.VISIBLE
                 submitButton.isEnabled = true
 
-                // Show any partial responses we have
                 if (state.firstResponse != null || state.secondResponse != null) {
                     responseContainer.visibility = View.VISIBLE
                     firstResponseText.text = state.firstResponse ?: ""
@@ -284,7 +265,6 @@ class MainActivity : AppCompatActivity() {
                 }
                 submitButton.isEnabled = false
 
-                // Show any partial responses we have while loading next stage
                 if (state.firstResponse != null || state.secondResponse != null) {
                     responseContainer.visibility = View.VISIBLE
                     firstResponseText.text = state.firstResponse ?: ""
@@ -339,10 +319,5 @@ class MainActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        queryManager.reset()
     }
 }

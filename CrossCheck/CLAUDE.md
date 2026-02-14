@@ -17,6 +17,7 @@ Android app that uses multiple AI models for cross-verified answers through a 3-
 - [x] Settings should be in the three dots menu alongside About (not a separate button)
 - [x] Selecting settings crashes app — added proper Toolbar to settings layout
 - [x] Icon art is slightly too high — shifted down 8 viewport units
+- [x] Queries cancel when app is backgrounded — now uses ForegroundService with notification
 
 ## Build
 ```

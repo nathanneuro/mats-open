@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">CrossCheck</string>
+    <string name="app_name">Cross Check</string>
     <string name="settings">Settings</string>
     <string name="ask_question">Ask a Question</string>
     <string name="question_hint">Enter your question here…</string>
