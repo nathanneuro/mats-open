@@ -66,14 +66,17 @@ class ArrowOverlayView @JvmOverloads constructor(
         strokeWidth = 2f
     }
 
-    private val buttonWidth = 56f  // dp
-    private val buttonHeightPortion = 0.5f // Each button takes half the view height
+    private val buttonSize = 56f  // dp — square buttons
+    private val buttonGap = 8f   // dp gap between buttons
+    private val bottomMargin = 24f // dp from bottom of view
 
     private var upPressed = false
     private var downPressed = false
 
     private val density = context.resources.displayMetrics.density
-    private val buttonWidthPx = buttonWidth * density
+    private val buttonSizePx = buttonSize * density
+    private val buttonGapPx = buttonGap * density
+    private val bottomMarginPx = bottomMargin * density
     private val cornerRadius = 12f * density
 
     override fun onDraw(canvas: Canvas) {
@@ -81,28 +84,32 @@ class ArrowOverlayView @JvmOverloads constructor(
 
         val viewWidth = width.toFloat()
         val viewHeight = height.toFloat()
-        val midY = viewHeight / 2
 
-        // Button position (left or right edge)
-        val buttonLeft = if (position == ArrowPosition.RIGHT) viewWidth - buttonWidthPx else 0f
-        val buttonRight = buttonLeft + buttonWidthPx
+        // Button position (left or right edge, near the bottom)
+        val buttonLeft = if (position == ArrowPosition.RIGHT) viewWidth - buttonSizePx - 8 * density else 8 * density
+        val buttonRight = buttonLeft + buttonSizePx
 
-        // Up button area
-        val upRect = RectF(buttonLeft, 0f, buttonRight, midY)
+        // Down button is at the bottom
+        val downBottom = viewHeight - bottomMarginPx
+        val downTop = downBottom - buttonSizePx
+
+        // Up button is above the down button with a gap
+        val upBottom = downTop - buttonGapPx
+        val upTop = upBottom - buttonSizePx
+
+        // Up button
+        val upRect = RectF(buttonLeft, upTop, buttonRight, upBottom)
         canvas.drawRoundRect(upRect, cornerRadius, cornerRadius, if (upPressed) bgPressedPaint else bgPaint)
 
-        // Down button area
-        val downRect = RectF(buttonLeft, midY, buttonRight, viewHeight)
+        // Down button
+        val downRect = RectF(buttonLeft, downTop, buttonRight, downBottom)
         canvas.drawRoundRect(downRect, cornerRadius, cornerRadius, if (downPressed) bgPressedPaint else bgPaint)
 
-        // Divider line
-        canvas.drawLine(buttonLeft + 8 * density, midY, buttonRight - 8 * density, midY, dividerPaint)
-
         // Up arrow
-        drawArrow(canvas, buttonLeft + buttonWidthPx / 2, midY / 2, true)
+        drawArrow(canvas, buttonLeft + buttonSizePx / 2, upTop + buttonSizePx / 2, true)
 
         // Down arrow
-        drawArrow(canvas, buttonLeft + buttonWidthPx / 2, midY + midY / 2, false)
+        drawArrow(canvas, buttonLeft + buttonSizePx / 2, downTop + buttonSizePx / 2, false)
     }
 
     private fun drawArrow(canvas: Canvas, cx: Float, cy: Float, isUp: Boolean) {
@@ -122,28 +129,36 @@ class ArrowOverlayView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        val viewWidth = width.toFloat()
         val viewHeight = height.toFloat()
-        val midY = viewHeight / 2
-        val buttonLeft = if (position == ArrowPosition.RIGHT) width - buttonWidthPx else 0f
-        val buttonRight = buttonLeft + buttonWidthPx
 
-        // Only handle touches within the button area
+        val buttonLeft = if (position == ArrowPosition.RIGHT) viewWidth - buttonSizePx - 8 * density else 8 * density
+        val buttonRight = buttonLeft + buttonSizePx
+
+        val downBottom = viewHeight - bottomMarginPx
+        val downTop = downBottom - buttonSizePx
+        val upBottom = downTop - buttonGapPx
+        val upTop = upBottom - buttonSizePx
+
+        // Only handle touches within the button areas
         if (event.x < buttonLeft || event.x > buttonRight) return false
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                if (event.y < midY) {
+                if (event.y >= upTop && event.y <= upBottom) {
                     upPressed = true
                     if (vibrateOnPress) {
                         performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                     }
                     onArrowUp?.invoke()
-                } else {
+                } else if (event.y >= downTop && event.y <= downBottom) {
                     downPressed = true
                     if (vibrateOnPress) {
                         performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                     }
                     onArrowDown?.invoke()
+                } else {
+                    return false
                 }
                 invalidate()
                 return true

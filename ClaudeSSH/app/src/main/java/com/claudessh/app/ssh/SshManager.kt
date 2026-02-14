@@ -167,6 +167,18 @@ class SshManager {
         }
     }
 
+    fun createTmuxWindow() {
+        sendInput("tmux new-window\r")
+    }
+
+    fun nextTmuxWindow() {
+        sendInput("tmux next-window\r")
+    }
+
+    fun closeTmuxWindow() {
+        sendInput("tmux if-shell '[ \$(tmux list-windows | wc -l) -gt 1 ]' kill-window\r")
+    }
+
     fun attachTmuxSession(sessionName: String) {
         sendInput("tmux attach-session -t $sessionName || tmux new-session -s $sessionName\r")
     }

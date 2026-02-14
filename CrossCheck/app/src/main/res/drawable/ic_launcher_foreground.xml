@@ -4,8 +4,38 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Checkmark icon for CrossCheck -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M38,54 L48,64 L70,42 L66,38 L48,56 L42,50 Z"/>
+    <!-- Pixel art question mark + checkmark -->
+
+    <!-- Question mark (left side) -->
+    <!-- Top curve -->
+    <path android:fillColor="#FFFFFF" android:pathData="M24,24h16v4H24z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M20,28h4v4h-4z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M40,28h4v4h-4z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M20,32h4v4h-4z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M40,32h4v4h-4z"/>
+    <!-- Right side descend -->
+    <path android:fillColor="#FFFFFF" android:pathData="M36,36h8v4h-8z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M32,40h8v4h-8z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M28,44h8v4h-8z"/>
+    <!-- Stem -->
+    <path android:fillColor="#FFFFFF" android:pathData="M28,48h8v4h-8z"/>
+    <!-- Gap -->
+    <!-- Dot -->
+    <path android:fillColor="#FFFFFF" android:pathData="M28,56h8v8h-8z"/>
+
+    <!-- Checkmark (right side) -->
+    <path android:fillColor="#A78BFA" android:pathData="M56,48h4v4h-4z"/>
+    <path android:fillColor="#A78BFA" android:pathData="M60,52h4v4h-4z"/>
+    <path android:fillColor="#A78BFA" android:pathData="M64,56h4v4h-4z"/>
+    <path android:fillColor="#A78BFA" android:pathData="M68,52h4v4h-4z"/>
+    <path android:fillColor="#A78BFA" android:pathData="M72,48h4v4h-4z"/>
+    <path android:fillColor="#A78BFA" android:pathData="M76,44h4v4h-4z"/>
+    <path android:fillColor="#A78BFA" android:pathData="M80,40h4v4h-4z"/>
+
+    <!-- Cross / X between them (the "cross" in crosscheck) -->
+    <path android:fillColor="#D97706" android:pathData="M48,36h4v4h-4z"/>
+    <path android:fillColor="#D97706" android:pathData="M52,40h4v4h-4z"/>
+    <path android:fillColor="#D97706" android:pathData="M48,44h4v4h-4z"/>
+    <path android:fillColor="#D97706" android:pathData="M56,36h4v4h-4z"/>
+    <path android:fillColor="#D97706" android:pathData="M56,44h4v4h-4z"/>
 </vector>

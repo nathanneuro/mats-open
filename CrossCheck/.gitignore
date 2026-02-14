@@ -79,6 +79,9 @@ lint-results*.html
 # Android Profiling
 *.hprof
 
+# Windows
+gradlew.bat
+
 # Mac files
 .DS_Store
 

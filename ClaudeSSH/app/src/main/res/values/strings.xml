@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Claude SSH</string>
+    <string name="app_name">ClaudePortal</string>
 
     <!-- Connection status -->
     <string name="disconnected">Disconnected</string>
@@ -64,6 +64,11 @@
     <string name="history_cleared">Session history cleared</string>
     <string name="save_settings">Save Settings</string>
     <string name="settings_saved">Settings saved</string>
+
+    <!-- Tmux window controls -->
+    <string name="tmux_new_window">+W</string>
+    <string name="tmux_next_window">W></string>
+    <string name="tmux_close_window">XW</string>
 
     <!-- Menu -->
     <string name="action_connections">Connections</string>

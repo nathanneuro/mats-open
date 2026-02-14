@@ -5,6 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:background="@color/terminal_bg"
     tools:context=".MainActivity">
 
@@ -129,6 +130,21 @@
                 android:id="@+id/keyCtrlE"
                 style="@style/ExtraKeyButton"
                 android:text="^E" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyTmuxNew"
+                style="@style/ExtraKeyButton"
+                android:text="@string/tmux_new_window" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyTmuxNext"
+                style="@style/ExtraKeyButton"
+                android:text="@string/tmux_next_window" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyTmuxClose"
+                style="@style/ExtraKeyButton"
+                android:text="@string/tmux_close_window" />
 
         </LinearLayout>
     </HorizontalScrollView>
