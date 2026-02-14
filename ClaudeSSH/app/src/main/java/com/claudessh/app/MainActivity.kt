@@ -125,11 +125,7 @@ class MainActivity : AppCompatActivity() {
         binding.keyTab.setOnClickListener { sshManager.sendKeyPress(KeyCode.TAB) }
         binding.keyEsc.setOnClickListener { sshManager.sendKeyPress(KeyCode.ESCAPE) }
         binding.keyCtrlC.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_C) }
-        binding.keyCtrlD.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_D) }
-        binding.keyCtrlZ.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_Z) }
-        binding.keyCtrlL.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_L) }
-        binding.keyCtrlA.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_A) }
-        binding.keyCtrlE.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_E) }
+
 
         binding.keyTmuxNew.setOnClickListener { sshManager.createTmuxWindow() }
         binding.keyTmuxNext.setOnClickListener { sshManager.nextTmuxWindow() }
