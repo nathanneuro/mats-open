@@ -4,12 +4,14 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Pixel art wizard hat with purple portal border -->
+    <!-- Pixel art wizard hat with purple portal ring -->
 
-    <!-- Purple portal ring (outer) -->
-    <path android:fillColor="#8B5CF6" android:pathData="M24,24h60v60H24z"/>
-    <!-- Inner cutout (background color) -->
-    <path android:fillColor="#B45309" android:pathData="M30,30h48v48H30z"/>
+    <!-- Purple portal circle (outer, r=30, center 54,54) -->
+    <path android:fillColor="#8B5CF6"
+        android:pathData="M24,54a30,30 0 1,0 60,0a30,30 0 1,0 -60,0z"/>
+    <!-- Inner cutout circle (r=24) -->
+    <path android:fillColor="#B45309"
+        android:pathData="M30,54a24,24 0 1,0 48,0a24,24 0 1,0 -48,0z"/>
 
     <!-- Hat tip / point -->
     <path android:fillColor="#FFFFFF" android:pathData="M51,32h6v3h-6z"/>
