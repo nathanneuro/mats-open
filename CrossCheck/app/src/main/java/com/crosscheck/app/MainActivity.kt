@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -36,9 +37,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var queryModeSpinner: Spinner
     private lateinit var questionInput: EditText
     private lateinit var submitButton: Button
-    private lateinit var settingsButton: Button
-    private lateinit var newChatButton: Button
-    private lateinit var historyButton: Button
+    private lateinit var newChatButton: ImageButton
+    private lateinit var historyButton: ImageButton
     private lateinit var retryButton: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
@@ -76,7 +76,6 @@ class MainActivity : AppCompatActivity() {
         queryModeSpinner = findViewById(R.id.queryModeSpinner)
         questionInput = findViewById(R.id.questionInput)
         submitButton = findViewById(R.id.submitButton)
-        settingsButton = findViewById(R.id.settingsButton)
         newChatButton = findViewById(R.id.newChatButton)
         historyButton = findViewById(R.id.historyButton)
         retryButton = findViewById(R.id.retryButton)
@@ -94,10 +93,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupListeners() {
         submitButton.setOnClickListener {
             submitQuery()
-        }
-
-        settingsButton.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
         }
 
         newChatButton.setOnClickListener {
@@ -334,6 +329,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java))
+                true
+            }
             R.id.action_about -> {
                 startActivity(Intent(this, AboutActivity::class.java))
                 true

@@ -33,6 +33,8 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
+        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.settings)
 
@@ -75,9 +77,10 @@ class SettingsActivity : AppCompatActivity() {
             updateStageSpinners()
 
             if (settings.queryOrder.size == 3) {
-                stage1Spinner.setSelection(settings.queryOrder[0])
-                stage2Spinner.setSelection(settings.queryOrder[1])
-                stage3Spinner.setSelection(settings.queryOrder[2])
+                val maxIndex = providerViews.size - 1
+                stage1Spinner.setSelection(settings.queryOrder[0].coerceIn(0, maxIndex))
+                stage2Spinner.setSelection(settings.queryOrder[1].coerceIn(0, maxIndex))
+                stage3Spinner.setSelection(settings.queryOrder[2].coerceIn(0, maxIndex))
             }
         }
     }

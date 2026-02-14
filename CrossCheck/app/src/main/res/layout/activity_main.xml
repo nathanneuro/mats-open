@@ -46,25 +46,24 @@
                     android:background="@android:color/transparent"
                     android:layout_marginEnd="8dp" />
 
-                <Button
+                <ImageButton
                     android:id="@+id/newChatButton"
-                    style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/new_chat"
-                    android:textColor="@color/purple_primary"
-                    app:icon="@android:drawable/ic_input_add"
-                    app:iconTint="@color/purple_primary" />
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="16dp"
+                    android:src="@android:drawable/ic_input_add"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/new_chat"
+                    app:tint="@color/purple_primary" />
 
-                <Button
+                <ImageButton
                     android:id="@+id/historyButton"
-                    style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/history"
-                    android:textColor="@color/purple_primary"
-                    app:icon="@android:drawable/ic_menu_recent_history"
-                    app:iconTint="@color/purple_primary" />
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/history"
+                    app:tint="@color/purple_primary" />
 
             </LinearLayout>
 
@@ -281,31 +280,13 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <LinearLayout
+                <Button
+                    android:id="@+id/submitButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="8dp">
-
-                    <Button
-                        android:id="@+id/submitButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/submit"
-                        android:backgroundTint="@color/purple_primary" />
-
-                    <Button
-                        android:id="@+id/settingsButton"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="@string/settings"
-                        app:strokeColor="@color/purple_primary"
-                        android:textColor="@color/purple_primary" />
-
-                </LinearLayout>
+                    android:layout_marginTop="8dp"
+                    android:text="@string/submit"
+                    android:backgroundTint="@color/purple_primary" />
 
             </LinearLayout>
 
