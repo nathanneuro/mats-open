@@ -103,7 +103,7 @@ class ConnectionActivity : AppCompatActivity() {
             .setView(dialogBinding.root)
             .setPositiveButton(R.string.save) { _, _ ->
                 val profile = ConnectionProfile(
-                    id = existing?.id ?: ConnectionProfile().id,
+                    id = existing?.id ?: java.util.UUID.randomUUID().toString(),
                     name = dialogBinding.editName.text.toString().ifBlank { "Server" },
                     host = dialogBinding.editHost.text.toString(),
                     port = dialogBinding.editPort.text.toString().toIntOrNull() ?: 22,
