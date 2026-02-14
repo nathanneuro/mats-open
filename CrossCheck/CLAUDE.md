@@ -14,7 +14,9 @@ Android app that uses multiple AI models for cross-verified answers through a 3-
 
 ## TODOs
 - [x] Create cute pixel art app icon
-- [ ] Settings should be in the three dots menu alongside About (not a separate button)
+- [x] Settings should be in the three dots menu alongside About (not a separate button)
+- [x] Selecting settings crashes app — added proper Toolbar to settings layout
+- [x] Icon art is slightly too high — shifted down 8 viewport units
 
 ## Build
 ```
