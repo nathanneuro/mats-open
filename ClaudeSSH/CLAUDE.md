@@ -38,8 +38,10 @@ AnsiParser converts raw terminal output with escape codes into Android Spannable
 HistoryRepository saves plain-text session output to files on disk, keyed by connection name + timestamp. Users can scroll back through past sessions.
 
 ## TODOs
-- [ ] Tmux window control buttons: create window, next window, close window (close only available if >1 window open)
-- [ ] Create cute pixel art app icon
+- [x] Tmux window control buttons: create window, next window, close window (close only available if >1 window open)
+- [x] Create cute pixel art app icon
+- [x] Up/down arrow buttons should be square and near the bottom of the screen
+- [x] Respect the top status bar and bottom navigation bar — shrink content to be within the two
 
 ## Build
 Standard Android Gradle build. No special setup required beyond Android SDK.

@@ -131,6 +131,10 @@ class MainActivity : AppCompatActivity() {
         binding.keyCtrlA.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_A) }
         binding.keyCtrlE.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_E) }
 
+        binding.keyTmuxNew.setOnClickListener { sshManager.createTmuxWindow() }
+        binding.keyTmuxNext.setOnClickListener { sshManager.nextTmuxWindow() }
+        binding.keyTmuxClose.setOnClickListener { sshManager.closeTmuxWindow() }
+
         binding.scrollBottomFab.setOnClickListener {
             binding.terminalView.scrollToBottom()
             binding.scrollBottomFab.visibility = View.GONE

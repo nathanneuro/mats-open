@@ -13,7 +13,8 @@ Android app that uses multiple AI models for cross-verified answers through a 3-
 - **JSONL** storage format for chat history
 
 ## TODOs
-- [ ] Create cute pixel art app icon
+- [x] Create cute pixel art app icon
+- [ ] Settings should be in the three dots menu alongside About (not a separate button)
 
 ## Build
 ```
