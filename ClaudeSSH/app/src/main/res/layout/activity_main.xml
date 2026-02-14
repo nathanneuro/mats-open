@@ -107,31 +107,6 @@
                 android:text="^C" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/keyCtrlD"
-                style="@style/ExtraKeyButton"
-                android:text="^D" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/keyCtrlZ"
-                style="@style/ExtraKeyButton"
-                android:text="^Z" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/keyCtrlL"
-                style="@style/ExtraKeyButton"
-                android:text="^L" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/keyCtrlA"
-                style="@style/ExtraKeyButton"
-                android:text="^A" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/keyCtrlE"
-                style="@style/ExtraKeyButton"
-                android:text="^E" />
-
-            <com.google.android.material.button.MaterialButton
                 android:id="@+id/keyTmuxNew"
                 style="@style/ExtraKeyButton"
                 android:text="@string/tmux_new_window" />
