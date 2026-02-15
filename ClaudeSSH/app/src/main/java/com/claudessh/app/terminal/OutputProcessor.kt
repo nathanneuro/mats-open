@@ -47,20 +47,21 @@ class OutputProcessor(
     val plainTextFlow: SharedFlow<String> = _plainTextFlow
 
     companion object {
-        private val THINKING_SYMBOLS = setOf('✶', '✻', '✽', '·', '✢', '*', '●')
-        private val THINKING_SYMBOLS_STR = "✶✻✽·✢*●"
+        private val THINKING_SYMBOLS = setOf('✶', '✻', '✽', '·', '✢', '*')
+        private val THINKING_SYMBOLS_STR = "✶✻✽·✢*"
         private val FENCE_CHARS = setOf('─', '═', '━', '-', '=')
         // A line that is ONLY a thinking symbol (with optional whitespace)
         private val LONE_THINKING_SYMBOL = Regex("^\\s*[$THINKING_SYMBOLS_STR]\\s*$")
         // Trailing dots/ellipsis in any form: .., ..., …, Unicode variants
         private val ELLIPSIS = Regex("[.…\u2024\u2025]+\\s*$")
-        // A content line that's really a Claude Code UI element:
-        // Option 1: thinking_symbol + text (tool use, status, etc.)
-        //   e.g. "● Bash(ls -la)", "✶ Running", "● Read(file.kt)"
+        // A content line that's really a Claude Code thinking/status UI element:
+        // Option 1: thinking_symbol + short text + ellipsis (status update)
+        //   e.g. "✶ Thinking...", "● Running…", "Compacting conversation…"
+        //   NOT tool-use lines like "● Read(file.kt)" or "● Bash(ls -la)"
         // Option 2: short capitalized text ending with ellipsis (no symbol)
-        //   e.g. "Compacting conversation…", "Thinking..."
+        //   e.g. "Compacting conversation…"
         private val STATUS_LINE_PATTERN = Regex(
-            "^\\s*[$THINKING_SYMBOLS_STR]\\s+(.+?)\\s*$" +
+            "^\\s*[$THINKING_SYMBOLS_STR]\\s+([A-Z][a-z]{2,}(?:\\s+\\w+){0,3})[.…\u2024\u2025]{1,3}\\s*$" +
             "|^\\s*([A-Z][a-z]{2,}(?:\\s+\\w+){0,3})[.…\u2024\u2025]{1,3}\\s*$"
         )
         // Regex to detect tmux status bar: black text on green background
@@ -108,10 +109,7 @@ class OutputProcessor(
                 extractTmuxBar()
             }
             ChunkType.INCREMENTAL -> {
-                // Normal output — also check for tmux bar in case it arrived
-                // as part of an incremental chunk (e.g., first tmux attach)
                 endThinkingIfNoSymbols()
-                extractTmuxBar()
             }
         }
 
@@ -536,23 +534,37 @@ class OutputProcessor(
     // --- Tmux bar extraction ---
 
     private fun extractTmuxBar() {
-        // The tmux bar is typically the last row of the screen
+        // The tmux bar is typically the last row of the screen.
+        // Tmux format: "[session] 0:bash  1:claude*  2:htop-"
+        //   - One [session] bracket at the start
+        //   - Then space-separated window entries: N:name
+        //   - Active window has * suffix, last window has - suffix
         val lastRow = screen.getRowText(rows - 1)
         if (lastRow.isBlank()) return
 
-        // Parse window entries: patterns like [0] bash  [1] claude*
-        val windowPattern = "\\[(\\d+)]\\s+([^\\[\\]]+?)(?=\\s*\\[|\\s*$)".toRegex()
-        val matches = windowPattern.findAll(lastRow).toList()
+        // Must start with [session_name] to be a tmux bar
+        val sessionMatch = "^\\[([^\\]]+)]\\s+".toRegex().find(lastRow) ?: return
+
+        // Extract window entries from the rest of the line.
+        // Windows are left-aligned, separated by 1-2 spaces. Right-side status
+        // (hostname, time) is separated by a large gap (3+ spaces).
+        // Truncate at the first gap of 3+ spaces to avoid matching e.g. "14:32".
+        val afterSession = lastRow.substring(sessionMatch.range.last + 1)
+        val gapIndex = afterSession.indexOf("   ")
+        val windowsText = if (gapIndex >= 0) afterSession.substring(0, gapIndex) else afterSession
+
+        val windowPattern = "(\\d+):(\\S+)".toRegex()
+        val matches = windowPattern.findAll(windowsText).toList()
 
         if (matches.isEmpty()) return
 
         val windows = matches.map { match ->
             val index = match.groupValues[1].toIntOrNull() ?: 0
-            val name = match.groupValues[2].trim()
-            val isActive = name.endsWith("*") || name.endsWith("*-")
+            val rawName = match.groupValues[2]
+            val isActive = rawName.endsWith("*") || rawName.endsWith("*-")
             TmuxWindow(
                 index = index,
-                name = name.removeSuffix("*").removeSuffix("*-").removeSuffix("-").trim(),
+                name = rawName.removeSuffix("*").removeSuffix("*-").removeSuffix("-"),
                 isActive = isActive
             )
         }

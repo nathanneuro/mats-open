@@ -76,37 +76,42 @@
         app:layout_constraintBottom_toTopOf="@id/statusBar"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Claude Code status bar (cost, tokens, model info) — always present, fixed height -->
+    <!-- Claude Code status bar (cost, tokens, model info) — always present -->
     <TextView
         android:id="@+id/statusBar"
-        android:layout_width="match_parent"
-        android:layout_height="24dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:background="#FF252530"
         android:fontFamily="monospace"
-        android:gravity="center_vertical"
         android:paddingHorizontal="12dp"
+        android:paddingVertical="2dp"
         android:textColor="#FF8888AA"
-        android:textSize="11sp"
+        android:textSize="13sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/thinkingIndicator" />
 
-    <!-- Thinking indicator — always present, fixed height, content shown/hidden -->
+    <!-- Thinking indicator — always present, content shown/hidden -->
     <FrameLayout
         android:id="@+id/thinkingIndicator"
-        android:layout_width="match_parent"
-        android:layout_height="28dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:background="#FF2D2D2D"
         android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/tmuxBar">
 
         <!-- Symbol in fixed-width box, centered, so size changes don't shift text -->
         <TextView
             android:id="@+id/thinkingSymbol"
-            android:layout_width="24dp"
-            android:layout_height="match_parent"
+            android:layout_width="20dp"
+            android:layout_height="wrap_content"
             android:layout_gravity="center_vertical|start"
             android:gravity="center"
             android:textColor="#FFFFCC00"
-            android:textSize="18sp"
+            android:textSize="13sp"
             android:fontFamily="monospace"
             android:visibility="invisible" />
 
@@ -114,10 +119,9 @@
         <TextView
             android:id="@+id/thinkingStatus"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_gravity="center_vertical|start"
-            android:layout_marginStart="28dp"
-            android:gravity="center_vertical"
+            android:layout_marginStart="22dp"
             android:textColor="@color/text_secondary"
             android:textSize="13sp"
             android:fontFamily="monospace"
