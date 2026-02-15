@@ -99,11 +99,14 @@ class MainActivity : AppCompatActivity() {
                 binding.statusBar.visibility = View.VISIBLE
                 binding.thinkingIndicator.visibility = View.VISIBLE
                 showKeyboard()
-                // Re-scroll after layout settles from bars + keyboard appearing
-                // Use fullScroll directly to avoid re-triggering onHistoryModeChanged
+                // Re-scroll after layout settles from bars + keyboard appearing.
+                // Two passes: once after bars appear, again after keyboard animation.
                 binding.terminalView.postDelayed({
                     binding.terminalView.fullScroll(View.FOCUS_DOWN)
-                }, 300)
+                }, 200)
+                binding.terminalView.postDelayed({
+                    binding.terminalView.fullScroll(View.FOCUS_DOWN)
+                }, 500)
             }
         }
     }
@@ -250,17 +253,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeOutput() {
-        // Feed raw SSH output to the OutputProcessor
-        lifecycleScope.launch {
-            sshManager.outputFlow.collectLatest { rawOutput ->
+        // Feed raw SSH output to the OutputProcessor on a background thread
+        // to avoid blocking the UI during heavy screen interpretation + diffing
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            sshManager.outputFlow.collect { rawOutput ->
                 outputProcessor.processRawOutput(rawOutput)
             }
         }
 
-        // Consume deduplicated content lines
+        // Consume deduplicated content lines (skip while viewing history)
         lifecycleScope.launch {
             outputProcessor.contentFlow.collectLatest { lines ->
-                binding.terminalView.appendLines(lines)
+                if (!binding.terminalView.isViewingHistory()) {
+                    binding.terminalView.appendLines(lines)
+                }
             }
         }
 
@@ -376,8 +382,12 @@ class MainActivity : AppCompatActivity() {
         val activeWindow = update.windows.getOrNull(update.activeIndex)
         if (activeWindow != null) {
             if (activeWindow.index != lastActiveWindowIndex) {
-                // Switched tmux windows — enter live mode
+                // Switched tmux windows — clear scrollback and enter live mode.
+                // The old window's history isn't relevant, and replaying
+                // the new window's history would overwhelm the UI thread.
                 lastActiveWindowIndex = activeWindow.index
+                binding.terminalView.clear()
+                outputProcessor.resetDiffState()
                 binding.terminalView.scrollToBottom()
             }
             historyBuffer.setActiveWindow(activeWindow.index)

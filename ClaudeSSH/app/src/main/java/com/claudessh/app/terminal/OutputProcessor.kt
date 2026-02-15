@@ -583,6 +583,11 @@ class OutputProcessor(
             .replace(Regex("\u001b[()][A-Z0-9]"), "")
     }
 
+    /** Reset diff state (e.g. after tmux window switch). */
+    fun resetDiffState() {
+        previousSnapshot = null
+    }
+
     fun destroy() {
         thinkingTimeoutJob?.cancel()
         scope.cancel()
