@@ -50,7 +50,8 @@ dependencies {
     implementation(libs.lifecycle.runtime)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.coroutines.android)
-    implementation(libs.jsch)
+    implementation(libs.sshj)
+    implementation(libs.bcprov)
     implementation(libs.datastore.preferences)
     implementation(libs.gson)
 

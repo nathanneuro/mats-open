@@ -3,23 +3,27 @@ package com.claudessh.app.ssh
 import com.claudessh.app.models.AuthMethod
 import com.claudessh.app.models.ConnectionProfile
 import com.claudessh.app.models.TmuxSession
-import com.jcraft.jsch.*
+import net.schmizz.sshj.SSHClient
+import net.schmizz.sshj.connection.channel.direct.Session as SshjSession
+import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.io.InputStream
+import android.util.Log
+import java.io.File
 import java.io.OutputStream
-import java.util.Properties
+import java.security.Security
 
 class SshManager {
 
-    private var session: Session? = null
-    private var channel: ChannelShell? = null
+    private var client: SSHClient? = null
+    private var session: SshjSession? = null
+    private var shell: SshjSession.Shell? = null
     private var outputStream: OutputStream? = null
-    private var inputStream: InputStream? = null
-    private var readJob: Job? = null
+    private var readerThread: Thread? = null
+    @Volatile private var shellReady = false
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState
@@ -29,85 +33,111 @@ class SshManager {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    suspend fun connect(profile: ConnectionProfile): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun connect(profile: ConnectionProfile, filesDir: File? = null): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             _connectionState.value = ConnectionState.Connecting(profile.name)
 
-            val jsch = JSch()
+            // Replace Android's crippled BC with full BouncyCastle for ed25519 support
+            Security.removeProvider("BC")
+            try {
+                val provider = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider")
+                    .getDeclaredConstructor().newInstance() as java.security.Provider
+                Security.insertProviderAt(provider, 1)
+                Log.d("SshManager", "Full BouncyCastle provider registered at position 1")
+            } catch (e: Exception) {
+                Log.w("SshManager", "BouncyCastle provider not available: ${e.message}")
+            }
+
+            val ssh = SSHClient()
+            ssh.addHostKeyVerifier(PromiscuousVerifier())
+            ssh.connection.keepAlive.keepAliveInterval = 15
+            ssh.connectTimeout = 15000
+            ssh.timeout = 15000
+
+            Log.d("SshManager", "Connecting to ${profile.host}:${profile.port}")
+            ssh.connect(profile.host, profile.port)
+            Log.d("SshManager", "TCP connected, authenticating as ${profile.username}")
 
             if (profile.authMethod == AuthMethod.KEY && profile.privateKeyPath != null) {
-                jsch.addIdentity(profile.privateKeyPath)
+                val keyFile = if (filesDir != null) {
+                    File(File(filesDir, "keys"), profile.privateKeyPath)
+                } else {
+                    File(profile.privateKeyPath)
+                }
+                ssh.authPublickey(profile.username, keyFile.absolutePath)
+            } else if (profile.authMethod == AuthMethod.PASSWORD && profile.password != null) {
+                ssh.authPassword(profile.username, profile.password)
             }
+            Log.d("SshManager", "Authenticated")
 
-            val sshSession = jsch.getSession(profile.username, profile.host, profile.port)
+            client = ssh
 
-            if (profile.authMethod == AuthMethod.PASSWORD && profile.password != null) {
-                sshSession.setPassword(profile.password)
-            }
+            val sess = ssh.startSession()
+            sess.allocatePTY("xterm-256color", 80, 24, 0, 0, emptyMap())
+            val sh = sess.startShell()
+            session = sess
+            shell = sh
+            outputStream = sh.outputStream
 
-            val config = Properties()
-            config["StrictHostKeyChecking"] = "no"
-            sshSession.setConfig(config)
-            sshSession.timeout = 15000
-
-            sshSession.connect()
-            session = sshSession
-
-            val shell = sshSession.openChannel("shell") as ChannelShell
-            shell.setPtyType("xterm-256color")
-            shell.setPtySize(80, 24, 640, 480)
-
-            inputStream = shell.inputStream
-            outputStream = shell.outputStream
-
-            shell.connect()
-            channel = shell
+            // Reader thread: read from shell's inputStream and emit to outputFlow
+            readerThread = Thread({
+                val buf = ByteArray(8192)
+                val input = sh.inputStream
+                try {
+                    while (!Thread.currentThread().isInterrupted) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        if (!shellReady) {
+                            shellReady = true
+                            Log.d("SshManager", "Shell ready (first output received)")
+                        }
+                        val text = String(buf, 0, n)
+                        val preview = text.take(80).replace("\n", "\\n").replace("\r", "\\r")
+                        Log.d("SshManager", "Received $n bytes: $preview")
+                        _outputFlow.tryEmit(text)
+                    }
+                } catch (e: Exception) {
+                    if (!Thread.currentThread().isInterrupted) {
+                        Log.e("SshManager", "Reader error: ${e.message}")
+                    }
+                }
+                Log.d("SshManager", "Reader thread exiting")
+                if (_connectionState.value is ConnectionState.Connected) {
+                    _connectionState.value = ConnectionState.Disconnected
+                }
+            }, "ssh-reader")
+            readerThread!!.isDaemon = true
+            readerThread!!.start()
 
             _connectionState.value = ConnectionState.Connected(profile.name)
-
-            startReadLoop()
+            Log.d("SshManager", "Shell started, connected")
 
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e("SshManager", "Connect failed: ${e.message}", e)
             _connectionState.value = ConnectionState.Error(e.message ?: "Connection failed")
             Result.failure(e)
         }
     }
 
-    private fun startReadLoop() {
-        readJob = scope.launch {
-            val buffer = ByteArray(8192)
-            try {
-                while (isActive && channel?.isConnected == true) {
-                    val stream = inputStream ?: break
-                    val available = stream.available()
-                    if (available > 0) {
-                        val bytesRead = stream.read(buffer, 0, minOf(available, buffer.size))
-                        if (bytesRead > 0) {
-                            val text = String(buffer, 0, bytesRead)
-                            _outputFlow.emit(text)
-                        }
-                    } else {
-                        delay(10)
-                    }
-                }
-            } catch (e: Exception) {
-                if (isActive) {
-                    _connectionState.value = ConnectionState.Error("Connection lost: ${e.message}")
-                }
-            }
-        }
-    }
-
     fun sendInput(text: String) {
-        scope.launch {
+        val out = outputStream
+        Log.d("SshManager", "sendInput: '${text.replace("\r", "\\r")}' stream=${out?.javaClass?.name}")
+        if (out == null) {
+            _connectionState.value = ConnectionState.Error("Send failed: not connected")
+            return
+        }
+        Thread {
             try {
-                outputStream?.write(text.toByteArray())
-                outputStream?.flush()
+                val bytes = text.toByteArray()
+                out.write(bytes)
+                out.flush()
+                Log.d("SshManager", "Sent ${bytes.size} bytes")
             } catch (e: Exception) {
+                Log.e("SshManager", "Send failed: ${e.javaClass.simpleName}: ${e.message}", e)
                 _connectionState.value = ConnectionState.Error("Send failed: ${e.message}")
             }
-        }
+        }.start()
     }
 
     fun sendKeyPress(keyCode: KeyCode) {
@@ -130,22 +160,20 @@ class SshManager {
     }
 
     fun resizeTerminal(cols: Int, rows: Int) {
-        channel?.setPtySize(cols, rows, cols * 8, rows * 16)
+        // Intentionally not sending resize to the server.
+        // We keep the default 80x24 PTY so programs output full-width text,
+        // and the TerminalView wraps it locally for the phone screen.
     }
 
     suspend fun listTmuxSessions(): Result<List<TmuxSession>> = withContext(Dispatchers.IO) {
         try {
-            val execChannel = session?.openChannel("exec") as? ChannelExec
-                ?: return@withContext Result.failure(Exception("Not connected"))
+            val ssh = client ?: return@withContext Result.failure(Exception("Not connected"))
 
-            execChannel.setCommand("tmux list-sessions -F '#{session_name}|#{session_windows}|#{session_created}|#{session_attached}' 2>/dev/null")
-            execChannel.inputStream = null
-
-            val resultStream = execChannel.inputStream
-            execChannel.connect()
-
-            val output = resultStream.bufferedReader().readText()
-            execChannel.disconnect()
+            val execSession = ssh.startSession()
+            val cmd = execSession.exec("tmux list-sessions -F '#{session_name}|#{session_windows}|#{session_created}|#{session_attached}' 2>/dev/null")
+            val output = cmd.inputStream.bufferedReader().readText()
+            cmd.join()
+            execSession.close()
 
             val sessions = output.lines()
                 .filter { it.isNotBlank() }
@@ -168,40 +196,69 @@ class SshManager {
     }
 
     fun createTmuxWindow() {
-        sendInput("tmux new-window\r")
+        execTmuxCommand("tmux new-window")
     }
 
     fun nextTmuxWindow() {
-        sendInput("tmux next-window\r")
+        execTmuxCommand("tmux next-window")
     }
 
     fun closeTmuxWindow() {
-        sendInput("tmux if-shell '[ \$(tmux list-windows | wc -l) -gt 1 ]' kill-window\r")
+        execTmuxCommand("tmux if-shell '[ \$(tmux list-windows | wc -l) -gt 1 ]' kill-window")
     }
 
-    fun attachTmuxSession(sessionName: String) {
-        sendInput("tmux attach-session -t $sessionName || tmux new-session -s $sessionName\r")
+    fun selectTmuxWindow(index: Int) {
+        execTmuxCommand("tmux select-window -t $index")
     }
 
     fun createTmuxSessionWithClaude(sessionName: String) {
-        sendInput("tmux new-session -d -s $sessionName 'claude' && tmux attach-session -t $sessionName\r")
+        execTmuxCommand("tmux new-session -d -s $sessionName 'claude' && tmux attach-session -t $sessionName")
+    }
+
+    private fun execTmuxCommand(command: String) {
+        Thread {
+            try {
+                val ssh = client ?: return@Thread
+                val execSession = ssh.startSession()
+                val cmd = execSession.exec(command)
+                cmd.join()
+                execSession.close()
+                Log.d("SshManager", "Exec: $command")
+            } catch (e: Exception) {
+                Log.w("SshManager", "Exec failed ($command): ${e.message}")
+            }
+        }.start()
+    }
+
+    fun attachTmuxSession(sessionName: String) {
+        Thread {
+            Thread.sleep(500)
+            if (sessionName.isBlank()) {
+                sendInput("tmux new-session -A\r")
+            } else {
+                sendInput("tmux new-session -A -s $sessionName\r")
+            }
+        }.start()
     }
 
     fun disconnect() {
-        readJob?.cancel()
+        readerThread?.interrupt()
+        readerThread = null
         try {
-            channel?.disconnect()
-            session?.disconnect()
+            shell?.close()
+            session?.close()
+            client?.disconnect()
         } catch (_: Exception) {}
-        channel = null
+        shell = null
         session = null
+        client = null
         outputStream = null
-        inputStream = null
+        shellReady = false
         _connectionState.value = ConnectionState.Disconnected
     }
 
     fun isConnected(): Boolean {
-        return session?.isConnected == true && channel?.isConnected == true
+        return client?.isConnected == true
     }
 
     fun destroy() {

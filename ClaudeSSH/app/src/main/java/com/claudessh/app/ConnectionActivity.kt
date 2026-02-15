@@ -1,12 +1,14 @@
 package com.claudessh.app
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -18,6 +20,7 @@ import com.claudessh.app.databinding.DialogConnectionBinding
 import com.claudessh.app.models.AuthMethod
 import com.claudessh.app.models.ConnectionProfile
 import kotlinx.coroutines.launch
+import java.io.File
 
 class ConnectionActivity : AppCompatActivity() {
 
@@ -25,6 +28,33 @@ class ConnectionActivity : AppCompatActivity() {
     private val connectionRepo by lazy { ConnectionRepository(this) }
     private val connections = mutableListOf<ConnectionProfile>()
     private lateinit var adapter: ConnectionAdapter
+
+    // State for the file picker callback
+    private var pendingKeyFilename: String? = null
+    private var activeDialogBinding: DialogConnectionBinding? = null
+
+    private val pickKeyFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri ?: return@registerForActivityResult
+        val dialogBinding = activeDialogBinding ?: return@registerForActivityResult
+
+        val filename = "key_${System.currentTimeMillis()}"
+        val keysDir = File(filesDir, "keys")
+        keysDir.mkdirs()
+        val destFile = File(keysDir, filename)
+
+        try {
+            contentResolver.openInputStream(uri)?.use { input ->
+                destFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            pendingKeyFilename = filename
+            dialogBinding.textKeyStatus.text = getString(R.string.key_imported)
+            dialogBinding.textKeyStatus.setTextColor(getColor(R.color.status_connected))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to import key: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,19 +100,31 @@ class ConnectionActivity : AppCompatActivity() {
 
     private fun showEditDialog(existing: ConnectionProfile?) {
         val dialogBinding = DialogConnectionBinding.inflate(layoutInflater)
+        activeDialogBinding = dialogBinding
+        pendingKeyFilename = existing?.privateKeyPath
 
         existing?.let { profile ->
             dialogBinding.editName.setText(profile.name)
             dialogBinding.editHost.setText(profile.host)
             dialogBinding.editPort.setText(profile.port.toString())
             dialogBinding.editUsername.setText(profile.username)
-            dialogBinding.editKeyPath.setText(profile.privateKeyPath ?: "")
             dialogBinding.editPassword.setText(profile.password ?: "")
-            dialogBinding.editTmuxSession.setText(profile.tmuxSessionName)
             dialogBinding.editStartCommand.setText(profile.startCommand ?: "")
             dialogBinding.switchAutoTmux.isChecked = profile.autoAttachTmux
             dialogBinding.radioKey.isChecked = profile.authMethod == AuthMethod.KEY
             dialogBinding.radioPassword.isChecked = profile.authMethod == AuthMethod.PASSWORD
+
+            if (profile.authMethod == AuthMethod.KEY && profile.privateKeyPath != null) {
+                val keyFile = File(File(filesDir, "keys"), profile.privateKeyPath)
+                if (keyFile.exists()) {
+                    dialogBinding.textKeyStatus.text = getString(R.string.key_imported)
+                    dialogBinding.textKeyStatus.setTextColor(getColor(R.color.status_connected))
+                }
+            }
+        }
+
+        dialogBinding.buttonBrowseKey.setOnClickListener {
+            pickKeyFile.launch(arrayOf("*/*"))
         }
 
         dialogBinding.authMethodGroup.setOnCheckedChangeListener { _, checkedId ->
@@ -109,15 +151,18 @@ class ConnectionActivity : AppCompatActivity() {
                     port = dialogBinding.editPort.text.toString().toIntOrNull() ?: 22,
                     username = dialogBinding.editUsername.text.toString(),
                     authMethod = if (dialogBinding.radioKey.isChecked) AuthMethod.KEY else AuthMethod.PASSWORD,
-                    privateKeyPath = dialogBinding.editKeyPath.text.toString().ifBlank { null },
+                    privateKeyPath = if (dialogBinding.radioKey.isChecked) pendingKeyFilename else null,
                     password = dialogBinding.editPassword.text.toString().ifBlank { null },
                     autoAttachTmux = dialogBinding.switchAutoTmux.isChecked,
-                    tmuxSessionName = dialogBinding.editTmuxSession.text.toString().ifBlank { "claude" },
-                    startCommand = dialogBinding.editStartCommand.text.toString().ifBlank { "claude" }
+                    tmuxSessionName = "",
+                    startCommand = dialogBinding.editStartCommand.text.toString().ifBlank { null }
                 )
                 saveConnection(profile)
+                activeDialogBinding = null
             }
-            .setNegativeButton(R.string.cancel, null)
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                activeDialogBinding = null
+            }
             .show()
     }
 

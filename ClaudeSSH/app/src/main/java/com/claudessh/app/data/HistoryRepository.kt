@@ -4,21 +4,12 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.*
 
 class HistoryRepository(private val context: Context) {
 
-    private val historyDir: File
+    val historyDir: File
         get() = File(context.filesDir, "session_history").also { it.mkdirs() }
-
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US)
-
-    fun createSessionFile(connectionName: String): File {
-        val timestamp = dateFormat.format(Date())
-        val safeName = connectionName.replace(Regex("[^a-zA-Z0-9_-]"), "_")
-        return File(historyDir, "${safeName}_${timestamp}.txt")
-    }
 
     suspend fun appendToSession(file: File, text: String) = withContext(Dispatchers.IO) {
         file.appendText(text)

@@ -22,6 +22,14 @@ class AnsiParser {
     private var underline = false
     private var italic = false
 
+    /** Number of lines to delete from the end of existing output before appending. */
+    var pendingDeleteLines = 0
+        private set
+
+    /** If true, content in this chunk should replace backward (cursor-up was seen). */
+    var hasBackwardMovement = false
+        private set
+
     // Standard 8 ANSI colors
     private val ansiColors = intArrayOf(
         Color.parseColor("#000000"), // 0 Black
@@ -52,6 +60,8 @@ class AnsiParser {
      */
     fun parse(raw: String): SpannableStringBuilder {
         val builder = SpannableStringBuilder()
+        pendingDeleteLines = 0
+        hasBackwardMovement = false
         var i = 0
 
         while (i < raw.length) {
@@ -73,9 +83,22 @@ class AnsiParser {
                                 i++
                                 when (finalByte) {
                                     'm' -> handleSgr(params.toString())
-                                    // Strip cursor movement, erase, scroll sequences
-                                    // They don't apply to the history view
-                                    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K',
+                                    // Cursor down / next line → emit newlines
+                                    // Claude Code uses these to separate prompt options
+                                    'B', 'E' -> {
+                                        val count = params.toString().toIntOrNull() ?: 1
+                                        for (j in 0 until count) {
+                                            val startPos = builder.length
+                                            builder.append('\n')
+                                            applyCurrentStyle(builder, startPos)
+                                        }
+                                    }
+                                    // Cursor up → signal backward movement for in-place replacement
+                                    'A' -> {
+                                        hasBackwardMovement = true
+                                    }
+                                    // Strip other cursor/erase/scroll sequences
+                                    'C', 'D', 'F', 'G', 'H', 'J', 'K',
                                     'S', 'T', 'f', 'r', 's', 'u', 'n', 'l', 'h' -> {
                                         // Stripped - these control terminal state, not text content
                                     }

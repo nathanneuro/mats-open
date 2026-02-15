@@ -13,7 +13,8 @@ lifecycle = "2.10.0"
 coroutines = "1.10.2"
 datastore = "1.2.0"
 gson = "2.13.2"
-jsch = "0.2.26"
+sshj = "0.40.0"
+bcprov = "1.79"
 junit = "4.13.2"
 junitExt = "1.2.1"
 espresso = "3.6.1"
@@ -29,7 +30,8 @@ lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmode
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
-jsch = { group = "com.github.mwiede", name = "jsch", version.ref = "jsch" }
+sshj = { group = "com.hierynomus", name = "sshj", version.ref = "sshj" }
+bcprov = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bcprov" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 junit-ext = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
 espresso = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
