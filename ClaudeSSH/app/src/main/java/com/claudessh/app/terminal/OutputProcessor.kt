@@ -218,6 +218,13 @@ class OutputProcessor(
         return text.replace("❯", " ").replace(">", " ").trimStart()
     }
 
+    /** A line looks like Claude Code status info if it has 2+ pipe separators. */
+    private fun isStatusInfoLine(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.length < 5) return false
+        return trimmed.count { it == '|' } >= 2
+    }
+
     /** A line is a "fence" if ≥60% of its non-whitespace chars are fence characters. */
     private fun isFenceLine(text: String): Boolean {
         val nonSpace = text.count { it != ' ' }
@@ -264,6 +271,30 @@ class OutputProcessor(
             }
         }
 
+        // If fence scan didn't find anything, try finding status lines by | separators
+        // Claude Code status looks like: "path | CPU 12% | RAM 4.2G | GPU 85%"
+        if (topFenceRow < 0) {
+            for (r in (maxRow - 1) downTo maxOf(0, maxRow - 6)) {
+                val text = screen.getRowText(r)
+                if (isStatusInfoLine(text)) {
+                    // Found a status line — scan upward for fences/prompt above it
+                    topFenceRow = r
+                    for (above in (r - 1) downTo maxOf(0, r - 4)) {
+                        val aboveText = screen.getRowText(above)
+                        val trimmed = aboveText.trimStart()
+                        if (isFenceLine(aboveText) && aboveText.length > 20) {
+                            topFenceRow = above
+                        } else if (trimmed.startsWith(">") || trimmed.startsWith("❯")) {
+                            topFenceRow = above
+                        } else {
+                            break
+                        }
+                    }
+                    break
+                }
+            }
+        }
+
         if (topFenceRow < 0) {
             _statusBarFlow.value = null
             return maxRow
@@ -281,10 +312,15 @@ class OutputProcessor(
                 statusLines.add(text)
             }
         }
+        // Also check if topFenceRow itself is a status info line (when no fence above)
+        val topText = screen.getRowText(topFenceRow)
+        if (isStatusInfoLine(topText)) {
+            statusLines.add(0, topText)
+        }
 
         _statusBarFlow.value = if (statusLines.isNotEmpty()) {
-            // Collapse into single line: trim each, join with " · ", collapse whitespace
-            statusLines.joinToString(" · ") { it.trim() }
+            // Collapse into single line, collapse whitespace
+            statusLines.joinToString(" ") { it.trim() }
                 .replace(Regex("\\s{2,}"), " ")
         } else {
             null
@@ -310,6 +346,27 @@ class OutputProcessor(
                 if (topFenceRow >= 0) break
             } else if (topFenceRow >= 0) {
                 break
+            }
+        }
+        // Fallback: look for | separated status lines
+        if (topFenceRow < 0) {
+            for (r in (maxRow - 1) downTo maxOf(0, maxRow - 6)) {
+                val text = getRowText(snapshot[r])
+                if (isStatusInfoLine(text)) {
+                    topFenceRow = r
+                    for (above in (r - 1) downTo maxOf(0, r - 4)) {
+                        val aboveText = getRowText(snapshot[above])
+                        val trimmed = aboveText.trimStart()
+                        if (isFenceLine(aboveText) && aboveText.length > 20) {
+                            topFenceRow = above
+                        } else if (trimmed.startsWith(">") || trimmed.startsWith("❯")) {
+                            topFenceRow = above
+                        } else {
+                            break
+                        }
+                    }
+                    break
+                }
             }
         }
         return if (topFenceRow >= 0) topFenceRow else maxRow
@@ -354,34 +411,50 @@ class OutputProcessor(
         val newStartRow = overlapLen
         val newLines = mutableListOf<SpannableStringBuilder>()
 
-        // For non-scrolling redraws (overlapLen == 0), build a set of all
-        // previous line texts so we can detect in-place updates like menu
-        // cursor movement. Strip selector chars (❯) for fuzzy matching.
-        val prevTextSet = if (overlapLen == 0) {
-            prevLines.map { stripSelector(it) }.toSet()
-        } else null
+        if (overlapLen == 0) {
+            // Non-scrolling redraw. Check if this is menu navigation
+            // (most changed lines differ only by selector character).
+            val changedRows = mutableListOf<Int>()
+            val selectorChangedRows = mutableListOf<Int>()
 
-        for (r in newStartRow until contentRows) {
-            val lineText = currLines[r]
-            if (lineText.isBlank()) continue
-
-            if (overlapLen == 0) {
-                // Same position, identical content+style → skip
+            for (r in 0 until contentRows) {
+                val lineText = currLines[r]
+                if (lineText.isBlank()) continue
                 if (r < prevLines.size) {
                     val prevLine = prevLines[r]
                     if (prevLine == lineText && VirtualScreen.rowsEqual(prev[r], screen.cells[r])) {
-                        continue
+                        continue // Identical — not changed
                     }
                 }
-
-                // Line text (ignoring selector chars) already existed on previous screen
-                // → in-place update (menu navigation, cursor movement), skip
-                if (prevTextSet != null && stripSelector(lineText) in prevTextSet) {
-                    continue
+                changedRows.add(r)
+                // Check if this line differs only by selector char
+                if (r < prevLines.size && stripSelector(currLines[r]) == stripSelector(prevLines[r])) {
+                    selectorChangedRows.add(r)
                 }
             }
 
-            newLines.add(screen.getRowStyled(r))
+            if (changedRows.size > 0 && selectorChangedRows.size == changedRows.size) {
+                // Pure menu navigation — emit only the currently selected line
+                for (r in selectorChangedRows) {
+                    val text = currLines[r].trimStart()
+                    if (text.startsWith("❯") || text.startsWith(">")) {
+                        newLines.add(screen.getRowStyled(r))
+                        break
+                    }
+                }
+                return newLines
+            }
+
+            // Not menu navigation — emit genuinely new lines
+            for (r in changedRows) {
+                newLines.add(screen.getRowStyled(r))
+            }
+        } else {
+            for (r in newStartRow until contentRows) {
+                val lineText = currLines[r]
+                if (lineText.isBlank()) continue
+                newLines.add(screen.getRowStyled(r))
+            }
         }
 
         return newLines

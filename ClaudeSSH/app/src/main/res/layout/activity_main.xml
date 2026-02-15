@@ -76,54 +76,52 @@
         app:layout_constraintBottom_toTopOf="@id/statusBar"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Claude Code status bar (cost, tokens, model info) -->
+    <!-- Claude Code status bar (cost, tokens, model info) — always present, fixed height -->
     <TextView
         android:id="@+id/statusBar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="24dp"
         android:background="#FF252530"
         android:fontFamily="monospace"
+        android:gravity="center_vertical"
         android:paddingHorizontal="12dp"
-        android:paddingVertical="4dp"
         android:textColor="#FF8888AA"
         android:textSize="11sp"
-        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/thinkingIndicator" />
 
-    <!-- Thinking indicator: shows when Claude is thinking -->
+    <!-- Thinking indicator — always present, fixed height, content shown/hidden -->
     <FrameLayout
         android:id="@+id/thinkingIndicator"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="28dp"
         android:background="#FF2D2D2D"
         android:paddingHorizontal="12dp"
-        android:paddingVertical="6dp"
-        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/tmuxBar">
 
         <!-- Symbol in fixed-width box, centered, so size changes don't shift text -->
         <TextView
             android:id="@+id/thinkingSymbol"
             android:layout_width="24dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_gravity="center_vertical|start"
             android:gravity="center"
             android:textColor="#FFFFCC00"
             android:textSize="18sp"
             android:fontFamily="monospace"
-            android:text="*" />
+            android:visibility="invisible" />
 
         <!-- Status text positioned after the fixed symbol box -->
         <TextView
             android:id="@+id/thinkingStatus"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_gravity="center_vertical|start"
             android:layout_marginStart="28dp"
+            android:gravity="center_vertical"
             android:textColor="@color/text_secondary"
             android:textSize="13sp"
             android:fontFamily="monospace"
-            android:text="@string/thinking" />
+            android:visibility="invisible" />
     </FrameLayout>
 
     <!-- Tmux tab bar: shows tmux windows -->

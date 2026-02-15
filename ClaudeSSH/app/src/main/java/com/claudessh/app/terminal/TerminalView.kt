@@ -7,6 +7,7 @@ import android.os.Looper
 import android.text.SpannableStringBuilder
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.view.MotionEvent
 import android.widget.TextView
 import androidx.core.widget.NestedScrollView
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -41,7 +42,7 @@ class TerminalView @JvmOverloads constructor(
     }
 
     private var autoScrollEnabled = true
-    private var suppressScrollDetection = false
+    private var userTouching = false
 
     /** Called when history mode changes: true = viewing history, false = live. */
     var onHistoryModeChanged: ((Boolean) -> Unit)? = null
@@ -64,7 +65,8 @@ class TerminalView @JvmOverloads constructor(
         isFillViewport = true
 
         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-            if (suppressScrollDetection) return@setOnScrollChangeListener
+            // Only detect history mode from user-initiated scrolls (touch)
+            if (!userTouching) return@setOnScrollChangeListener
 
             val maxScroll = textView.height - height
             val atBottom = scrollY >= maxScroll - 50
@@ -81,6 +83,17 @@ class TerminalView @JvmOverloads constructor(
                 onHistoryModeChanged?.invoke(false)
             }
         }
+    }
+
+    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> userTouching = true
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                // Delay clearing so fling scroll events still count as user-initiated
+                postDelayed({ userTouching = false }, 500)
+            }
+        }
+        return super.onInterceptTouchEvent(ev)
     }
 
     fun setFontSize(sp: Float) {
@@ -132,9 +145,6 @@ class TerminalView @JvmOverloads constructor(
         // In history mode, save scroll position before appending
         val savedScrollY = if (!autoScrollEnabled) scrollY else -1
 
-        // Suppress scroll detection during programmatic content changes
-        suppressScrollDetection = true
-
         val combined = SpannableStringBuilder()
         for ((i, line) in batch.withIndex()) {
             if (i > 0 || textView.length() > 0) {
@@ -148,22 +158,13 @@ class TerminalView @JvmOverloads constructor(
 
         if (!autoScrollEnabled && savedScrollY >= 0) {
             // History mode: lock scroll position so the view doesn't jump
-            post {
-                scrollTo(0, savedScrollY)
-                suppressScrollDetection = false
-            }
+            post { scrollTo(0, savedScrollY) }
         } else if (autoScrollEnabled) {
             if (skipAnimation) {
-                post {
-                    fullScroll(FOCUS_DOWN)
-                    suppressScrollDetection = false
-                }
+                post { fullScroll(FOCUS_DOWN) }
             } else {
-                post { suppressScrollDetection = false }
                 smoothScrollToBottom()
             }
-        } else {
-            post { suppressScrollDetection = false }
         }
     }
 

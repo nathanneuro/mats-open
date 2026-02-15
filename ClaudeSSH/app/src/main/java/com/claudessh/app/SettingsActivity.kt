@@ -77,13 +77,13 @@ class SettingsActivity : AppCompatActivity() {
 
         // Terminal font size +/-
         binding.btnFontMinus.setOnClickListener {
-            if (currentFontSize > 8) {
+            if (currentFontSize > 4) {
                 currentFontSize--
                 updateFontSizeDisplay(binding.textFontSizeValue, currentFontSize)
             }
         }
         binding.btnFontPlus.setOnClickListener {
-            if (currentFontSize < 32) {
+            if (currentFontSize < 16) {
                 currentFontSize++
                 updateFontSizeDisplay(binding.textFontSizeValue, currentFontSize)
             }
@@ -91,13 +91,13 @@ class SettingsActivity : AppCompatActivity() {
 
         // Thinking bar font size +/-
         binding.btnThinkingFontMinus.setOnClickListener {
-            if (currentThinkingFontSize > 8) {
+            if (currentThinkingFontSize > 4) {
                 currentThinkingFontSize--
                 updateFontSizeDisplay(binding.textThinkingFontSizeValue, currentThinkingFontSize)
             }
         }
         binding.btnThinkingFontPlus.setOnClickListener {
-            if (currentThinkingFontSize < 32) {
+            if (currentThinkingFontSize < 16) {
                 currentThinkingFontSize++
                 updateFontSizeDisplay(binding.textThinkingFontSizeValue, currentThinkingFontSize)
             }
@@ -105,13 +105,13 @@ class SettingsActivity : AppCompatActivity() {
 
         // Tmux bar font size +/-
         binding.btnTmuxFontMinus.setOnClickListener {
-            if (currentTmuxFontSize > 8) {
+            if (currentTmuxFontSize > 4) {
                 currentTmuxFontSize--
                 updateFontSizeDisplay(binding.textTmuxFontSizeValue, currentTmuxFontSize)
             }
         }
         binding.btnTmuxFontPlus.setOnClickListener {
-            if (currentTmuxFontSize < 32) {
+            if (currentTmuxFontSize < 16) {
                 currentTmuxFontSize++
                 updateFontSizeDisplay(binding.textTmuxFontSizeValue, currentTmuxFontSize)
             }
