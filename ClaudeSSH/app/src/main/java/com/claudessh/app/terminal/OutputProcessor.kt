@@ -61,9 +61,11 @@ class OutputProcessor(
         //   NOT tool-use lines like "● Read(file.kt)" or "● Bash(ls -la)"
         // Option 2: short capitalized text ending with ellipsis (no symbol)
         //   e.g. "Compacting conversation…"
+        // Status line: thinking_symbol + word(s) + ellipsis, or just word(s) + ellipsis.
+        // Allow trailing text after ellipsis (timestamps, token counts, etc.)
         private val STATUS_LINE_PATTERN = Regex(
-            "^\\s*[$THINKING_SYMBOLS_STR]\\s+([A-Z][a-z]{2,}(?:\\s+\\w+){0,3})[.…\u2024\u2025]{1,3}\\s*$" +
-            "|^\\s*([A-Z][a-z]{2,}(?:\\s+\\w+){0,3})[.…\u2024\u2025]{1,3}\\s*$"
+            "^\\s*[$THINKING_SYMBOLS_STR]\\s+([A-Z][a-z]{2,}(?:\\s+\\w+){0,3})[.…\u2024\u2025]{1,3}.*$" +
+            "|^\\s*([A-Z][a-z]{2,}(?:\\s+\\w+){0,3})[.…\u2024\u2025]{1,3}.*$"
         )
         // Regex to detect tmux status bar: black text on green background
         private val TMUX_BAR_PATTERN = Regex("\u001b\\[3[0-7]m\u001b\\[4[2-7]m|\\[\\d+\\]")
