@@ -108,8 +108,10 @@ class OutputProcessor(
                 extractTmuxBar()
             }
             ChunkType.INCREMENTAL -> {
-                // Normal output
+                // Normal output — also check for tmux bar in case it arrived
+                // as part of an incremental chunk (e.g., first tmux attach)
                 endThinkingIfNoSymbols()
+                extractTmuxBar()
             }
         }
 
@@ -129,8 +131,22 @@ class OutputProcessor(
     private fun classifyChunk(raw: String): ChunkType {
         val len = raw.length
 
+        // Check for tmux bar FIRST: small chunk with black-on-green color codes
+        // Must come before thinking check because tmux active window marker '*'
+        // is in THINKING_SYMBOLS and would cause false thinking detection.
+        if (len < 300) {
+            val stripped = stripAnsiCodes(raw)
+            // Tmux bar typically has [N] window patterns with green background
+            if (raw.contains("\u001b[42m") && stripped.contains("[") &&
+                "\\[\\d+\\]".toRegex().containsMatchIn(stripped)) {
+                return ChunkType.TMUX_BAR
+            }
+        }
+
         // Check for thinking animation: chunk with cursor-up + thinking symbol
-        if (len < 600 && raw.contains("\u001b[") && raw.contains("A")) {
+        // Exclude chunks with tmux green background to avoid false positives
+        if (len < 600 && raw.contains("\u001b[") && raw.contains("A") &&
+            !raw.contains("\u001b[42m")) {
             val hasThinkingSymbol = raw.any { it in THINKING_SYMBOLS }
             val hasCursorUp = "\u001b\\[\\d*A".toRegex().containsMatchIn(raw)
             if (hasCursorUp && hasThinkingSymbol) {
@@ -141,16 +157,6 @@ class OutputProcessor(
                     return ChunkType.THINKING_STATUS
                 }
                 return ChunkType.THINKING_ANIM
-            }
-        }
-
-        // Check for tmux bar: small chunk with black-on-green color codes
-        if (len < 300) {
-            val stripped = stripAnsiCodes(raw)
-            // Tmux bar typically has [N] window patterns with green background
-            if (raw.contains("\u001b[42m") && stripped.contains("[") &&
-                "\\[\\d+\\]".toRegex().containsMatchIn(stripped)) {
-                return ChunkType.TMUX_BAR
             }
         }
 
@@ -205,6 +211,11 @@ class OutputProcessor(
             result.add(line)
         }
         return result
+    }
+
+    /** Strip selector/cursor characters for fuzzy line comparison. */
+    private fun stripSelector(text: String): String {
+        return text.replace("❯", " ").replace(">", " ").trimStart()
     }
 
     /** A line is a "fence" if ≥60% of its non-whitespace chars are fence characters. */
@@ -272,7 +283,9 @@ class OutputProcessor(
         }
 
         _statusBarFlow.value = if (statusLines.isNotEmpty()) {
-            statusLines.joinToString("\n")
+            // Collapse into single line: trim each, join with " · ", collapse whitespace
+            statusLines.joinToString(" · ") { it.trim() }
+                .replace(Regex("\\s{2,}"), " ")
         } else {
             null
         }
@@ -341,15 +354,30 @@ class OutputProcessor(
         val newStartRow = overlapLen
         val newLines = mutableListOf<SpannableStringBuilder>()
 
+        // For non-scrolling redraws (overlapLen == 0), build a set of all
+        // previous line texts so we can detect in-place updates like menu
+        // cursor movement. Strip selector chars (❯) for fuzzy matching.
+        val prevTextSet = if (overlapLen == 0) {
+            prevLines.map { stripSelector(it) }.toSet()
+        } else null
+
         for (r in newStartRow until contentRows) {
             val lineText = currLines[r]
             if (lineText.isBlank()) continue
 
-            // Check if this line existed at the same position in prev and is unchanged
-            if (overlapLen == 0 && r < prevLines.size) {
-                val prevLine = prevLines[r]
-                if (prevLine == lineText && VirtualScreen.rowsEqual(prev[r], screen.cells[r])) {
-                    continue // Line unchanged at same position, skip
+            if (overlapLen == 0) {
+                // Same position, identical content+style → skip
+                if (r < prevLines.size) {
+                    val prevLine = prevLines[r]
+                    if (prevLine == lineText && VirtualScreen.rowsEqual(prev[r], screen.cells[r])) {
+                        continue
+                    }
+                }
+
+                // Line text (ignoring selector chars) already existed on previous screen
+                // → in-place update (menu navigation, cursor movement), skip
+                if (prevTextSet != null && stripSelector(lineText) in prevTextSet) {
+                    continue
                 }
             }
 

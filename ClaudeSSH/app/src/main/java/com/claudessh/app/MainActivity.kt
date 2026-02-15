@@ -184,6 +184,8 @@ class MainActivity : AppCompatActivity() {
             sshManager.connectionState.collectLatest { state ->
                 when (state) {
                     is ConnectionState.Disconnected -> {
+                        tmuxDetected = false
+                        binding.tmuxBar.visibility = View.GONE
                         if (currentProfile != null) {
                             binding.statusText.text = getString(R.string.disconnected_tap_reconnect)
                             binding.statusText.setOnClickListener { reconnect() }
@@ -203,6 +205,8 @@ class MainActivity : AppCompatActivity() {
                         binding.statusText.setOnClickListener(null)
                         binding.statusIndicator.setBackgroundResource(R.drawable.status_connected)
                         updateTerminalSize()
+                        if (!tmuxDetected) showTmuxAttachButton()
+                        showKeyboard()
                     }
                     is ConnectionState.Error -> {
                         if (currentProfile != null) {
@@ -301,11 +305,45 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var tmuxDetected = false
+
+    private fun showTmuxAttachButton() {
+        binding.tmuxBar.visibility = View.VISIBLE
+        val container = binding.tmuxTabs
+        container.removeAllViews()
+
+        val btn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "tmux a"
+            textSize = 12f
+            minWidth = 0
+            minimumWidth = 0
+            setPadding(16, 4, 16, 4)
+            insetTop = 0
+            insetBottom = 0
+            setBackgroundColor(0xFF3D3D5C.toInt())
+            setTextColor(0xFFFFFFFF.toInt())
+            setOnClickListener {
+                sshManager.sendInput("tmux a\r")
+            }
+        }
+        val lp = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        container.addView(btn, lp)
+    }
+
     private fun updateTmuxBar(update: TmuxBarUpdate?) {
         if (update == null || update.windows.isEmpty()) {
-            binding.tmuxBar.visibility = View.GONE
+            if (!tmuxDetected && sshManager.isConnected()) {
+                showTmuxAttachButton()
+            } else if (!sshManager.isConnected()) {
+                binding.tmuxBar.visibility = View.GONE
+            }
             return
         }
+
+        tmuxDetected = true
 
         // Route history writes to the active tmux window's file
         val activeWindow = update.windows.getOrNull(update.activeIndex)
