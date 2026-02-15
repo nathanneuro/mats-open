@@ -89,8 +89,16 @@ class MainActivity : AppCompatActivity() {
                 binding.scrollBottomFab.visibility = View.VISIBLE
                 binding.scrollBottomFab.backgroundTintList =
                     android.content.res.ColorStateList.valueOf(0xFFFF8800.toInt())
+                // Hide info bars and keyboard in history mode
+                binding.statusBar.visibility = View.GONE
+                binding.thinkingIndicator.visibility = View.GONE
+                hideKeyboard()
             } else {
                 binding.scrollBottomFab.visibility = View.GONE
+                // Show info bars and keyboard in live mode
+                binding.statusBar.visibility = View.VISIBLE
+                binding.thinkingIndicator.visibility = View.VISIBLE
+                showKeyboard()
             }
         }
     }
@@ -274,11 +282,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateThinkingIndicator(update: ThinkingUpdate) {
         if (update.isThinking) {
-            binding.thinkingIndicator.visibility = View.VISIBLE
+            binding.thinkingSymbol.visibility = View.VISIBLE
+            binding.thinkingStatus.visibility = View.VISIBLE
             binding.thinkingStatus.text = update.statusText ?: getString(R.string.thinking)
             startThinkingAnimation()
         } else {
-            binding.thinkingIndicator.visibility = View.GONE
+            binding.thinkingSymbol.visibility = View.INVISIBLE
+            binding.thinkingStatus.visibility = View.INVISIBLE
             stopThinkingAnimation()
         }
     }
@@ -301,15 +311,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateStatusBar(status: String?) {
-        if (status == null) {
-            binding.statusBar.visibility = View.GONE
-        } else {
-            binding.statusBar.text = status
-            binding.statusBar.visibility = View.VISIBLE
-        }
+        binding.statusBar.text = status ?: ""
     }
 
     private var tmuxDetected = false
+    private var lastActiveWindowIndex = -1
 
     private fun showTmuxAttachButton() {
         binding.tmuxBar.visibility = View.VISIBLE
@@ -352,6 +358,11 @@ class MainActivity : AppCompatActivity() {
         // Route history writes to the active tmux window's file
         val activeWindow = update.windows.getOrNull(update.activeIndex)
         if (activeWindow != null) {
+            if (activeWindow.index != lastActiveWindowIndex) {
+                // Switched tmux windows — enter live mode
+                lastActiveWindowIndex = activeWindow.index
+                binding.terminalView.scrollToBottom()
+            }
             historyBuffer.setActiveWindow(activeWindow.index)
         }
 
@@ -453,6 +464,12 @@ class MainActivity : AppCompatActivity() {
         binding.inputEditText.requestFocus()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.showSoftInput(binding.inputEditText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(binding.inputEditText.windowToken, 0)
+        binding.inputEditText.clearFocus()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
