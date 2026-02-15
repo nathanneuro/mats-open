@@ -224,6 +224,11 @@ class AnsiScreenInterpreter(private val screen: VirtualScreen) {
             'l', 'h' -> {
                 // Set/reset mode - ignore (e.g. cursor visibility, alt screen)
             }
+            'd' -> {
+                // VPA: Vertical Position Absolute (1-based)
+                val row = (params.toIntOrNull() ?: 1) - 1
+                screen.moveCursorTo(row, screen.cursorCol)
+            }
             'r' -> {
                 // Set scrolling region - ignore for now
             }

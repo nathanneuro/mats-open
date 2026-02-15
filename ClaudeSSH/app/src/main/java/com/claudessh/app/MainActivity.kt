@@ -485,14 +485,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun showKeyboard() {
         binding.inputEditText.requestFocus()
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-        imm.showSoftInput(binding.inputEditText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        binding.inputEditText.post {
+            val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            imm.showSoftInput(binding.inputEditText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }
     }
 
     private fun hideKeyboard() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.hideSoftInputFromWindow(binding.inputEditText.windowToken, 0)
         binding.inputEditText.clearFocus()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Route all key events to the input field so typing always goes there
+        if (event.action == KeyEvent.ACTION_DOWN && !binding.inputEditText.hasFocus()) {
+            val keyCode = event.keyCode
+            // Don't steal system keys, menu, or back
+            if (keyCode != KeyEvent.KEYCODE_BACK &&
+                keyCode != KeyEvent.KEYCODE_MENU &&
+                keyCode != KeyEvent.KEYCODE_HOME &&
+                keyCode != KeyEvent.KEYCODE_VOLUME_UP &&
+                keyCode != KeyEvent.KEYCODE_VOLUME_DOWN) {
+                binding.inputEditText.requestFocus()
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

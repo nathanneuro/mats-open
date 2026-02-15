@@ -28,6 +28,7 @@ class OutputProcessor(
     enum class ThinkingState { IDLE, ANIMATING, STATUS_TEXT }
     private var thinkingState = ThinkingState.IDLE
     private var thinkingTimeoutJob: Job? = null
+    private var thinkingRow = -1 // Screen row with thinking symbol, excluded from content
 
     // Output flows
     private val _contentFlow = MutableSharedFlow<List<SpannableStringBuilder>>(extraBufferCapacity = 64)
@@ -74,7 +75,11 @@ class OutputProcessor(
         // thinking_symbol followed by short text, with or without ellipsis
         // \\s* because cursor-forward [C] gets stripped, leaving no whitespace
         private val STATUS_TEXT_PATTERN = Regex("[$THINKING_SYMBOLS_STR]\\s*([A-Z][a-z].{1,38}?)(?:[.…\u2024\u2025]+|\\s*$)")
+        private const val MIN_DIFF_INTERVAL_MS = 80L
     }
+
+    // Throttle: skip expensive diffs for rapid-fire small chunks (thinking animation)
+    private var lastDiffTime = 0L
 
     /**
      * Process a raw SSH output chunk. This is the main entry point,
@@ -87,38 +92,35 @@ class OutputProcessor(
         interpreter.feed(raw)
 
         when (chunkType) {
-            ChunkType.THINKING_ANIM -> {
-                handleThinking(null)
-                // Don't emit content for thinking animation frames
-                return
-            }
-            ChunkType.THINKING_STATUS -> {
-                val statusText = extractStatusText(raw)
-                handleThinking(statusText)
-                // Don't emit content for status text updates
-                return
-            }
             ChunkType.TMUX_BAR -> {
                 extractTmuxBar()
-                // Tmux bar chunks are just the bar itself, no content to emit
                 return
             }
             ChunkType.FULL_REDRAW -> {
-                // Full redraw: diff against previous to find new content
-                endThinkingIfNoSymbols()
                 extractTmuxBar()
             }
             ChunkType.INCREMENTAL -> {
-                endThinkingIfNoSymbols()
+                // Small incremental chunks (thinking animation frames) arrive very
+                // rapidly (~10/sec). Skip expensive diff if we diffed recently —
+                // just update thinking state. The next larger chunk or the next
+                // chunk after the throttle window will pick up any content changes.
+                if (raw.length < 60) {
+                    detectThinkingOnScreen()
+                    val now = System.currentTimeMillis()
+                    if (now - lastDiffTime < MIN_DIFF_INTERVAL_MS) {
+                        return
+                    }
+                }
             }
         }
 
-        // Diff screens, post-process, and emit new lines
+        detectThinkingOnScreen()
+
+        lastDiffTime = System.currentTimeMillis()
         val rawLines = diffScreens()
         val newLines = postProcessLines(rawLines)
         if (newLines.isNotEmpty()) {
             _contentFlow.tryEmit(newLines)
-            // Also emit plain text for history
             val plainText = newLines.joinToString("\n") { it.toString() }
             if (plainText.isNotBlank()) {
                 _plainTextFlow.tryEmit(plainText + "\n")
@@ -129,32 +131,12 @@ class OutputProcessor(
     private fun classifyChunk(raw: String): ChunkType {
         val len = raw.length
 
-        // Check for tmux bar FIRST: small chunk with black-on-green color codes
-        // Must come before thinking check because tmux active window marker '*'
-        // is in THINKING_SYMBOLS and would cause false thinking detection.
+        // Check for tmux bar: small chunk with black-on-green color codes
         if (len < 300) {
             val stripped = stripAnsiCodes(raw)
-            // Tmux bar typically has [N] window patterns with green background
             if (raw.contains("\u001b[42m") && stripped.contains("[") &&
                 "\\[\\d+\\]".toRegex().containsMatchIn(stripped)) {
                 return ChunkType.TMUX_BAR
-            }
-        }
-
-        // Check for thinking animation: chunk with cursor-up + thinking symbol
-        // Exclude chunks with tmux green background to avoid false positives
-        if (len < 600 && raw.contains("\u001b[") && raw.contains("A") &&
-            !raw.contains("\u001b[42m")) {
-            val hasThinkingSymbol = raw.any { it in THINKING_SYMBOLS }
-            val hasCursorUp = "\u001b\\[\\d*A".toRegex().containsMatchIn(raw)
-            if (hasCursorUp && hasThinkingSymbol) {
-                // Check if it also has status text (symbol + word + ellipsis)
-                val stripped = stripAnsiCodes(raw)
-                val statusMatch = STATUS_TEXT_PATTERN.find(stripped)
-                if (statusMatch != null) {
-                    return ChunkType.THINKING_STATUS
-                }
-                return ChunkType.THINKING_ANIM
             }
         }
 
@@ -389,8 +371,14 @@ class OutputProcessor(
 
         val prevContentRows = detectStatusAreaInSnapshot(prev, maxRow)
 
-        val prevLines = (0 until prevContentRows).map { getRowText(prev[it]) }
-        val currLines = (0 until contentRows).map { screen.getRowText(it) }
+        // Build line lists, but mark thinking row as blank so it's excluded from diff
+        val tRow = thinkingRow
+        val prevLines = (0 until prevContentRows).map {
+            if (it == tRow) "" else getRowText(prev[it])
+        }
+        val currLines = (0 until contentRows).map {
+            if (it == tRow) "" else screen.getRowText(it)
+        }
 
         // Find the longest suffix of prevLines that matches a prefix of currLines
         // This tells us how much the content scrolled
@@ -461,6 +449,7 @@ class OutputProcessor(
     private fun extractNonBlankLines(): List<SpannableStringBuilder> {
         val lines = mutableListOf<SpannableStringBuilder>()
         for (r in 0 until rows - 1) { // Skip last row (potential tmux bar)
+            if (r == thinkingRow) continue // Skip thinking animation row
             val text = screen.getRowText(r)
             if (text.isNotBlank()) {
                 lines.add(screen.getRowStyled(r))
@@ -508,27 +497,42 @@ class OutputProcessor(
         }
     }
 
-    private fun endThinkingIfNoSymbols() {
-        if (thinkingState == ThinkingState.IDLE) return
-
-        // Check if the current screen still has thinking symbols
-        val hasSymbols = (0 until rows).any { r ->
-            (0 until cols).any { c -> screen.cells[r][c].char in THINKING_SYMBOLS }
+    /**
+     * Scan the virtual screen for thinking symbols. If found, extract
+     * the full text on that row as status text. This is more reliable
+     * than chunk-based detection since Claude Code writes the symbol
+     * and status text as separate small chunks using VPA positioning.
+     */
+    private fun detectThinkingOnScreen() {
+        // Find the first row with a thinking symbol in the leftmost columns (0-2).
+        // Claude Code places the animation symbol at column 0 or 1.
+        // Only checking first few columns avoids false positives from * or · in content.
+        var thinkingRow = -1
+        for (r in 0 until rows - 1) {
+            for (c in 0 until minOf(3, cols)) {
+                if (screen.cells[r][c].char in THINKING_SYMBOLS) {
+                    thinkingRow = r
+                    break
+                }
+            }
+            if (thinkingRow >= 0) break
         }
 
-        if (!hasSymbols) {
+        if (thinkingRow >= 0) {
+            this.thinkingRow = thinkingRow
+            // Extract the full text on this row (after the symbol)
+            val rowText = screen.getRowText(thinkingRow).trim()
+            // Strip the leading symbol and whitespace
+            val statusText = rowText.dropWhile { it in THINKING_SYMBOLS || it.isWhitespace() }.trim()
+            handleThinking(statusText.ifEmpty { null })
+        } else if (thinkingState != ThinkingState.IDLE) {
+            this.thinkingRow = -1
+            // No thinking symbols on screen anymore — end thinking
             thinkingTimeoutJob?.cancel()
             thinkingState = ThinkingState.IDLE
+            lastStatusText = null
             _thinkingFlow.value = ThinkingUpdate(false, null, null)
         }
-    }
-
-    private fun extractStatusText(raw: String): String? {
-        val stripped = stripAnsiCodes(raw)
-        val match = STATUS_TEXT_PATTERN.find(stripped) ?: return null
-        val rawText = match.groupValues[1].trim()
-        // Strip trailing dots/ellipsis for clean display
-        return ELLIPSIS.replace(rawText, "").trim().ifEmpty { null }
     }
 
     // --- Tmux bar extraction ---
@@ -587,8 +591,6 @@ class OutputProcessor(
     // --- Data classes ---
 
     enum class ChunkType {
-        THINKING_ANIM,
-        THINKING_STATUS,
         TMUX_BAR,
         FULL_REDRAW,
         INCREMENTAL
