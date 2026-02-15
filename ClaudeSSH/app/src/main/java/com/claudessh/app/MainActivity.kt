@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
 
     private var currentSettings = AppSettings()
     private var currentProfile: ConnectionProfile? = null
+    private var currentTmuxFontSize = 12f
 
     // Thinking animation coroutine
     private var thinkingAnimJob: Job? = null
@@ -166,6 +167,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun applySettings(settings: AppSettings) {
         binding.terminalView.setFontSize(settings.fontSize.toFloat())
+        binding.thinkingStatus.textSize = settings.thinkingFontSize.toFloat()
+        binding.statusBar.textSize = settings.thinkingFontSize.toFloat()
+        currentTmuxFontSize = settings.tmuxFontSize.toFloat()
         binding.arrowOverlay.position = settings.arrowPosition
         binding.arrowOverlay.buttonOpacity = settings.arrowOpacity
         binding.arrowOverlay.vibrateOnPress = settings.vibrateOnKeyPress
@@ -314,7 +318,7 @@ class MainActivity : AppCompatActivity() {
 
         val btn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "tmux a"
-            textSize = 12f
+            textSize = currentTmuxFontSize
             minWidth = 0
             minimumWidth = 0
             setPadding(16, 4, 16, 4)
@@ -358,7 +362,7 @@ class MainActivity : AppCompatActivity() {
         for (window in update.windows) {
             val tab = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                 text = "[${window.index}] ${window.name}"
-                textSize = 12f
+                textSize = currentTmuxFontSize
                 minWidth = 0
                 minimumWidth = 0
                 setPadding(16, 4, 16, 4)

@@ -21,6 +21,8 @@ class SettingsRepository(private val context: Context) {
         val MAX_HISTORY_LINES = intPreferencesKey("max_history_lines")
         val SAVE_HISTORY = booleanPreferencesKey("save_history")
         val DEFAULT_CONNECTION_ID = stringPreferencesKey("default_connection_id")
+        val THINKING_FONT_SIZE = intPreferencesKey("thinking_font_size")
+        val TMUX_FONT_SIZE = intPreferencesKey("tmux_font_size")
         val SHOW_EXTRA_KEYS = booleanPreferencesKey("show_extra_keys")
         val VIBRATE_ON_KEY = booleanPreferencesKey("vibrate_on_key")
     }
@@ -32,6 +34,8 @@ class SettingsRepository(private val context: Context) {
             } ?: ArrowPosition.RIGHT,
             arrowOpacity = prefs[Keys.ARROW_OPACITY] ?: 0.4f,
             fontSize = prefs[Keys.FONT_SIZE] ?: 14,
+            thinkingFontSize = prefs[Keys.THINKING_FONT_SIZE] ?: 13,
+            tmuxFontSize = prefs[Keys.TMUX_FONT_SIZE] ?: 12,
             keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: true,
             maxHistoryLines = prefs[Keys.MAX_HISTORY_LINES] ?: 50000,
             saveHistoryBetweenSessions = prefs[Keys.SAVE_HISTORY] ?: true,
@@ -46,6 +50,8 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.ARROW_POSITION] = settings.arrowPosition.name
             prefs[Keys.ARROW_OPACITY] = settings.arrowOpacity
             prefs[Keys.FONT_SIZE] = settings.fontSize
+            prefs[Keys.THINKING_FONT_SIZE] = settings.thinkingFontSize
+            prefs[Keys.TMUX_FONT_SIZE] = settings.tmuxFontSize
             prefs[Keys.KEEP_SCREEN_ON] = settings.keepScreenOn
             prefs[Keys.MAX_HISTORY_LINES] = settings.maxHistoryLines
             prefs[Keys.SAVE_HISTORY] = settings.saveHistoryBetweenSessions
