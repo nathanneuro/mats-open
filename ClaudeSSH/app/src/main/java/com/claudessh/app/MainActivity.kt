@@ -99,6 +99,11 @@ class MainActivity : AppCompatActivity() {
                 binding.statusBar.visibility = View.VISIBLE
                 binding.thinkingIndicator.visibility = View.VISIBLE
                 showKeyboard()
+                // Re-scroll after layout settles from bars + keyboard appearing
+                // Use fullScroll directly to avoid re-triggering onHistoryModeChanged
+                binding.terminalView.postDelayed({
+                    binding.terminalView.fullScroll(View.FOCUS_DOWN)
+                }, 300)
             }
         }
     }
@@ -129,6 +134,13 @@ class MainActivity : AppCompatActivity() {
                     KeyEvent.KEYCODE_TAB -> {
                         sshManager.sendKeyPress(KeyCode.TAB)
                         true
+                    }
+                    KeyEvent.KEYCODE_DEL -> {
+                        // Backspace: if input is empty, send to terminal
+                        if (binding.inputEditText.text.isNullOrEmpty()) {
+                            sshManager.sendInput("\u007F") // DEL character (backspace)
+                            true
+                        } else false
                     }
                     else -> false
                 }
@@ -175,6 +187,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun applySettings(settings: AppSettings) {
         binding.terminalView.setFontSize(settings.fontSize.toFloat())
+        binding.thinkingSymbol.textSize = settings.thinkingFontSize.toFloat()
         binding.thinkingStatus.textSize = settings.thinkingFontSize.toFloat()
         binding.statusBar.textSize = settings.thinkingFontSize.toFloat()
         currentTmuxFontSize = settings.tmuxFontSize.toFloat()
@@ -322,16 +335,20 @@ class MainActivity : AppCompatActivity() {
         val container = binding.tmuxTabs
         container.removeAllViews()
 
-        val btn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+        val btn = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
             text = "tmux a"
             textSize = currentTmuxFontSize
             minWidth = 0
             minimumWidth = 0
-            setPadding(16, 4, 16, 4)
+            minHeight = 0
+            minimumHeight = 0
+            setPadding(12, 2, 12, 2)
             insetTop = 0
             insetBottom = 0
             setBackgroundColor(0xFF3D3D5C.toInt())
             setTextColor(0xFFFFFFFF.toInt())
+            cornerRadius = 12
+            strokeWidth = 0
             setOnClickListener {
                 sshManager.sendInput("tmux a\r")
             }
@@ -371,25 +388,27 @@ class MainActivity : AppCompatActivity() {
         container.removeAllViews()
 
         for (window in update.windows) {
-            val tab = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = "[${window.index}] ${window.name}"
+            val tab = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
+                text = "${window.index}:${window.name}"
                 textSize = currentTmuxFontSize
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(16, 4, 16, 4)
+                minHeight = 0
+                minimumHeight = 0
+                setPadding(12, 2, 12, 2)
                 insetTop = 0
                 insetBottom = 0
+                cornerRadius = 12
+                strokeWidth = 0
+
+                isClickable = false
 
                 if (window.isActive) {
                     setBackgroundColor(0xFF3D3D5C.toInt())
                     setTextColor(0xFFFFFFFF.toInt())
                 } else {
                     setBackgroundColor(0x00000000)
-                    setTextColor(0xFFAAAAAA.toInt())
-                }
-
-                setOnClickListener {
-                    sshManager.selectTmuxWindow(window.index)
+                    setTextColor(0xFF777777.toInt())
                 }
             }
 
@@ -405,10 +424,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendCurrentInput() {
         val text = binding.inputEditText.text.toString()
-        if (text.isNotEmpty() || true) { // Allow sending empty (just Enter)
-            sshManager.sendInput(text + "\r")
-            binding.inputEditText.text?.clear()
+        if (text.isNotEmpty()) {
+            sshManager.sendInput(text)
         }
+        // Send Enter as a separate write so TUI doesn't merge it with text
+        binding.terminalView.postDelayed({
+            sshManager.sendInput("\r")
+        }, 50)
+        binding.inputEditText.text?.clear()
     }
 
     private fun connectById(connectionId: String) {
