@@ -1,0 +1,500 @@
+package com.claudessh.app.terminal
+
+import android.text.SpannableStringBuilder
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * The brain of the output pipeline. Intercepts raw SSH data and produces
+ * three clean output flows: deduplicated content, thinking state, and tmux bar.
+ *
+ * Raw SSH data → AnsiScreenInterpreter → VirtualScreen → diff → new lines only.
+ */
+class OutputProcessor(
+    private val cols: Int = 80,
+    private val rows: Int = 24,
+    private val displayCols: Int = 40,
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+) {
+    // Virtual screens for diffing
+    private val screen = VirtualScreen(cols, rows)
+    private val interpreter = AnsiScreenInterpreter(screen)
+    private var previousSnapshot: Array<Array<VirtualScreen.Cell>>? = null
+
+    // Thinking state machine
+    enum class ThinkingState { IDLE, ANIMATING, STATUS_TEXT }
+    private var thinkingState = ThinkingState.IDLE
+    private var thinkingTimeoutJob: Job? = null
+
+    // Output flows
+    private val _contentFlow = MutableSharedFlow<List<SpannableStringBuilder>>(extraBufferCapacity = 64)
+    val contentFlow: SharedFlow<List<SpannableStringBuilder>> = _contentFlow
+
+    private val _thinkingFlow = MutableStateFlow(ThinkingUpdate(false, null, null))
+    val thinkingFlow: StateFlow<ThinkingUpdate> = _thinkingFlow
+
+    private val _tmuxBarFlow = MutableStateFlow<TmuxBarUpdate?>(null)
+    val tmuxBarFlow: StateFlow<TmuxBarUpdate?> = _tmuxBarFlow
+
+    private val _statusBarFlow = MutableStateFlow<String?>(null)
+    val statusBarFlow: StateFlow<String?> = _statusBarFlow
+
+    // Plain text flow for history persistence
+    private val _plainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    val plainTextFlow: SharedFlow<String> = _plainTextFlow
+
+    companion object {
+        private val THINKING_SYMBOLS = setOf('✶', '✻', '✽', '·', '✢', '*', '●')
+        private val THINKING_SYMBOLS_STR = "✶✻✽·✢*●"
+        private val FENCE_CHARS = setOf('─', '═', '━', '-', '=')
+        // A line that is ONLY a thinking symbol (with optional whitespace)
+        private val LONE_THINKING_SYMBOL = Regex("^\\s*[$THINKING_SYMBOLS_STR]\\s*$")
+        // Trailing dots/ellipsis in any form: .., ..., …, Unicode variants
+        private val ELLIPSIS = Regex("[.…\u2024\u2025]+\\s*$")
+        // A content line that's really a Claude Code UI element:
+        // Option 1: thinking_symbol + text (tool use, status, etc.)
+        //   e.g. "● Bash(ls -la)", "✶ Running", "● Read(file.kt)"
+        // Option 2: short capitalized text ending with ellipsis (no symbol)
+        //   e.g. "Compacting conversation…", "Thinking..."
+        private val STATUS_LINE_PATTERN = Regex(
+            "^\\s*[$THINKING_SYMBOLS_STR]\\s+(.+?)\\s*$" +
+            "|^\\s*([A-Z][a-z]{2,}(?:\\s+\\w+){0,3})[.…\u2024\u2025]{1,3}\\s*$"
+        )
+        // Regex to detect tmux status bar: black text on green background
+        private val TMUX_BAR_PATTERN = Regex("\u001b\\[3[0-7]m\u001b\\[4[2-7]m|\\[\\d+\\]")
+        // Tmux bar line leaked into content: e.g. "[0] 0:zsh  1:claude*  ..."
+        private val TMUX_BAR_LINE = Regex("^\\[\\d+]\\s+\\d+:\\S.*")
+        // Regex to detect cursor-home at start of chunk
+        private val CURSOR_HOME_PATTERN = Regex("^\u001b\\[(H|1;1H|\\?25[lh])")
+        // Pattern for status text in raw chunks (ANSI-stripped):
+        // thinking_symbol followed by short text, with or without ellipsis
+        // \\s* because cursor-forward [C] gets stripped, leaving no whitespace
+        private val STATUS_TEXT_PATTERN = Regex("[$THINKING_SYMBOLS_STR]\\s*([A-Z][a-z].{1,38}?)(?:[.…\u2024\u2025]+|\\s*$)")
+    }
+
+    /**
+     * Process a raw SSH output chunk. This is the main entry point,
+     * called for every chunk emitted by SshManager.outputFlow.
+     */
+    fun processRawOutput(raw: String) {
+        val chunkType = classifyChunk(raw)
+
+        // Feed to screen interpreter
+        interpreter.feed(raw)
+
+        when (chunkType) {
+            ChunkType.THINKING_ANIM -> {
+                handleThinking(null)
+                // Don't emit content for thinking animation frames
+                return
+            }
+            ChunkType.THINKING_STATUS -> {
+                val statusText = extractStatusText(raw)
+                handleThinking(statusText)
+                // Don't emit content for status text updates
+                return
+            }
+            ChunkType.TMUX_BAR -> {
+                extractTmuxBar()
+                // Tmux bar chunks are just the bar itself, no content to emit
+                return
+            }
+            ChunkType.FULL_REDRAW -> {
+                // Full redraw: diff against previous to find new content
+                endThinkingIfNoSymbols()
+                extractTmuxBar()
+            }
+            ChunkType.INCREMENTAL -> {
+                // Normal output
+                endThinkingIfNoSymbols()
+            }
+        }
+
+        // Diff screens, post-process, and emit new lines
+        val rawLines = diffScreens()
+        val newLines = postProcessLines(rawLines)
+        if (newLines.isNotEmpty()) {
+            _contentFlow.tryEmit(newLines)
+            // Also emit plain text for history
+            val plainText = newLines.joinToString("\n") { it.toString() }
+            if (plainText.isNotBlank()) {
+                _plainTextFlow.tryEmit(plainText + "\n")
+            }
+        }
+    }
+
+    private fun classifyChunk(raw: String): ChunkType {
+        val len = raw.length
+
+        // Check for thinking animation: chunk with cursor-up + thinking symbol
+        if (len < 600 && raw.contains("\u001b[") && raw.contains("A")) {
+            val hasThinkingSymbol = raw.any { it in THINKING_SYMBOLS }
+            val hasCursorUp = "\u001b\\[\\d*A".toRegex().containsMatchIn(raw)
+            if (hasCursorUp && hasThinkingSymbol) {
+                // Check if it also has status text (symbol + word + ellipsis)
+                val stripped = stripAnsiCodes(raw)
+                val statusMatch = STATUS_TEXT_PATTERN.find(stripped)
+                if (statusMatch != null) {
+                    return ChunkType.THINKING_STATUS
+                }
+                return ChunkType.THINKING_ANIM
+            }
+        }
+
+        // Check for tmux bar: small chunk with black-on-green color codes
+        if (len < 300) {
+            val stripped = stripAnsiCodes(raw)
+            // Tmux bar typically has [N] window patterns with green background
+            if (raw.contains("\u001b[42m") && stripped.contains("[") &&
+                "\\[\\d+\\]".toRegex().containsMatchIn(stripped)) {
+                return ChunkType.TMUX_BAR
+            }
+        }
+
+        // Full redraw: large chunk with cursor-home + erase sequences
+        if (len > 400) {
+            val hasCursorHome = raw.contains("\u001b[H") || raw.contains("\u001b[1;1H")
+            val hasEraseSequences = raw.contains("\u001b[K") || raw.contains("\u001b[J") ||
+                raw.contains("\u001b[2J")
+            if (hasCursorHome && hasEraseSequences) {
+                return ChunkType.FULL_REDRAW
+            }
+        }
+
+        return ChunkType.INCREMENTAL
+    }
+
+    /**
+     * Post-process content lines for phone display:
+     * - Trim fence lines to displayCols width
+     * - Filter lone thinking symbols that leaked past chunk classification
+     */
+    private fun postProcessLines(lines: List<SpannableStringBuilder>): List<SpannableStringBuilder> {
+        val result = mutableListOf<SpannableStringBuilder>()
+        for (line in lines) {
+            val text = line.toString()
+
+            // Drop lines that are only a thinking symbol (leaked animation frame)
+            if (LONE_THINKING_SYMBOL.matches(text)) continue
+
+            // Drop tmux bar lines that leaked into content
+            if (TMUX_BAR_LINE.matches(text)) continue
+
+            // Filter status lines (e.g. "✶ Compacting conversation…") → show in thinking bar
+            val statusMatch = STATUS_LINE_PATTERN.find(text)
+            if (statusMatch != null) {
+                // Strip trailing dots/ellipsis for clean display
+                val rawStatus = statusMatch.groupValues[1].trim()
+                val statusText = ELLIPSIS.replace(rawStatus, "").trim()
+                if (statusText.isNotEmpty()) {
+                    handleThinking(statusText)
+                }
+                continue
+            }
+
+            // Trim fence lines to phone width
+            if (text.length > displayCols && isFenceLine(text)) {
+                val trimmed = SpannableStringBuilder(line, 0, displayCols)
+                result.add(trimmed)
+                continue
+            }
+
+            result.add(line)
+        }
+        return result
+    }
+
+    /** A line is a "fence" if ≥60% of its non-whitespace chars are fence characters. */
+    private fun isFenceLine(text: String): Boolean {
+        val nonSpace = text.count { it != ' ' }
+        if (nonSpace == 0) return false
+        val fenceCount = text.count { it in FENCE_CHARS }
+        return fenceCount.toFloat() / nonSpace >= 0.6f
+    }
+
+    /**
+     * Detect Claude Code's status area at the bottom of the screen.
+     * Pattern: fence, "> " prompt, fence, status line(s) — above the tmux bar row.
+     * Returns the first row of the status area, or `maxRow` if not found.
+     * Also extracts and emits the status text.
+     */
+    private fun detectStatusArea(maxRow: Int): Int {
+        // Scan upward from the bottom to find the top fence of the status area.
+        // Claude Code layout (bottom of screen):
+        //   Row N:   ──────────── (top fence)
+        //   Row N+1: ❯            (prompt — uses ❯ or >)
+        //   Row N+2: ──────────── (bottom fence, possibly doubled)
+        //   Row N+3: ──────────── (optional second fence)
+        //   Row N+4: status info (path | CPU | RAM | GPU...)
+        //   Row N+5: more status...
+        //   Row N+6: ⏵⏵ accept edits on · ...
+        //   Last:    [0] bash [1] claude* (tmux bar — already excluded)
+        var topFenceRow = -1
+
+        for (r in (maxRow - 1) downTo maxOf(0, maxRow - 8)) {
+            val text = screen.getRowText(r)
+            if (isFenceLine(text) && text.length > 20) {
+                // Check if the row below is a prompt or another fence or blank
+                if (r + 1 < maxRow) {
+                    val below = screen.getRowText(r + 1).trimStart()
+                    if (below.startsWith(">") || below.startsWith("❯") ||
+                        below.isEmpty() || (isFenceLine(below) && below.length > 20)) {
+                        topFenceRow = r
+                        // Keep scanning up — we want the TOPMOST fence in the cluster
+                        continue
+                    }
+                }
+                if (topFenceRow >= 0) break // Found a non-fence/non-prompt, stop
+            } else if (topFenceRow >= 0) {
+                break // First non-fence row above the area, stop
+            }
+        }
+
+        if (topFenceRow < 0) {
+            _statusBarFlow.value = null
+            return maxRow
+        }
+
+        // Collect status lines: everything below fences/prompt that isn't a fence
+        val statusLines = mutableListOf<String>()
+        for (r in (topFenceRow + 1) until maxRow) {
+            val text = screen.getRowText(r)
+            // Skip fences and the prompt line
+            if (isFenceLine(text) && text.length > 20) continue
+            val trimmed = text.trimStart()
+            if (trimmed.startsWith(">") || trimmed.startsWith("❯")) continue
+            if (text.isNotBlank()) {
+                statusLines.add(text)
+            }
+        }
+
+        _statusBarFlow.value = if (statusLines.isNotEmpty()) {
+            statusLines.joinToString("\n")
+        } else {
+            null
+        }
+
+        return topFenceRow
+    }
+
+    /** Same detection but on a raw snapshot array (for previous screen). */
+    private fun detectStatusAreaInSnapshot(snapshot: Array<Array<VirtualScreen.Cell>>, maxRow: Int): Int {
+        var topFenceRow = -1
+        for (r in (maxRow - 1) downTo maxOf(0, maxRow - 8)) {
+            val text = getRowText(snapshot[r])
+            if (isFenceLine(text) && text.length > 20) {
+                if (r + 1 < maxRow) {
+                    val below = getRowText(snapshot[r + 1]).trimStart()
+                    if (below.startsWith(">") || below.startsWith("❯") ||
+                        below.isEmpty() || (isFenceLine(below) && below.length > 20)) {
+                        topFenceRow = r
+                        continue
+                    }
+                }
+                if (topFenceRow >= 0) break
+            } else if (topFenceRow >= 0) {
+                break
+            }
+        }
+        return if (topFenceRow >= 0) topFenceRow else maxRow
+    }
+
+    /**
+     * Diff current screen against previous snapshot.
+     * Returns only genuinely new lines (not present in previous screen).
+     */
+    private fun diffScreens(): List<SpannableStringBuilder> {
+        val prev = previousSnapshot
+        previousSnapshot = screen.snapshot()
+
+        if (prev == null) {
+            // First screen - emit all non-blank lines
+            return extractNonBlankLines()
+        }
+
+        // Exclude last row (tmux bar) and detect status area
+        val maxRow = rows - 1
+        val contentRows = detectStatusArea(maxRow)
+
+        val prevContentRows = detectStatusAreaInSnapshot(prev, maxRow)
+
+        val prevLines = (0 until prevContentRows).map { getRowText(prev[it]) }
+        val currLines = (0 until contentRows).map { screen.getRowText(it) }
+
+        // Find the longest suffix of prevLines that matches a prefix of currLines
+        // This tells us how much the content scrolled
+        var overlapLen = 0
+        val maxOverlap = minOf(prevLines.size, currLines.size)
+        for (overlap in maxOverlap downTo 1) {
+            val prevSuffix = prevLines.subList(prevLines.size - overlap, prevLines.size)
+            val currPrefix = currLines.subList(0, overlap)
+            if (prevSuffix == currPrefix) {
+                overlapLen = overlap
+                break
+            }
+        }
+
+        // New lines = everything in currLines after the overlap
+        val newStartRow = overlapLen
+        val newLines = mutableListOf<SpannableStringBuilder>()
+
+        for (r in newStartRow until contentRows) {
+            val lineText = currLines[r]
+            if (lineText.isBlank()) continue
+
+            // Check if this line existed at the same position in prev and is unchanged
+            if (overlapLen == 0 && r < prevLines.size) {
+                val prevLine = prevLines[r]
+                if (prevLine == lineText && VirtualScreen.rowsEqual(prev[r], screen.cells[r])) {
+                    continue // Line unchanged at same position, skip
+                }
+            }
+
+            newLines.add(screen.getRowStyled(r))
+        }
+
+        return newLines
+    }
+
+    private fun extractNonBlankLines(): List<SpannableStringBuilder> {
+        val lines = mutableListOf<SpannableStringBuilder>()
+        for (r in 0 until rows - 1) { // Skip last row (potential tmux bar)
+            val text = screen.getRowText(r)
+            if (text.isNotBlank()) {
+                lines.add(screen.getRowStyled(r))
+            }
+        }
+        return lines
+    }
+
+    private fun getRowText(row: Array<VirtualScreen.Cell>): String {
+        val sb = StringBuilder(row.size)
+        for (cell in row) {
+            sb.append(cell.char)
+        }
+        return sb.toString().trimEnd()
+    }
+
+    // --- Thinking state machine ---
+    private var lastStatusText: String? = null
+
+    private fun handleThinking(statusText: String?) {
+        thinkingTimeoutJob?.cancel()
+
+        if (statusText != null) {
+            lastStatusText = statusText
+        }
+
+        when {
+            statusText != null -> {
+                thinkingState = ThinkingState.STATUS_TEXT
+                _thinkingFlow.value = ThinkingUpdate(true, null, statusText)
+            }
+            else -> {
+                // Animation frame: keep showing last status text if we have one
+                thinkingState = if (lastStatusText != null) ThinkingState.STATUS_TEXT else ThinkingState.ANIMATING
+                _thinkingFlow.value = ThinkingUpdate(true, null, lastStatusText)
+            }
+        }
+
+        // Reset timeout: if no thinking chunks for 2 seconds, end thinking
+        thinkingTimeoutJob = scope.launch {
+            delay(2000)
+            thinkingState = ThinkingState.IDLE
+            lastStatusText = null
+            _thinkingFlow.value = ThinkingUpdate(false, null, null)
+        }
+    }
+
+    private fun endThinkingIfNoSymbols() {
+        if (thinkingState == ThinkingState.IDLE) return
+
+        // Check if the current screen still has thinking symbols
+        val hasSymbols = (0 until rows).any { r ->
+            (0 until cols).any { c -> screen.cells[r][c].char in THINKING_SYMBOLS }
+        }
+
+        if (!hasSymbols) {
+            thinkingTimeoutJob?.cancel()
+            thinkingState = ThinkingState.IDLE
+            _thinkingFlow.value = ThinkingUpdate(false, null, null)
+        }
+    }
+
+    private fun extractStatusText(raw: String): String? {
+        val stripped = stripAnsiCodes(raw)
+        val match = STATUS_TEXT_PATTERN.find(stripped) ?: return null
+        val rawText = match.groupValues[1].trim()
+        // Strip trailing dots/ellipsis for clean display
+        return ELLIPSIS.replace(rawText, "").trim().ifEmpty { null }
+    }
+
+    // --- Tmux bar extraction ---
+
+    private fun extractTmuxBar() {
+        // The tmux bar is typically the last row of the screen
+        val lastRow = screen.getRowText(rows - 1)
+        if (lastRow.isBlank()) return
+
+        // Parse window entries: patterns like [0] bash  [1] claude*
+        val windowPattern = "\\[(\\d+)]\\s+([^\\[\\]]+?)(?=\\s*\\[|\\s*$)".toRegex()
+        val matches = windowPattern.findAll(lastRow).toList()
+
+        if (matches.isEmpty()) return
+
+        val windows = matches.map { match ->
+            val index = match.groupValues[1].toIntOrNull() ?: 0
+            val name = match.groupValues[2].trim()
+            val isActive = name.endsWith("*") || name.endsWith("*-")
+            TmuxWindow(
+                index = index,
+                name = name.removeSuffix("*").removeSuffix("*-").removeSuffix("-").trim(),
+                isActive = isActive
+            )
+        }
+
+        val activeIndex = windows.indexOfFirst { it.isActive }.takeIf { it >= 0 } ?: 0
+        _tmuxBarFlow.value = TmuxBarUpdate(windows, activeIndex)
+    }
+
+    private fun stripAnsiCodes(raw: String): String {
+        return raw.replace(Regex("\u001b\\[[0-9;]*[a-zA-Z]"), "")
+            .replace(Regex("\u001b\\][^\u0007]*\u0007"), "")
+            .replace(Regex("\u001b[()][A-Z0-9]"), "")
+    }
+
+    fun destroy() {
+        thinkingTimeoutJob?.cancel()
+        scope.cancel()
+    }
+
+    // --- Data classes ---
+
+    enum class ChunkType {
+        THINKING_ANIM,
+        THINKING_STATUS,
+        TMUX_BAR,
+        FULL_REDRAW,
+        INCREMENTAL
+    }
+}
+
+data class ThinkingUpdate(
+    val isThinking: Boolean,
+    val symbol: Char?,
+    val statusText: String?
+)
+
+data class TmuxBarUpdate(
+    val windows: List<TmuxWindow>,
+    val activeIndex: Int
+)
+
+data class TmuxWindow(
+    val index: Int,
+    val name: String,
+    val isActive: Boolean
+)

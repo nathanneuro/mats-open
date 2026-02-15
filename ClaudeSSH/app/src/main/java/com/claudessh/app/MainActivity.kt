@@ -2,13 +2,14 @@ package com.claudessh.app
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.SpannableStringBuilder
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -17,29 +18,38 @@ import com.claudessh.app.data.HistoryRepository
 import com.claudessh.app.data.SettingsRepository
 import com.claudessh.app.databinding.ActivityMainBinding
 import com.claudessh.app.models.AppSettings
-import com.claudessh.app.models.ArrowPosition
 import com.claudessh.app.models.ConnectionProfile
 import com.claudessh.app.ssh.ConnectionState
 import com.claudessh.app.ssh.KeyCode
 import com.claudessh.app.ssh.SshManager
-import com.claudessh.app.terminal.AnsiParser
 import com.claudessh.app.terminal.HistoryBuffer
+import com.claudessh.app.terminal.OutputProcessor
+import com.claudessh.app.terminal.ThinkingUpdate
+import com.claudessh.app.terminal.TmuxBarUpdate
+import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val sshManager = SshManager()
-    private val ansiParser = AnsiParser()
+    private val outputProcessor = OutputProcessor()
     private val historyBuffer = HistoryBuffer()
     private val settingsRepo by lazy { SettingsRepository(this) }
     private val connectionRepo by lazy { ConnectionRepository(this) }
     private val historyRepo by lazy { HistoryRepository(this) }
 
     private var currentSettings = AppSettings()
-    private var sessionHistoryFile: File? = null
+    private var currentProfile: ConnectionProfile? = null
+
+    // Thinking animation coroutine
+    private var thinkingAnimJob: Job? = null
+    private val thinkingSymbols = charArrayOf('\u2736', '\u273B', '\u273D', '\u00B7', '\u2722', '*')
+    private var thinkingSymbolIndex = 0
 
     companion object {
         const val EXTRA_CONNECTION_ID = "connection_id"
@@ -64,14 +74,23 @@ class MainActivity : AppCompatActivity() {
         val connectionId = intent.getStringExtra(EXTRA_CONNECTION_ID)
         if (connectionId != null) {
             connectById(connectionId)
+        } else if (!sshManager.isConnected()) {
+            startActivity(Intent(this, ConnectionActivity::class.java))
         }
     }
 
     private fun setupTerminalView() {
-        // Terminal view is in the layout - just configure it
         binding.terminalView.setOnClickListener {
-            // Tap terminal to show keyboard
             showKeyboard()
+        }
+        binding.terminalView.onHistoryModeChanged = { viewingHistory ->
+            if (viewingHistory) {
+                binding.scrollBottomFab.visibility = View.VISIBLE
+                binding.scrollBottomFab.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(0xFFFF8800.toInt())
+            } else {
+                binding.scrollBottomFab.visibility = View.GONE
+            }
         }
     }
 
@@ -126,7 +145,6 @@ class MainActivity : AppCompatActivity() {
         binding.keyEsc.setOnClickListener { sshManager.sendKeyPress(KeyCode.ESCAPE) }
         binding.keyCtrlC.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_C) }
 
-
         binding.keyTmuxNew.setOnClickListener { sshManager.createTmuxWindow() }
         binding.keyTmuxNext.setOnClickListener { sshManager.nextTmuxWindow() }
         binding.keyTmuxClose.setOnClickListener { sshManager.closeTmuxWindow() }
@@ -166,21 +184,34 @@ class MainActivity : AppCompatActivity() {
             sshManager.connectionState.collectLatest { state ->
                 when (state) {
                     is ConnectionState.Disconnected -> {
-                        binding.statusText.text = getString(R.string.disconnected)
+                        if (currentProfile != null) {
+                            binding.statusText.text = getString(R.string.disconnected_tap_reconnect)
+                            binding.statusText.setOnClickListener { reconnect() }
+                        } else {
+                            binding.statusText.text = getString(R.string.disconnected)
+                            binding.statusText.setOnClickListener(null)
+                        }
                         binding.statusIndicator.setBackgroundResource(R.drawable.status_disconnected)
                     }
                     is ConnectionState.Connecting -> {
                         binding.statusText.text = getString(R.string.connecting_to, state.name)
+                        binding.statusText.setOnClickListener(null)
                         binding.statusIndicator.setBackgroundResource(R.drawable.status_connecting)
                     }
                     is ConnectionState.Connected -> {
                         binding.statusText.text = getString(R.string.connected_to, state.name)
+                        binding.statusText.setOnClickListener(null)
                         binding.statusIndicator.setBackgroundResource(R.drawable.status_connected)
-                        // Update terminal size now that we're connected
                         updateTerminalSize()
                     }
                     is ConnectionState.Error -> {
-                        binding.statusText.text = state.message
+                        if (currentProfile != null) {
+                            binding.statusText.text = "${state.message} — tap to retry"
+                            binding.statusText.setOnClickListener { reconnect() }
+                        } else {
+                            binding.statusText.text = state.message
+                            binding.statusText.setOnClickListener(null)
+                        }
                         binding.statusIndicator.setBackgroundResource(R.drawable.status_disconnected)
                         Toast.makeText(this@MainActivity, state.message, Toast.LENGTH_LONG).show()
                     }
@@ -190,31 +221,132 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeOutput() {
+        // Feed raw SSH output to the OutputProcessor
         lifecycleScope.launch {
             sshManager.outputFlow.collectLatest { rawOutput ->
-                // Parse ANSI codes into styled text
-                val styled = ansiParser.parse(rawOutput)
-                val plain = ansiParser.stripAnsi(rawOutput)
+                outputProcessor.processRawOutput(rawOutput)
+            }
+        }
 
-                // Add to history buffer
-                historyBuffer.appendStyled(styled)
-                historyBuffer.appendPlain(plain)
+        // Consume deduplicated content lines
+        lifecycleScope.launch {
+            outputProcessor.contentFlow.collectLatest { lines ->
+                binding.terminalView.appendLines(lines)
+            }
+        }
 
-                // Display in terminal view
-                binding.terminalView.appendOutput(styled)
+        // Consume plain text for history persistence
+        lifecycleScope.launch {
+            outputProcessor.plainTextFlow.collectLatest { plainText ->
+                historyBuffer.appendPlain(plainText)
+            }
+        }
 
-                // Persist to disk if enabled
-                if (currentSettings.saveHistoryBetweenSessions) {
-                    sessionHistoryFile?.let { file ->
-                        historyRepo.appendToSession(file, plain)
-                    }
+        // Consume thinking state
+        lifecycleScope.launch {
+            outputProcessor.thinkingFlow.collectLatest { update ->
+                updateThinkingIndicator(update)
+            }
+        }
+
+        // Consume tmux bar updates
+        lifecycleScope.launch {
+            outputProcessor.tmuxBarFlow.collectLatest { update ->
+                updateTmuxBar(update)
+            }
+        }
+
+        // Consume Claude Code status bar
+        lifecycleScope.launch {
+            outputProcessor.statusBarFlow.collectLatest { status ->
+                updateStatusBar(status)
+            }
+        }
+    }
+
+    private fun updateThinkingIndicator(update: ThinkingUpdate) {
+        if (update.isThinking) {
+            binding.thinkingIndicator.visibility = View.VISIBLE
+            binding.thinkingStatus.text = update.statusText ?: getString(R.string.thinking)
+            startThinkingAnimation()
+        } else {
+            binding.thinkingIndicator.visibility = View.GONE
+            stopThinkingAnimation()
+        }
+    }
+
+    private fun startThinkingAnimation() {
+        if (thinkingAnimJob?.isActive == true) return
+        thinkingSymbolIndex = 0
+        thinkingAnimJob = lifecycleScope.launch {
+            while (isActive) {
+                binding.thinkingSymbol.text = thinkingSymbols[thinkingSymbolIndex].toString()
+                thinkingSymbolIndex = (thinkingSymbolIndex + 1) % thinkingSymbols.size
+                delay(150)
+            }
+        }
+    }
+
+    private fun stopThinkingAnimation() {
+        thinkingAnimJob?.cancel()
+        thinkingAnimJob = null
+    }
+
+    private fun updateStatusBar(status: String?) {
+        if (status == null) {
+            binding.statusBar.visibility = View.GONE
+        } else {
+            binding.statusBar.text = status
+            binding.statusBar.visibility = View.VISIBLE
+        }
+    }
+
+    private fun updateTmuxBar(update: TmuxBarUpdate?) {
+        if (update == null || update.windows.isEmpty()) {
+            binding.tmuxBar.visibility = View.GONE
+            return
+        }
+
+        // Route history writes to the active tmux window's file
+        val activeWindow = update.windows.getOrNull(update.activeIndex)
+        if (activeWindow != null) {
+            historyBuffer.setActiveWindow(activeWindow.index)
+        }
+
+        binding.tmuxBar.visibility = View.VISIBLE
+        val container = binding.tmuxTabs
+        container.removeAllViews()
+
+        for (window in update.windows) {
+            val tab = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = "[${window.index}] ${window.name}"
+                textSize = 12f
+                minWidth = 0
+                minimumWidth = 0
+                setPadding(16, 4, 16, 4)
+                insetTop = 0
+                insetBottom = 0
+
+                if (window.isActive) {
+                    setBackgroundColor(0xFF3D3D5C.toInt())
+                    setTextColor(0xFFFFFFFF.toInt())
+                } else {
+                    setBackgroundColor(0x00000000)
+                    setTextColor(0xFFAAAAAA.toInt())
                 }
 
-                // Show "scroll to bottom" FAB if user is viewing history
-                if (binding.terminalView.isViewingHistory()) {
-                    binding.scrollBottomFab.visibility = View.VISIBLE
+                setOnClickListener {
+                    sshManager.selectTmuxWindow(window.index)
                 }
             }
+
+            val lp = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = 4
+            }
+            container.addView(tab, lp)
         }
     }
 
@@ -234,20 +366,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun connectToServer(profile: ConnectionProfile) {
-        // Create a history file for this session
-        sessionHistoryFile = historyRepo.createSessionFile(profile.name)
+        currentProfile = profile
+        // Set up per-window history files (appends if reconnecting to same server)
+        historyBuffer.setConnection(historyRepo.historyDir, profile.name)
 
         lifecycleScope.launch {
-            val result = sshManager.connect(profile)
-            result.onSuccess {
-                if (profile.autoAttachTmux) {
-                    sshManager.attachTmuxSession(profile.tmuxSessionName)
-                }
-            }
+            val result = sshManager.connect(profile, filesDir)
             result.onFailure { error ->
                 Toast.makeText(
                     this@MainActivity,
                     "Connection failed: ${error.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun reconnect() {
+        val profile = currentProfile ?: return
+        // Reuse existing history files — don't clear terminal
+        lifecycleScope.launch {
+            val result = sshManager.connect(profile, filesDir)
+            result.onFailure { error ->
+                Toast.makeText(
+                    this@MainActivity,
+                    "Reconnect failed: ${error.message}",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -281,10 +424,6 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, ConnectionActivity::class.java))
                 true
             }
-            R.id.action_tmux_sessions -> {
-                startActivity(Intent(this, SessionPickerActivity::class.java))
-                true
-            }
             R.id.action_settings -> {
                 startActivity(Intent(this, SettingsActivity::class.java))
                 true
@@ -303,6 +442,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        outputProcessor.destroy()
+        historyBuffer.close()
         sshManager.destroy()
     }
 }

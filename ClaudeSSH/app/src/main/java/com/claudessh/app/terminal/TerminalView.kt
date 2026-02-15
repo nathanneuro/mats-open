@@ -2,22 +2,26 @@ package com.claudessh.app.terminal
 
 import android.content.Context
 import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
 import android.text.SpannableStringBuilder
 import android.util.AttributeSet
 import android.util.TypedValue
-import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.widget.NestedScrollView
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
- * Scrollable terminal history view.
+ * Scrollable terminal history view with batched display.
  *
- * This wraps a TextView inside a ScrollView, presenting terminal output as a scrollable
- * document. Scrolling is purely a local UI operation and does NOT send any keypresses
- * to the remote server. This is the key difference from traditional terminal scrollback.
+ * Incoming lines go into a pending queue. A display timer (every ~100ms) pulls
+ * from the queue and appends a batch. If the queue has more than a screen's
+ * worth of lines, it skips to the latest screen-sized piece. This prevents
+ * rapid unreadable scrolling during high-throughput output (e.g. cat large file).
  *
- * The view auto-scrolls to the bottom when new output arrives, unless the user has
- * manually scrolled up to read history.
+ * When the user scrolls up ("history mode"), the view freezes in place —
+ * new content is appended but the scroll position stays locked. Only the
+ * user or the scroll-to-bottom FAB can resume auto-scroll.
  */
 class TerminalView @JvmOverloads constructor(
     context: Context,
@@ -31,10 +35,27 @@ class TerminalView @JvmOverloads constructor(
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
         setPadding(16, 8, 16, 8)
         setTextIsSelectable(true)
+        // Disable content capture to prevent OOM — Android's ContentCapture copies
+        // the entire SpannableStringBuilder on every text change
+        importantForContentCapture = IMPORTANT_FOR_CONTENT_CAPTURE_NO
     }
 
-    private var isUserScrolling = false
     private var autoScrollEnabled = true
+
+    /** Called when history mode changes: true = viewing history, false = live. */
+    var onHistoryModeChanged: ((Boolean) -> Unit)? = null
+
+    // Batched display queue
+    private val pendingLines = ConcurrentLinkedQueue<SpannableStringBuilder>()
+    private val handler = Handler(Looper.getMainLooper())
+    private var batchTimerRunning = false
+
+    companion object {
+        private const val MAX_CHARS = 100_000
+        private const val TRIM_TO = 75_000
+        private const val BATCH_INTERVAL_MS = 100L
+        private const val VISIBLE_ROWS_ESTIMATE = 30
+    }
 
     init {
         setBackgroundColor(0xFF1E1E1E.toInt()) // Dark background
@@ -42,17 +63,19 @@ class TerminalView @JvmOverloads constructor(
         isFillViewport = true
 
         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-            if (scrollY < oldScrollY) {
-                // User scrolled up
-                isUserScrolling = true
-                autoScrollEnabled = false
-            }
-
-            // Re-enable auto-scroll if user scrolled to bottom
             val maxScroll = textView.height - height
-            if (scrollY >= maxScroll - 50) {
-                isUserScrolling = false
+            val atBottom = scrollY >= maxScroll - 50
+
+            if (scrollY < oldScrollY && !atBottom) {
+                // User scrolled up — enter history mode
+                if (autoScrollEnabled) {
+                    autoScrollEnabled = false
+                    onHistoryModeChanged?.invoke(true)
+                }
+            } else if (atBottom && !autoScrollEnabled) {
+                // User scrolled back to bottom — exit history mode
                 autoScrollEnabled = true
+                onHistoryModeChanged?.invoke(false)
             }
         }
     }
@@ -62,15 +85,86 @@ class TerminalView @JvmOverloads constructor(
     }
 
     /**
-     * Append styled text from the ANSI parser to the display.
-     * Auto-scrolls to bottom unless user is manually browsing history.
+     * Append deduplicated lines from the OutputProcessor.
+     * Lines are queued and flushed in batches for smooth display.
      */
-    fun appendOutput(styled: SpannableStringBuilder) {
-        textView.append(styled)
+    fun appendLines(lines: List<SpannableStringBuilder>) {
+        for (line in lines) {
+            pendingLines.add(line)
+        }
+        startBatchTimer()
+    }
 
-        if (autoScrollEnabled) {
-            post {
-                fullScroll(FOCUS_DOWN)
+    private fun startBatchTimer() {
+        if (batchTimerRunning) return
+        batchTimerRunning = true
+        handler.postDelayed(batchRunnable, BATCH_INTERVAL_MS)
+    }
+
+    private val batchRunnable = object : Runnable {
+        override fun run() {
+            flushPendingLines()
+            if (pendingLines.isNotEmpty()) {
+                handler.postDelayed(this, BATCH_INTERVAL_MS)
+            } else {
+                batchTimerRunning = false
+            }
+        }
+    }
+
+    private fun flushPendingLines() {
+        if (pendingLines.isEmpty()) return
+
+        // Drain all pending lines
+        val batch = mutableListOf<SpannableStringBuilder>()
+        while (true) {
+            val line = pendingLines.poll() ?: break
+            batch.add(line)
+        }
+
+        if (batch.isEmpty()) return
+
+        val skipAnimation = batch.size > VISIBLE_ROWS_ESTIMATE
+
+        // In history mode, save scroll position before appending
+        val savedScrollY = if (!autoScrollEnabled) scrollY else -1
+
+        val combined = SpannableStringBuilder()
+        for ((i, line) in batch.withIndex()) {
+            if (i > 0 || textView.length() > 0) {
+                combined.append("\n")
+            }
+            combined.append(line)
+        }
+
+        textView.append(combined)
+        trimIfNeeded()
+
+        if (!autoScrollEnabled && savedScrollY >= 0) {
+            // History mode: lock scroll position so the view doesn't jump
+            post { scrollTo(0, savedScrollY) }
+        } else if (autoScrollEnabled) {
+            if (skipAnimation) {
+                post { fullScroll(FOCUS_DOWN) }
+            } else {
+                smoothScrollToBottom()
+            }
+        }
+    }
+
+    private fun trimIfNeeded() {
+        val editable = textView.editableText
+        if (editable != null && editable.length > MAX_CHARS) {
+            val deleteEnd = editable.length - TRIM_TO
+            editable.delete(0, deleteEnd)
+        }
+    }
+
+    private fun smoothScrollToBottom() {
+        post {
+            val targetY = textView.height - height
+            if (targetY > scrollY) {
+                smoothScrollTo(0, targetY)
             }
         }
     }
@@ -80,47 +174,29 @@ class TerminalView @JvmOverloads constructor(
      */
     fun setContent(styled: SpannableStringBuilder) {
         textView.text = styled
-        post {
-            fullScroll(FOCUS_DOWN)
-        }
+        post { fullScroll(FOCUS_DOWN) }
     }
 
-    /**
-     * Clear the display.
-     */
     fun clear() {
+        pendingLines.clear()
         textView.text = ""
         autoScrollEnabled = true
     }
 
-    /**
-     * Scroll to the very bottom and re-enable auto-scroll.
-     */
     fun scrollToBottom() {
         autoScrollEnabled = true
-        post {
-            fullScroll(FOCUS_DOWN)
-        }
+        onHistoryModeChanged?.invoke(false)
+        post { fullScroll(FOCUS_DOWN) }
     }
 
-    /**
-     * Check if the user is currently browsing history (scrolled up from bottom).
-     */
-    fun isViewingHistory(): Boolean = isUserScrolling
+    fun isViewingHistory(): Boolean = !autoScrollEnabled
 
-    /**
-     * Get the number of columns that fit at the current font size.
-     * Used to set the PTY size on the SSH channel.
-     */
     fun calculateColumns(): Int {
         val paint = textView.paint
         val charWidth = paint.measureText("M")
         return if (charWidth > 0) ((width - textView.paddingLeft - textView.paddingRight) / charWidth).toInt() else 80
     }
 
-    /**
-     * Get the number of rows visible at the current font size.
-     */
     fun calculateRows(): Int {
         val lineHeight = textView.lineHeight
         return if (lineHeight > 0) (height / lineHeight) else 24

@@ -7,12 +7,7 @@
         android:title="@string/action_connections"
         app:showAsAction="never" />
 
-    <item
-        android:id="@+id/action_tmux_sessions"
-        android:title="@string/action_tmux"
-        app:showAsAction="never" />
-
-    <item
+<item
         android:id="@+id/action_settings"
         android:title="@string/action_settings"
         app:showAsAction="never" />

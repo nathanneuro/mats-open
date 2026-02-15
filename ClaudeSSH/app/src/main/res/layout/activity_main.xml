@@ -47,7 +47,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toTopOf="@id/extraKeysBar"
+        app:layout_constraintBottom_toTopOf="@id/statusBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -57,7 +57,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toTopOf="@id/extraKeysBar"
+        app:layout_constraintBottom_toTopOf="@id/statusBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -73,8 +73,76 @@
         app:fabSize="mini"
         app:backgroundTint="@color/accent"
         app:tint="@color/text_primary"
-        app:layout_constraintBottom_toTopOf="@id/extraKeysBar"
+        app:layout_constraintBottom_toTopOf="@id/statusBar"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Claude Code status bar (cost, tokens, model info) -->
+    <TextView
+        android:id="@+id/statusBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FF252530"
+        android:fontFamily="monospace"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp"
+        android:textColor="#FF8888AA"
+        android:textSize="11sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/thinkingIndicator" />
+
+    <!-- Thinking indicator: shows when Claude is thinking -->
+    <FrameLayout
+        android:id="@+id/thinkingIndicator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FF2D2D2D"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/tmuxBar">
+
+        <!-- Symbol in fixed-width box, centered, so size changes don't shift text -->
+        <TextView
+            android:id="@+id/thinkingSymbol"
+            android:layout_width="24dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical|start"
+            android:gravity="center"
+            android:textColor="#FFFFCC00"
+            android:textSize="18sp"
+            android:fontFamily="monospace"
+            android:text="*" />
+
+        <!-- Status text positioned after the fixed symbol box -->
+        <TextView
+            android:id="@+id/thinkingStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical|start"
+            android:layout_marginStart="28dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:text="@string/thinking" />
+    </FrameLayout>
+
+    <!-- Tmux tab bar: shows tmux windows -->
+    <HorizontalScrollView
+        android:id="@+id/tmuxBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FF1A1A2E"
+        android:scrollbars="none"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/extraKeysBar">
+
+        <LinearLayout
+            android:id="@+id/tmuxTabs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="2dp" />
+    </HorizontalScrollView>
 
     <!-- Extra keys bar (Tab, Esc, Ctrl combos) -->
     <HorizontalScrollView

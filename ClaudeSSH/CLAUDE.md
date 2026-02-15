@@ -10,7 +10,7 @@ Keep all build tooling at latest stable versions: AGP, Kotlin, Gradle, compileSd
 - **Kotlin / Android SDK 35** (minSdk 26)
 - **MVVM-ish** with Repository pattern, Kotlin Coroutines + Flow
 - **ViewBinding** (no Compose)
-- **JSch** (`com.github.mwiede:jsch`) for SSH connections
+- **SSHJ** (`com.hierynomus:sshj`) for SSH connections
 
 ## Package Structure
 ```
@@ -50,7 +50,8 @@ cd ClaudeSSH && ./gradlew assembleDebug
 ```
 
 ## Dependencies
-- `com.github.mwiede:jsch:0.2.16` - SSH (maintained JSch fork)
+- `com.hierynomus:sshj:0.40.0` - SSH (replaced JSch which had MAC bugs on Android)
+- `org.bouncycastle:bcprov-jdk18on` - Full BouncyCastle for ed25519 key support
 - `androidx.datastore:datastore-preferences` - Settings persistence
 - `com.google.code.gson:gson` - JSON for connection profiles
 - Standard AndroidX (material, constraintlayout, lifecycle, coroutines)

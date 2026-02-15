@@ -4,6 +4,7 @@
 
     <!-- Connection status -->
     <string name="disconnected">Disconnected</string>
+    <string name="disconnected_tap_reconnect">Disconnected — tap to reconnect</string>
     <string name="connecting_to">Connecting to %s...</string>
     <string name="connected_to">Connected: %s</string>
 
@@ -32,6 +33,9 @@
     <string name="ssh_key">SSH Key</string>
     <string name="password">Password</string>
     <string name="private_key_path">Private key path</string>
+    <string name="browse_key_file">Import Key File</string>
+    <string name="no_key_selected">No key imported</string>
+    <string name="key_imported">Key imported ✓</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
@@ -64,6 +68,9 @@
     <string name="history_cleared">Session history cleared</string>
     <string name="save_settings">Save Settings</string>
     <string name="settings_saved">Settings saved</string>
+
+    <!-- Thinking indicator -->
+    <string name="thinking">Thinking\u2026</string>
 
     <!-- Tmux window controls -->
     <string name="tmux_new_window">+W</string>
@@ -98,9 +105,9 @@
     <string name="instructions_step4_cmd">mkdir -p ~/.ssh \u0026\u0026 chmod 700 ~/.ssh\necho \"PASTE_YOUR_PUBLIC_KEY_HERE\" >> ~/.ssh/authorized_keys\nchmod 600 ~/.ssh/authorized_keys</string>
 
     <string name="instructions_step5_title">5. Get the private key onto your phone</string>
-    <string name="instructions_step5_body">Transfer the private key file to your Android device. Some options:\n\n• USB cable: copy to Internal Storage or Downloads\n• ADB: adb push ~/.ssh/phone_ed25519 /sdcard/Download/\n• Email/messaging: send to yourself (delete after saving)\n• Termux: if you generated the key in Termux, it\'s already on your phone\n\nNote the file path where you save it:</string>
-    <string name="instructions_step5_cmd">/sdcard/Download/phone_ed25519</string>
+    <string name="instructions_step5_body">Transfer the private key file to your Android device. Any method works:\n\n• USB cable: copy to Downloads\n• ADB: adb push ~/.ssh/phone_ed25519 /sdcard/Download/\n• Email/messaging: send to yourself (delete after saving)\n\nThe file just needs to be somewhere your phone\'s file browser can find it.</string>
+    <string name="instructions_step5_cmd">adb push ~/.ssh/phone_ed25519 /sdcard/Download/</string>
 
-    <string name="instructions_step6_title">6. Configure C_Portal</string>
-    <string name="instructions_step6_body">Open Connections in C_Portal and create a new connection:\n\n• Name: anything you like\n• Host: your server\'s IP or hostname\n• Port: 22 (default)\n• Username: your server username\n• Auth: SSH Key\n• Private key path: the path from step 5\n\nThat\'s it! Tap the connection to connect.</string>
+    <string name="instructions_step6_title">6. Import the key in C_Portal</string>
+    <string name="instructions_step6_body">Open Connections and create a new connection:\n\n• Name: anything you like\n• Host: your server\'s IP or hostname\n• Port: 22 (default)\n• Username: your server username\n• Auth: SSH Key\n• Tap \"Import Key File\" and select the private key from step 5\n\nC_Portal copies the key into its own secure storage, so you can delete the file from Downloads afterward.\n\nThat\'s it! Tap the connection to connect.</string>
 </resources>

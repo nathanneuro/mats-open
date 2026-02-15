@@ -92,20 +92,29 @@
                 android:text="@string/password" />
         </RadioGroup>
 
-        <com.google.android.material.textfield.TextInputLayout
+        <LinearLayout
             android:id="@+id/layoutKeyPath"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="@string/private_key_path">
+            android:orientation="vertical">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editKeyPath"
+            <TextView
+                android:id="@+id/textKeyStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textNoSuggestions"
-                android:text="/sdcard/.ssh/id_ed25519" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:text="@string/no_key_selected"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonBrowseKey"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/browse_key_file" />
+        </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/layoutPassword"
@@ -145,20 +154,7 @@
             android:text="@string/auto_attach_tmux"
             android:checked="true" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="@string/tmux_session_name">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editTmuxSession"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="claude" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
+<com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -167,8 +163,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editStartCommand"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="claude" />
+                android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
 
     </LinearLayout>

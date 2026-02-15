@@ -12,8 +12,8 @@ data class ConnectionProfile(
     val privateKeyPath: String? = null,
     val password: String? = null,
     val autoAttachTmux: Boolean = true,
-    val tmuxSessionName: String = "claude",
-    val startCommand: String? = "claude"
+    val tmuxSessionName: String = "",
+    val startCommand: String? = null
 )
 
 enum class AuthMethod {
