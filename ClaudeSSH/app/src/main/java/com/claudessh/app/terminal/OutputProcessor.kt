@@ -76,6 +76,7 @@ class OutputProcessor(
         // \\s* because cursor-forward [C] gets stripped, leaving no whitespace
         private val STATUS_TEXT_PATTERN = Regex("[$THINKING_SYMBOLS_STR]\\s*([A-Z][a-z].{1,38}?)(?:[.…\u2024\u2025]+|\\s*$)")
         private const val MIN_DIFF_INTERVAL_MS = 80L
+        private const val DEDUP_WINDOW = 20
     }
 
     // Throttle: skip expensive diffs for rapid-fire small chunks (thinking animation)
@@ -153,10 +154,15 @@ class OutputProcessor(
         return ChunkType.INCREMENTAL
     }
 
+    // Deduplication: track recently emitted lines to avoid repeats
+    private val recentLines = ArrayDeque<String>(DEDUP_WINDOW)
+
     /**
      * Post-process content lines for phone display:
+     * - Drop fence lines (status area safety net)
+     * - Drop lone thinking symbols
+     * - Deduplicate recently emitted lines
      * - Trim fence lines to displayCols width
-     * - Filter lone thinking symbols that leaked past chunk classification
      */
     private fun postProcessLines(lines: List<SpannableStringBuilder>): List<SpannableStringBuilder> {
         val result = mutableListOf<SpannableStringBuilder>()
@@ -169,10 +175,18 @@ class OutputProcessor(
             // Drop tmux bar lines that leaked into content
             if (TMUX_BAR_LINE.matches(text)) continue
 
+            // Drop standalone fence lines — these are status area UI, not content.
+            // Content fences (e.g. in code blocks) are shorter and mixed with text.
+            if (isFenceLine(text) && text.trim().length > 20) continue
+
+            // Drop standalone prompt lines (❯ with no meaningful text after)
+            val trimmed = text.trimStart()
+            if ((trimmed.startsWith("❯") || trimmed.startsWith(">")) &&
+                trimmed.removePrefix("❯").removePrefix(">").isBlank()) continue
+
             // Filter status lines (e.g. "✶ Compacting conversation…") → show in thinking bar
             val statusMatch = STATUS_LINE_PATTERN.find(text)
             if (statusMatch != null) {
-                // Strip trailing dots/ellipsis for clean display
                 val rawStatus = statusMatch.groupValues[1].trim()
                 val statusText = ELLIPSIS.replace(rawStatus, "").trim()
                 if (statusText.isNotEmpty()) {
@@ -181,11 +195,12 @@ class OutputProcessor(
                 continue
             }
 
-            // Trim fence lines to phone width
-            if (text.length > displayCols && isFenceLine(text)) {
-                val trimmed = SpannableStringBuilder(line, 0, displayCols)
-                result.add(trimmed)
-                continue
+            // Deduplicate: skip if this exact line was recently emitted
+            val textKey = text.trim()
+            if (textKey.isNotEmpty() && textKey in recentLines) continue
+            if (textKey.isNotEmpty()) {
+                recentLines.addLast(textKey)
+                if (recentLines.size > DEDUP_WINDOW) recentLines.removeFirst()
             }
 
             result.add(line)
@@ -196,6 +211,27 @@ class OutputProcessor(
     /** Strip selector/cursor characters for fuzzy line comparison. */
     private fun stripSelector(text: String): String {
         return text.replace("❯", " ").replace(">", " ").trimStart()
+    }
+
+    /** Strip leading bullet (●) for detecting bullet-blink animation. */
+    private fun stripBullet(text: String): String {
+        return text.trimStart().removePrefix("●").trimStart()
+    }
+
+    /** Check if a row on the current screen has a thinking symbol in the first few columns. */
+    private fun isThinkingRow(row: Int): Boolean {
+        for (c in 0 until minOf(3, cols)) {
+            if (screen.cells[row][c].char in THINKING_SYMBOLS) return true
+        }
+        return false
+    }
+
+    /** Check if a snapshot row has a thinking symbol in the first few columns. */
+    private fun isThinkingRowInSnapshot(row: Array<VirtualScreen.Cell>): Boolean {
+        for (c in 0 until minOf(3, row.size)) {
+            if (row[c].char in THINKING_SYMBOLS) return true
+        }
+        return false
     }
 
     /** A line looks like Claude Code status info if it has 2+ pipe separators. */
@@ -219,137 +255,86 @@ class OutputProcessor(
      * Returns the first row of the status area, or `maxRow` if not found.
      * Also extracts and emits the status text.
      */
+    /** Check if a line is a prompt line (❯ or >) */
+    private fun isPromptLine(text: String): Boolean {
+        val trimmed = text.trimStart()
+        return trimmed.startsWith("❯") || trimmed.startsWith(">")
+    }
+
+    /** Check if a line is part of the status area (fence, prompt, or action hint) */
+    private fun isStatusAreaLine(text: String): Boolean {
+        val trimmed = text.trimStart()
+        return (isFenceLine(text) && text.length > 20) ||
+            isPromptLine(text) ||
+            trimmed.startsWith("⏵") // accept/reject hints
+    }
+
     private fun detectStatusArea(maxRow: Int): Int {
-        // Scan upward from the bottom to find the top fence of the status area.
+        // Scan upward from the bottom to find the top of the status area.
         // Claude Code layout (bottom of screen):
         //   Row N:   ──────────── (top fence)
         //   Row N+1: ❯            (prompt — uses ❯ or >)
         //   Row N+2: ──────────── (bottom fence, possibly doubled)
-        //   Row N+3: ──────────── (optional second fence)
-        //   Row N+4: status info (path | CPU | RAM | GPU...)
-        //   Row N+5: more status...
-        //   Row N+6: ⏵⏵ accept edits on · ...
+        //   Row N+3: status info (path | CPU | RAM | GPU...)
+        //   Row N+4: more status...
+        //   Row N+5: ⏵⏵ accept edits on · ...
         //   Last:    [0] bash [1] claude* (tmux bar — already excluded)
-        var topFenceRow = -1
+        var topStatusRow = -1
 
-        for (r in (maxRow - 1) downTo maxOf(0, maxRow - 8)) {
+        for (r in (maxRow - 1) downTo maxOf(0, maxRow - 10)) {
             val text = screen.getRowText(r)
-            if (isFenceLine(text) && text.length > 20) {
-                // Check if the row below is a prompt or another fence or blank
-                if (r + 1 < maxRow) {
-                    val below = screen.getRowText(r + 1).trimStart()
-                    if (below.startsWith(">") || below.startsWith("❯") ||
-                        below.isEmpty() || (isFenceLine(below) && below.length > 20)) {
-                        topFenceRow = r
-                        // Keep scanning up — we want the TOPMOST fence in the cluster
-                        continue
-                    }
-                }
-                if (topFenceRow >= 0) break // Found a non-fence/non-prompt, stop
-            } else if (topFenceRow >= 0) {
-                break // First non-fence row above the area, stop
+            if (isStatusAreaLine(text) || isStatusInfoLine(text)) {
+                topStatusRow = r
+                continue
+            } else if (text.isBlank() && topStatusRow >= 0) {
+                // Blank line within the status area — include it
+                topStatusRow = r
+                continue
+            } else if (topStatusRow >= 0) {
+                break // First content row above the status area
             }
         }
 
-        // If fence scan didn't find anything, try finding status lines by | separators
-        // Claude Code status looks like: "path | CPU 12% | RAM 4.2G | GPU 85%"
-        if (topFenceRow < 0) {
-            for (r in (maxRow - 1) downTo maxOf(0, maxRow - 6)) {
-                val text = screen.getRowText(r)
-                if (isStatusInfoLine(text)) {
-                    // Found a status line — scan upward for fences/prompt above it
-                    topFenceRow = r
-                    for (above in (r - 1) downTo maxOf(0, r - 4)) {
-                        val aboveText = screen.getRowText(above)
-                        val trimmed = aboveText.trimStart()
-                        if (isFenceLine(aboveText) && aboveText.length > 20) {
-                            topFenceRow = above
-                        } else if (trimmed.startsWith(">") || trimmed.startsWith("❯")) {
-                            topFenceRow = above
-                        } else {
-                            break
-                        }
-                    }
-                    break
-                }
-            }
-        }
-
-        if (topFenceRow < 0) {
+        if (topStatusRow < 0) {
             _statusBarFlow.value = null
             return maxRow
         }
 
-        // Collect status lines: everything below fences/prompt that isn't a fence
+        // Collect status info lines from the status area (pipe-separated stats)
         val statusLines = mutableListOf<String>()
-        for (r in (topFenceRow + 1) until maxRow) {
+        for (r in topStatusRow until maxRow) {
             val text = screen.getRowText(r)
-            // Skip fences and the prompt line
-            if (isFenceLine(text) && text.length > 20) continue
-            val trimmed = text.trimStart()
-            if (trimmed.startsWith(">") || trimmed.startsWith("❯")) continue
-            if (text.isNotBlank()) {
+            if (isStatusInfoLine(text)) {
                 statusLines.add(text)
             }
         }
-        // Also check if topFenceRow itself is a status info line (when no fence above)
-        val topText = screen.getRowText(topFenceRow)
-        if (isStatusInfoLine(topText)) {
-            statusLines.add(0, topText)
-        }
 
         _statusBarFlow.value = if (statusLines.isNotEmpty()) {
-            // Collapse into single line, collapse whitespace
             statusLines.joinToString(" ") { it.trim() }
                 .replace(Regex("\\s{2,}"), " ")
         } else {
             null
         }
 
-        return topFenceRow
+        return topStatusRow
     }
 
     /** Same detection but on a raw snapshot array (for previous screen). */
     private fun detectStatusAreaInSnapshot(snapshot: Array<Array<VirtualScreen.Cell>>, maxRow: Int): Int {
-        var topFenceRow = -1
-        for (r in (maxRow - 1) downTo maxOf(0, maxRow - 8)) {
+        var topStatusRow = -1
+        for (r in (maxRow - 1) downTo maxOf(0, maxRow - 10)) {
             val text = getRowText(snapshot[r])
-            if (isFenceLine(text) && text.length > 20) {
-                if (r + 1 < maxRow) {
-                    val below = getRowText(snapshot[r + 1]).trimStart()
-                    if (below.startsWith(">") || below.startsWith("❯") ||
-                        below.isEmpty() || (isFenceLine(below) && below.length > 20)) {
-                        topFenceRow = r
-                        continue
-                    }
-                }
-                if (topFenceRow >= 0) break
-            } else if (topFenceRow >= 0) {
+            if (isStatusAreaLine(text) || isStatusInfoLine(text)) {
+                topStatusRow = r
+                continue
+            } else if (text.isBlank() && topStatusRow >= 0) {
+                topStatusRow = r
+                continue
+            } else if (topStatusRow >= 0) {
                 break
             }
         }
-        // Fallback: look for | separated status lines
-        if (topFenceRow < 0) {
-            for (r in (maxRow - 1) downTo maxOf(0, maxRow - 6)) {
-                val text = getRowText(snapshot[r])
-                if (isStatusInfoLine(text)) {
-                    topFenceRow = r
-                    for (above in (r - 1) downTo maxOf(0, r - 4)) {
-                        val aboveText = getRowText(snapshot[above])
-                        val trimmed = aboveText.trimStart()
-                        if (isFenceLine(aboveText) && aboveText.length > 20) {
-                            topFenceRow = above
-                        } else if (trimmed.startsWith(">") || trimmed.startsWith("❯")) {
-                            topFenceRow = above
-                        } else {
-                            break
-                        }
-                    }
-                    break
-                }
-            }
-        }
-        return if (topFenceRow >= 0) topFenceRow else maxRow
+        return if (topStatusRow >= 0) topStatusRow else maxRow
     }
 
     /**
@@ -371,13 +356,12 @@ class OutputProcessor(
 
         val prevContentRows = detectStatusAreaInSnapshot(prev, maxRow)
 
-        // Build line lists, but mark thinking row as blank so it's excluded from diff
-        val tRow = thinkingRow
+        // Build line lists, blanking any row with thinking symbols so they're excluded
         val prevLines = (0 until prevContentRows).map {
-            if (it == tRow) "" else getRowText(prev[it])
+            if (isThinkingRowInSnapshot(prev[it])) "" else getRowText(prev[it])
         }
         val currLines = (0 until contentRows).map {
-            if (it == tRow) "" else screen.getRowText(it)
+            if (isThinkingRow(it)) "" else screen.getRowText(it)
         }
 
         // Find the longest suffix of prevLines that matches a prefix of currLines
@@ -402,6 +386,7 @@ class OutputProcessor(
             // (most changed lines differ only by selector character).
             val changedRows = mutableListOf<Int>()
             val selectorChangedRows = mutableListOf<Int>()
+            val bulletChangedRows = mutableListOf<Int>()
 
             for (r in 0 until contentRows) {
                 val lineText = currLines[r]
@@ -417,6 +402,10 @@ class OutputProcessor(
                 if (r < prevLines.size && stripSelector(currLines[r]) == stripSelector(prevLines[r])) {
                     selectorChangedRows.add(r)
                 }
+                // Check if this line differs only by leading ● (bullet blink)
+                if (r < prevLines.size && stripBullet(currLines[r]) == stripBullet(prevLines[r])) {
+                    bulletChangedRows.add(r)
+                }
             }
 
             if (changedRows.size > 0 && selectorChangedRows.size == changedRows.size) {
@@ -431,7 +420,12 @@ class OutputProcessor(
                 return newLines
             }
 
-            // Not menu navigation — emit genuinely new lines
+            if (changedRows.size > 0 && bulletChangedRows.size == changedRows.size) {
+                // Pure bullet blink — suppress entirely
+                return newLines
+            }
+
+            // Not menu/bullet animation — emit genuinely new lines
             for (r in changedRows) {
                 newLines.add(screen.getRowStyled(r))
             }
@@ -449,7 +443,7 @@ class OutputProcessor(
     private fun extractNonBlankLines(): List<SpannableStringBuilder> {
         val lines = mutableListOf<SpannableStringBuilder>()
         for (r in 0 until rows - 1) { // Skip last row (potential tmux bar)
-            if (r == thinkingRow) continue // Skip thinking animation row
+            if (isThinkingRow(r)) continue // Skip thinking animation row
             val text = screen.getRowText(r)
             if (text.isNotBlank()) {
                 lines.add(screen.getRowStyled(r))
