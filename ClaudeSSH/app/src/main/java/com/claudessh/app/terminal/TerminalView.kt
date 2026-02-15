@@ -43,6 +43,7 @@ class TerminalView @JvmOverloads constructor(
 
     private var autoScrollEnabled = true
     private var userTouching = false
+    private var suppressScrollDetection = false
 
     /** Called when history mode changes: true = viewing history, false = live. */
     var onHistoryModeChanged: ((Boolean) -> Unit)? = null
@@ -65,8 +66,9 @@ class TerminalView @JvmOverloads constructor(
         isFillViewport = true
 
         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-            // Only detect history mode from user-initiated scrolls (touch)
-            if (!userTouching) return@setOnScrollChangeListener
+            // Only detect history mode from user-initiated scrolls (touch),
+            // and not when suppressed (during keyboard/bar show/hide transitions)
+            if (!userTouching || suppressScrollDetection) return@setOnScrollChangeListener
 
             val maxScroll = textView.height - height
             val atBottom = scrollY >= maxScroll - 50
@@ -75,22 +77,38 @@ class TerminalView @JvmOverloads constructor(
                 // User scrolled up — enter history mode
                 if (autoScrollEnabled) {
                     autoScrollEnabled = false
+                    // Clear touch flag and suppress scroll detection so layout
+                    // changes from hiding keyboard/bars don't re-trigger mode.
+                    // The scroll gesture is semantically "done" at this point.
+                    userTouching = false
+                    suppressScrollDetection = true
                     onHistoryModeChanged?.invoke(true)
+                    postDelayed({ suppressScrollDetection = false }, 1000)
                 }
             } else if (atBottom && !autoScrollEnabled) {
                 // User scrolled back to bottom — exit history mode
                 autoScrollEnabled = true
+                userTouching = false
+                suppressScrollDetection = true
                 onHistoryModeChanged?.invoke(false)
+                postDelayed({ suppressScrollDetection = false }, 1000)
             }
         }
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> userTouching = true
+            MotionEvent.ACTION_MOVE -> {
+                // Only mark as user-touching on actual drag, not on taps.
+                // Taps can cause spurious scroll events (from trim or layout)
+                // that would falsely trigger history mode.
+                userTouching = true
+            }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 // Delay clearing so fling scroll events still count as user-initiated
-                postDelayed({ userTouching = false }, 500)
+                if (userTouching) {
+                    postDelayed({ userTouching = false }, 500)
+                }
             }
         }
         return super.onInterceptTouchEvent(ev)
@@ -201,8 +219,10 @@ class TerminalView @JvmOverloads constructor(
 
     fun scrollToBottom() {
         autoScrollEnabled = true
+        suppressScrollDetection = true
         onHistoryModeChanged?.invoke(false)
         post { fullScroll(FOCUS_DOWN) }
+        postDelayed({ suppressScrollDetection = false }, 600)
     }
 
     fun isViewingHistory(): Boolean = !autoScrollEnabled
