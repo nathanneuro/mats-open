@@ -41,6 +41,7 @@ class TerminalView @JvmOverloads constructor(
     }
 
     private var autoScrollEnabled = true
+    private var suppressScrollDetection = false
 
     /** Called when history mode changes: true = viewing history, false = live. */
     var onHistoryModeChanged: ((Boolean) -> Unit)? = null
@@ -63,6 +64,8 @@ class TerminalView @JvmOverloads constructor(
         isFillViewport = true
 
         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+            if (suppressScrollDetection) return@setOnScrollChangeListener
+
             val maxScroll = textView.height - height
             val atBottom = scrollY >= maxScroll - 50
 
@@ -129,6 +132,9 @@ class TerminalView @JvmOverloads constructor(
         // In history mode, save scroll position before appending
         val savedScrollY = if (!autoScrollEnabled) scrollY else -1
 
+        // Suppress scroll detection during programmatic content changes
+        suppressScrollDetection = true
+
         val combined = SpannableStringBuilder()
         for ((i, line) in batch.withIndex()) {
             if (i > 0 || textView.length() > 0) {
@@ -142,13 +148,22 @@ class TerminalView @JvmOverloads constructor(
 
         if (!autoScrollEnabled && savedScrollY >= 0) {
             // History mode: lock scroll position so the view doesn't jump
-            post { scrollTo(0, savedScrollY) }
+            post {
+                scrollTo(0, savedScrollY)
+                suppressScrollDetection = false
+            }
         } else if (autoScrollEnabled) {
             if (skipAnimation) {
-                post { fullScroll(FOCUS_DOWN) }
+                post {
+                    fullScroll(FOCUS_DOWN)
+                    suppressScrollDetection = false
+                }
             } else {
+                post { suppressScrollDetection = false }
                 smoothScrollToBottom()
             }
+        } else {
+            post { suppressScrollDetection = false }
         }
     }
 
