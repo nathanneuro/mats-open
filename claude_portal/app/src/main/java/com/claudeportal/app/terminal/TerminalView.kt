@@ -93,14 +93,9 @@ class TerminalView @JvmOverloads constructor(
                     onHistoryModeChanged?.invoke(true)
                     postDelayed({ suppressScrollDetection = false }, 1000)
                 }
-            } else if (atBottom && !autoScrollEnabled) {
-                // User scrolled back to bottom — exit history mode
-                autoScrollEnabled = true
-                userTouching = false
-                suppressScrollDetection = true
-                onHistoryModeChanged?.invoke(false)
-                postDelayed({ suppressScrollDetection = false }, 1000)
-            }
+            // Scrolling down does NOT exit history mode — only the
+            // scroll-to-bottom FAB (via scrollToBottom()) can do that.
+        }
         }
     }
 
