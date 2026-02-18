@@ -93,7 +93,7 @@ class OutputProcessor(
     // When false, Claude-specific filters (thinking detection, status area,
     // fence lines, etc.) are bypassed so non-Claude windows render cleanly.
     @Volatile
-    var isClaudeWindow: Boolean = true
+    var isClaudeWindow: Boolean = false
 
     // Throttle: skip expensive diffs for rapid-fire small chunks (thinking animation)
     private var lastDiffTime = 0L

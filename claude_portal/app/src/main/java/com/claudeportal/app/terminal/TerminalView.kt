@@ -1,10 +1,13 @@
 package com.claudeportal.app.terminal
 
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.text.SpannableStringBuilder
+import android.text.style.LeadingMarginSpan
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
@@ -40,6 +43,11 @@ class TerminalView @JvmOverloads constructor(
         // the entire SpannableStringBuilder on every text change
         importantForContentCapture = IMPORTANT_FOR_CONTENT_CAPTURE_NO
     }
+
+    // Latest-line accent: thin left-edge bar on the most recently appended batch
+    private var accentSpanStart = -1
+    private var accentSpanEnd = -1
+    private var accentSpan: LatestLineSpan? = null
 
     private var autoScrollEnabled = true
     private var userTouching = false
@@ -171,7 +179,27 @@ class TerminalView @JvmOverloads constructor(
             combined.append(line)
         }
 
+        // Remove previous latest-line accent
+        val editable = textView.editableText
+        val oldSpan = accentSpan
+        if (oldSpan != null && editable != null) {
+            editable.removeSpan(oldSpan)
+        }
+
+        val batchStart = textView.length()
         textView.append(combined)
+
+        // Apply accent bar to this batch
+        val newEditable = textView.editableText
+        if (newEditable != null) {
+            val barWidth = 3 * resources.displayMetrics.density
+            val span = LatestLineSpan(0x60D97706, barWidth)  // semi-transparent Claude orange
+            newEditable.setSpan(span, batchStart, newEditable.length, 0)
+            accentSpan = span
+            accentSpanStart = batchStart
+            accentSpanEnd = newEditable.length
+        }
+
         trimIfNeeded()
 
         if (!autoScrollEnabled && savedScrollY >= 0) {
@@ -214,6 +242,9 @@ class TerminalView @JvmOverloads constructor(
     fun clear() {
         pendingLines.clear()
         textView.text = ""
+        accentSpan = null
+        accentSpanStart = -1
+        accentSpanEnd = -1
         autoScrollEnabled = true
     }
 
@@ -236,5 +267,28 @@ class TerminalView @JvmOverloads constructor(
     fun calculateRows(): Int {
         val lineHeight = textView.lineHeight
         return if (lineHeight > 0) (height / lineHeight) else 24
+    }
+
+    /**
+     * A LeadingMarginSpan that draws a thin colored bar in the left margin.
+     * Applied to the most recently appended batch of lines.
+     */
+    private class LatestLineSpan(private val barColor: Int, private val barWidth: Float) :
+        LeadingMarginSpan {
+        private val paint = Paint().apply {
+            color = barColor
+            style = Paint.Style.FILL
+        }
+
+        override fun getLeadingMargin(first: Boolean): Int = 0  // no indent
+
+        override fun drawLeadingMargin(
+            c: Canvas, p: Paint, x: Int, dir: Int,
+            top: Int, baseline: Int, bottom: Int,
+            text: CharSequence, start: Int, end: Int,
+            first: Boolean, layout: android.text.Layout?
+        ) {
+            c.drawRect(x.toFloat(), top.toFloat(), x + barWidth, bottom.toFloat(), paint)
+        }
     }
 }

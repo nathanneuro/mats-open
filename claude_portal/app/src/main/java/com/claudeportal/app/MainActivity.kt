@@ -95,9 +95,11 @@ class MainActivity : AppCompatActivity() {
                 hideKeyboard()
             } else {
                 binding.scrollBottomFab.visibility = View.GONE
-                // Show info bars and keyboard in live mode
-                binding.statusBar.visibility = View.VISIBLE
-                binding.thinkingIndicator.visibility = View.VISIBLE
+                // Show info bars and keyboard in live mode (only on Claude windows)
+                if (outputProcessor.isClaudeWindow) {
+                    binding.statusBar.visibility = View.VISIBLE
+                    binding.thinkingIndicator.visibility = View.VISIBLE
+                }
                 showKeyboard()
                 // Re-scroll after layout settles from bars + keyboard appearing.
                 // Two passes: once after bars appear, again after keyboard animation.
@@ -301,6 +303,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateThinkingIndicator(update: ThinkingUpdate) {
+        if (!outputProcessor.isClaudeWindow) {
+            binding.thinkingIndicator.visibility = View.GONE
+            stopThinkingAnimation()
+            return
+        }
+        binding.thinkingIndicator.visibility = View.VISIBLE
         if (update.isThinking) {
             binding.thinkingSymbol.visibility = View.VISIBLE
             binding.thinkingStatus.visibility = View.VISIBLE
@@ -331,6 +339,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateStatusBar(status: String?) {
+        if (!outputProcessor.isClaudeWindow) {
+            binding.statusBar.visibility = View.GONE
+            return
+        }
+        binding.statusBar.visibility = View.VISIBLE
         binding.statusBar.text = status ?: ""
     }
 
