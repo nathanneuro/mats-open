@@ -1,0 +1,542 @@
+--------- beginning of main
+02-15 18:35:52.739 14011 14011 D SshManager: sendInput: '\r' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:35:52.744 14011 14616 D SshManager: Sent 1 bytes
+02-15 18:35:53.328 14011 14455 D SshManager: Received 1503 bytes: [5d[37m [39m[19;1H[K\r\n[K[2B[K[9d[31m✶[39m [33mFermenting…[31m [37m
+02-15 18:35:53.330 14011 14455 D SshManager: Received 74 bytes: [9d[31m✽[CFermenting…[15;59H[37mChecking for updates[18;1H(B[m
+02-15 18:35:53.332 14011 14033 D OutputProcessor: chunk len=1168 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[39m⎋[19;1H⎋[K⏎↵⎋[K⎋[2B⎋[K⎋[9d⎋[31m✶⎋[39m ⎋[33mFermenting…⎋[31m ⎋[37m(6m 24s · ↓⎋[39m ⎋[37m6.6k tokens)⎋[39m                                          ⎋[10;2H            ⏎↵⎋[37m⎋[2m─────────
+02-15 18:35:53.342 14011 14033 D OutputProcessor: thinking row=8 rowText='✶ Fermenting… (6m 24s · ↓ 6.6k tokens)' status='Fermenting… (6m 24s · ↓ 6.6k tokens)'
+02-15 18:35:53.363 14011 14033 V OutputProcessor: filter FENCE: '────────────────────────────────────────────────────────────────────────────────'
+02-15 18:35:53.363 14011 14033 V OutputProcessor: filter PROMPT: '❯ '
+02-15 18:35:53.364 14011 14033 V OutputProcessor: filter FENCE: '────────────────────────────────────────────────────────────────────────────────'
+02-15 18:35:53.365 14011 14033 D OutputProcessor: emit: '  Bash(RUN_SLOW_TESTS=1 uv run pytest tests/test_simulator.py::TestChessFullGame'
+02-15 18:35:53.365 14011 14033 D OutputProcessor: emit: '  /media/external-drive/crystal_society | Context left until auto-compact: 11%'
+02-15 18:35:53.365 14011 14033 D OutputProcessor: emit: '   CPU: 51% | RAM: 11% | GPU0: 0%'
+02-15 18:35:53.365 14011 14033 D OutputProcessor: emit: '  22.1/24.0GB | GPU1: 0% 0.0/24.0GB'
+02-15 18:35:53.365 14011 14033 D OutputProcessor: chunk len=70 type=INCREMENTAL: ⎋[9d⎋[31m✽⎋[CFermenting…⎋[15;59H⎋[37mChecking for updates⎋[18;1H⎋(B⎋[m
+02-15 18:35:53.366 14011 14033 D OutputProcessor: thinking row=8 rowText='✽ Fermenting… (6m 24s · ↓ 6.6k tokens)' status='Fermenting… (6m 24s · ↓ 6.6k tokens)'
+02-15 18:35:53.372 14011 14033 D OutputProcessor: emit: '   CPU: 51% | RAM: 11% | GPU0: 0%                         Checking for updates'
+02-15 18:35:53.619 14011 14455 D SshManager: Received 25 bytes: [9d[31m✻[18;1H(B[m
+02-15 18:35:53.621 14011 14455 D SshManager: Received 35 bytes: [15;59H                    [18;1H
+02-15 18:35:53.622 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9d⎋[31m✻⎋[18;1H⎋(B⎋[m
+02-15 18:35:53.622 14011 14033 D OutputProcessor: thinking row=8 rowText='✻ Fermenting… (6m 24s · ↓ 6.6k tokens)' status='Fermenting… (6m 24s · ↓ 6.6k tokens)'
+02-15 18:35:53.623 14011 14033 D OutputProcessor: thinking row=8 rowText='✻ Fermenting… (6m 24s · ↓ 6.6k tokens)' status='Fermenting… (6m 24s · ↓ 6.6k tokens)'
+02-15 18:35:53.628 14011 14033 D OutputProcessor: chunk len=35 type=INCREMENTAL: ⎋[15;59H                    ⎋[18;1H
+02-15 18:35:53.628 14011 14033 D OutputProcessor: thinking row=8 rowText='✻ Fermenting… (6m 24s · ↓ 6.6k tokens)' status='Fermenting… (6m 24s · ↓ 6.6k tokens)'
+02-15 18:35:53.640 14011 14455 D SshManager: Received 36 bytes: [9d[31m✶[18C[37m5[18;1H(B[m
+02-15 18:35:53.643 14011 14034 D OutputProcessor: chunk len=34 type=INCREMENTAL: ⎋[9d⎋[31m✶⎋[18C⎋[37m5⎋[18;1H⎋(B⎋[m
+02-15 18:35:53.645 14011 14034 D OutputProcessor: thinking row=8 rowText='✶ Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:53.824 14011 14455 D SshManager: Received 44 bytes: [9d[31m*[C[33mFermenting…[18;1H(B[m
+02-15 18:35:53.828 14011 14398 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9d⎋[31m*⎋[C⎋[33mFermenting…⎋[18;1H⎋(B⎋[m
+02-15 18:35:53.829 14011 14455 D SshManager: Received 25 bytes: [9d[31m✢[18;1H(B[m
+02-15 18:35:53.832 14011 14398 D OutputProcessor: thinking row=8 rowText='* Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:53.835 14011 14398 D OutputProcessor: thinking row=8 rowText='* Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:53.851 14011 14398 V OutputProcessor: filter DEDUP: '   CPU: 51% | RAM: 11% | GPU0: 0%'
+02-15 18:35:53.851 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9d⎋[31m✢⎋[18;1H⎋(B⎋[m
+02-15 18:35:53.851 14011 14398 D OutputProcessor: thinking row=8 rowText='✢ Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.029 14011 14455 D SshManager: Received 24 bytes: [9d[31m·[18;1H(B[m
+02-15 18:35:54.032 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9d⎋[31m·⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.034 14011 14033 D OutputProcessor: thinking row=8 rowText='· Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.037 14011 14455 D SshManager: Received 27 bytes: [15;10H[37m7[18;1H(B[m
+02-15 18:35:54.037 14011 14033 D OutputProcessor: thinking row=8 rowText='· Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.044 14011 14033 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[15;10H⎋[37m7⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.045 14011 14033 D OutputProcessor: thinking row=8 rowText='· Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.074 14011 14455 D SshManager: Received 37 bytes: [9;3H[93mFermenting…[18;1H(B[m
+02-15 18:35:54.076 14011 14033 D OutputProcessor: chunk len=35 type=INCREMENTAL: ⎋[9;3H⎋[93mFermenting…⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.078 14011 14033 D OutputProcessor: thinking row=8 rowText='· Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.232 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 
+02-15 18:35:54.235 14011 14455 D SshManager: Received 25 bytes: [9d[31m✢[18;1H(B[m
+02-15 18:35:54.235 14011 14033 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:35 16-Feb-26⎋(B⎋[m⎋[18;1H
+02-15 18:35:54.237 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9d⎋[31m✢⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.238 14011 14033 D OutputProcessor: thinking row=8 rowText='✢ Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.239 14011 14033 D OutputProcessor: thinking row=8 rowText='✢ Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.244 14011 14033 D OutputProcessor: emit: '   CPU: 57% | RAM: 11% | GPU0: 0%'
+02-15 18:35:54.438 14011 14455 D SshManager: Received 23 bytes: [9d[31m*[18;1H(B[m
+02-15 18:35:54.440 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9d⎋[31m*⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.440 14011 14033 D OutputProcessor: thinking row=8 rowText='* Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.441 14011 14033 D OutputProcessor: thinking row=8 rowText='* Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.445 14011 14455 D SshManager: Received 25 bytes: [5d[37m●[18;1H(B[m
+02-15 18:35:54.447 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.447 14011 14033 D OutputProcessor: thinking row=8 rowText='* Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.475 14011 14455 D SshManager: Received 25 bytes: [9d[31m✶[18;1H(B[m
+02-15 18:35:54.477 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9d⎋[31m✶⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.479 14011 14032 D OutputProcessor: thinking row=8 rowText='✶ Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.643 14011 14455 D SshManager: Received 25 bytes: [9d[31m✻[18;1H(B[m
+02-15 18:35:54.645 14011 14455 D SshManager: Received 26 bytes: [9;20H[37m6[18;1H(B[m
+02-15 18:35:54.646 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9d⎋[31m✻⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.647 14011 14033 D OutputProcessor: thinking row=8 rowText='✻ Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.650 14011 14033 D OutputProcessor: thinking row=8 rowText='✻ Fermenting… (6m 25s · ↓ 6.6k tokens)' status='Fermenting… (6m 25s · ↓ 6.6k tokens)'
+02-15 18:35:54.668 14011 14033 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[9;20H⎋[37m6⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.668 14011 14033 D OutputProcessor: thinking row=8 rowText='✻ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:54.746 14011 14455 D SshManager: Received 25 bytes: [9d[31m✽[18;1H(B[m
+02-15 18:35:54.748 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9d⎋[31m✽⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.750 14011 14032 D OutputProcessor: thinking row=8 rowText='✽ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:54.752 14011 14032 D OutputProcessor: thinking row=8 rowText='✽ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:54.765 14011 14455 D SshManager: Received 37 bytes: [9;3H[33mFermenting…[18;1H(B[m
+02-15 18:35:54.767 14011 14032 D OutputProcessor: chunk len=35 type=INCREMENTAL: ⎋[9;3H⎋[33mFermenting…⎋[18;1H⎋(B⎋[m
+02-15 18:35:54.768 14011 14032 D OutputProcessor: thinking row=8 rowText='✽ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:55.052 14011 14455 D SshManager: Received 25 bytes: [9d[31m✻[18;1H(B[m
+02-15 18:35:55.053 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9d⎋[31m✻⎋[18;1H⎋(B⎋[m
+02-15 18:35:55.053 14011 14033 D OutputProcessor: thinking row=8 rowText='✻ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:55.054 14011 14033 D OutputProcessor: thinking row=8 rowText='✻ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:55.361 14011 14455 D SshManager: Received 1154 bytes: [8;6H[37mctrl+b ctrl+b (twice) to run in background\r\n[39m [C                
+02-15 18:35:55.362 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 
+02-15 18:35:55.362 14011 14455 D SshManager: Received 54 bytes: [5d[37m [10;1H[31m✢[CFermenting…[19;1H(B[m
+02-15 18:35:55.364 14011 14033 D OutputProcessor: chunk len=819 type=INCREMENTAL: ⎋[8;6H⎋[37mctrl+b ctrl+b (twice) to run in background⏎↵⎋[39m ⎋[C                       ⎋[C            ⏎↵⎋[31m✻⎋[C⎋[33mFermenting…⎋[31m ⎋[37m(6m 26s · ↓⎋[C6.6k tokens)⏎↵⎋[39m                           
+02-15 18:35:55.373 14011 14033 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:55.380 14011 14033 V OutputProcessor: filter FENCE: '────────────────────────────────────────────────────────────────────────────────'
+02-15 18:35:55.380 14011 14033 V OutputProcessor: filter PROMPT: '❯ '
+02-15 18:35:55.380 14011 14033 V OutputProcessor: filter FENCE: '────────────────────────────────────────────────────────────────────────────────'
+02-15 18:35:55.380 14011 14033 V OutputProcessor: filter DEDUP: '  /media/external-drive/crystal_society | Context left until auto-compact: 11%'
+02-15 18:35:55.380 14011 14033 V OutputProcessor: filter DEDUP: '   CPU: 57% | RAM: 11% | GPU0: 0%'
+02-15 18:35:55.380 14011 14033 V OutputProcessor: filter DEDUP: '  22.1/24.0GB | GPU1: 0% 0.0/24.0GB'
+02-15 18:35:55.380 14011 14033 D OutputProcessor: emit: '     ctrl+b ctrl+b (twice) to run in background'
+02-15 18:35:55.381 14011 14033 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:35 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:35:55.381 14011 14033 D OutputProcessor: chunk len=50 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[10;1H⎋[31m✢⎋[CFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:55.382 14011 14033 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:55.564 14011 14455 D SshManager: Received 45 bytes: [7;14H[37m (2s · timeout 10m)[19;1H(B[m
+02-15 18:35:55.565 14011 14455 D SshManager: Received 24 bytes: [9A[31m·[19;1H(B[m
+02-15 18:35:55.568 14011 14398 D OutputProcessor: chunk len=44 type=INCREMENTAL: ⎋[7;14H⎋[37m (2s · timeout 10m)⎋[19;1H⎋(B⎋[m
+02-15 18:35:55.570 14011 14398 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:55.573 14011 14398 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:55.583 14011 14398 V OutputProcessor: filter DEDUP: '  Bash(RUN_SLOW_TESTS=1 uv run pytest tests/test_simulator.py::TestChessFullGame'
+02-15 18:35:55.583 14011 14398 D OutputProcessor: emit: '  ⎿  Running… (2s · timeout 10m)'
+02-15 18:35:55.585 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[19;1H⎋(B⎋[m
+02-15 18:35:55.585 14011 14398 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 26s · ↓ 6.6k tokens)' status='Fermenting… (6m 26s · ↓ 6.6k tokens)'
+02-15 18:35:55.665 14011 14455 D SshManager: Received 36 bytes: [9A[31m✢[18C[37m7[19;1H(B[m
+02-15 18:35:55.667 14011 14033 D OutputProcessor: chunk len=34 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[18C⎋[37m7⎋[19;1H⎋(B⎋[m
+02-15 18:35:55.669 14011 14033 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:55.672 14011 14033 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:55.771 14011 14455 D SshManager: Received 44 bytes: [9A[31m*[C[33mFermenting…[19;1H(B[m
+02-15 18:35:55.775 14011 14033 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[C⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:55.776 14011 14033 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:55.779 14011 14033 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:55.972 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:35:55.973 14011 14455 D SshManager: Received 25 bytes: [5d[37m●[19;1H(B[m
+02-15 18:35:55.973 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:35:55.973 14011 14033 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:55.974 14011 14033 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:55.975 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[19;1H⎋(B⎋[m
+02-15 18:35:55.975 14011 14033 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:56.281 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 
+02-15 18:35:56.282 14011 14455 D SshManager: Received 46 bytes: [9A[31m✽[C[93mFermenting…[19;1H(B[m
+02-15 18:35:56.283 14011 14033 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:35 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:35:56.285 14011 14033 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[C⎋[93mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:56.286 14011 14033 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:56.286 14011 14033 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:56.589 14011 14455 D SshManager: Received 26 bytes: [7;16H[37m3[19;1H(B[m
+02-15 18:35:56.589 14011 14455 D SshManager: Received 38 bytes: [5d[37m [10;1H[31m✶[19;1H(B[m
+02-15 18:35:56.591 14011 14033 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;16H⎋[37m3⎋[19;1H⎋(B⎋[m
+02-15 18:35:56.592 14011 14033 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:56.594 14011 14033 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:56.600 14011 14455 D SshManager: Received 34 bytes: [9A[31m*[18C[37m8[19;1H(B[m
+02-15 18:35:56.606 14011 14033 D OutputProcessor: emit: '  ⎿  Running… (3s · timeout 10m)'
+02-15 18:35:56.606 14011 14033 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[10;1H⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:35:56.607 14011 14033 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 27s · ↓ 6.6k tokens)' status='Fermenting… (6m 27s · ↓ 6.6k tokens)'
+02-15 18:35:56.607 14011 14033 D OutputProcessor: chunk len=34 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[18C⎋[37m8⎋[19;1H⎋(B⎋[m
+02-15 18:35:56.607 14011 14033 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:56.793 14011 14455 D SshManager: Received 25 bytes: [9A[31m✢[19;1H(B[m
+02-15 18:35:56.795 14011 14455 D SshManager: Received 38 bytes: [10;3H[33mFermenting…[19;1H(B[m
+02-15 18:35:56.798 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[19;1H⎋(B⎋[m
+02-15 18:35:56.800 14011 14398 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:56.803 14011 14398 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:56.808 14011 14398 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[10;3H⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:56.809 14011 14398 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:56.839 14011 14455 D SshManager: Received 24 bytes: [9A[31m·[19;1H(B[m
+02-15 18:35:56.842 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[19;1H⎋(B⎋[m
+02-15 18:35:56.843 14011 14033 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:57.258 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 
+02-15 18:35:57.260 14011 14455 D SshManager: Received 54 bytes: [5d[37m●[10;1H[31m*[CFermenting…[19;1H(B[m
+02-15 18:35:57.264 14011 14398 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:35 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:35:57.270 14011 14398 D OutputProcessor: chunk len=50 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[10;1H⎋[31m*⎋[CFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:57.271 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:57.273 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:57.508 14011 14455 D SshManager: Received 26 bytes: [7;16H[37m4[19;1H(B[m
+02-15 18:35:57.509 14011 14455 D SshManager: Received 25 bytes: [9A[31m✻[19;1H(B[m
+02-15 18:35:57.510 14011 14398 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;16H⎋[37m4⎋[19;1H⎋(B⎋[m
+02-15 18:35:57.512 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:57.514 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:57.519 14011 14398 D OutputProcessor: emit: '  ⎿  Running… (4s · timeout 10m)'
+02-15 18:35:57.519 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:35:57.519 14011 14398 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:57.558 14011 14455 D SshManager: Received 25 bytes: [9A[31m✽[19;1H(B[m
+02-15 18:35:57.561 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[19;1H⎋(B⎋[m
+02-15 18:35:57.562 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 28s · ↓ 6.6k tokens)' status='Fermenting… (6m 28s · ↓ 6.6k tokens)'
+02-15 18:35:57.716 14011 14455 D SshManager: Received 27 bytes: [10;20H[37m9[19;1H(B[m
+02-15 18:35:57.720 14011 14398 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[10;20H⎋[37m9⎋[19;1H⎋(B⎋[m
+02-15 18:35:57.722 14011 14398 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:57.727 14011 14398 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:57.738 14011 14455 D SshManager: Received 38 bytes: [10;3H[33mFermenting…[19;1H(B[m
+02-15 18:35:57.739 14011 14034 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[10;3H⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:57.740 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:57.790 14011 14455 D SshManager: Received 25 bytes: [9A[31m✻[19;1H(B[m
+02-15 18:35:57.793 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:35:57.793 14011 14033 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:57.921 14011 14455 D SshManager: Received 23 bytes: [5d[37m [19;1H(B[m
+02-15 18:35:57.922 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:35:57.924 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[19;1H⎋(B⎋[m
+02-15 18:35:57.926 14011 14033 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:57.930 14011 14033 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:57.935 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:35:57.935 14011 14033 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:58.341 14011 14455 D SshManager: Received 26 bytes: [7;16H[37m5[19;1H(B[m
+02-15 18:35:58.342 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 
+02-15 18:35:58.343 14011 14455 D SshManager: Received 45 bytes: [9A[31m·[C[93mFermenting…[19;1H(B[m
+02-15 18:35:58.344 14011 14033 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;16H⎋[37m5⎋[19;1H⎋(B⎋[m
+02-15 18:35:58.346 14011 14033 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:58.349 14011 14033 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:58.356 14011 14033 D OutputProcessor: emit: '  ⎿  Running… (5s · timeout 10m)'
+02-15 18:35:58.357 14011 14033 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:35 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:35:58.359 14011 14033 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[C⎋[93mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:58.359 14011 14033 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:58.535 14011 14455 D SshManager: Received 25 bytes: [5d[37m●[19;1H(B[m
+02-15 18:35:58.537 14011 14455 D SshManager: Received 25 bytes: [9A[31m✢[19;1H(B[m
+02-15 18:35:58.539 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[19;1H⎋(B⎋[m
+02-15 18:35:58.541 14011 14398 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:58.543 14011 14398 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:58.554 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[19;1H⎋(B⎋[m
+02-15 18:35:58.554 14011 14398 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 29s · ↓ 6.6k tokens)' status='Fermenting… (6m 29s · ↓ 6.6k tokens)'
+02-15 18:35:58.737 14011 14455 D SshManager: Received 35 bytes: [9A[31m*[17C[37m30[19;1H(B[m
+02-15 18:35:58.741 14011 14034 D OutputProcessor: chunk len=35 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[17C⎋[37m30⎋[19;1H⎋(B⎋[m
+02-15 18:35:58.743 14011 14034 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:58.746 14011 14034 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:58.761 14011 14455 D SshManager: Received 46 bytes: [9A[31m✶[C[33mFermenting…[19;1H(B[m
+02-15 18:35:58.764 14011 14034 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[C⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:58.766 14011 14034 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:58.945 14011 14455 D SshManager: Received 25 bytes: [9A[31m✻[19;1H(B[m
+02-15 18:35:58.947 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:35:58.948 14011 14034 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:58.950 14011 14034 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:59.150 14011 14455 D SshManager: Received 25 bytes: [9A[31m✽[19;1H(B[m
+02-15 18:35:59.154 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[19;1H⎋(B⎋[m
+02-15 18:35:59.156 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:59.159 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:59.352 14011 14455 D SshManager: Received 26 bytes: [7;16H[37m6[19;1H(B[m
+02-15 18:35:59.352 14011 14455 D SshManager: Received 41 bytes: [9A[31m✻[CFermenting…[19;1H(B[m
+02-15 18:35:59.353 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 
+02-15 18:35:59.355 14011 14034 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;16H⎋[37m6⎋[19;1H⎋(B⎋[m
+02-15 18:35:59.356 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:59.356 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:35:59.358 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:59.371 14011 14034 D OutputProcessor: emit: '  ⎿  Running… (6s · timeout 10m)'
+02-15 18:35:59.372 14011 14034 D OutputProcessor: chunk len=37 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[CFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:59.373 14011 14034 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:59.375 14011 14034 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:35 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:35:59.376 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:35:59.377 14011 14034 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:59.560 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:35:59.563 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:35:59.565 14011 14033 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:59.568 14011 14033 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 30s · ↓ 6.6k tokens)' status='Fermenting… (6m 30s · ↓ 6.6k tokens)'
+02-15 18:35:59.658 14011 14455 D SshManager: Received 36 bytes: [9A[31m✢[18C[37m1[19;1H(B[m
+02-15 18:35:59.659 14011 14033 D OutputProcessor: chunk len=34 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[18C⎋[37m1⎋[19;1H⎋(B⎋[m
+02-15 18:35:59.659 14011 14033 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:35:59.660 14011 14033 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:35:59.869 14011 14455 D SshManager: Received 45 bytes: [9A[31m·[C[33mFermenting…[19;1H(B[m
+02-15 18:35:59.873 14011 14034 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[C⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:35:59.875 14011 14034 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:35:59.878 14011 14034 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:35:59.921 14011 14455 D SshManager: Received 23 bytes: [5d[37m [19;1H(B[m
+02-15 18:35:59.923 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[19;1H⎋(B⎋[m
+02-15 18:35:59.924 14011 14034 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:36:00.070 14011 14455 D SshManager: Received 25 bytes: [9A[31m✢[19;1H(B[m
+02-15 18:36:00.071 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[19;1H⎋(B⎋[m
+02-15 18:36:00.072 14011 14034 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:36:00.072 14011 14034 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:36:00.273 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 
+02-15 18:36:00.276 14011 14034 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:35 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:00.297 14011 14455 D SshManager: Received 46 bytes: [9A[31m✶[C[93mFermenting…[19;1H(B[m
+02-15 18:36:00.300 14011 14034 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[C⎋[93mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:00.302 14011 14034 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:36:00.305 14011 14034 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:36:00.580 14011 14455 D SshManager: Received 26 bytes: [7;16H[37m7[19;1H(B[m
+02-15 18:36:00.582 14011 14455 D SshManager: Received 40 bytes: [5d[37m●[10;1H[31m✽[19;1H(B[m
+02-15 18:36:00.582 14011 14034 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;16H⎋[37m7⎋[19;1H⎋(B⎋[m
+02-15 18:36:00.582 14011 14034 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:36:00.583 14011 14034 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:36:00.585 14011 14034 D OutputProcessor: emit: '  ⎿  Running… (7s · timeout 10m)'
+02-15 18:36:00.586 14011 14034 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[10;1H⎋[31m✽⎋[19;1H⎋(B⎋[m
+02-15 18:36:00.586 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 31s · ↓ 6.6k tokens)' status='Fermenting… (6m 31s · ↓ 6.6k tokens)'
+02-15 18:36:00.632 14011 14455 D SshManager: Received 27 bytes: [10;20H[37m2[19;1H(B[m
+02-15 18:36:00.634 14011 14398 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[10;20H⎋[37m2⎋[19;1H⎋(B⎋[m
+02-15 18:36:00.635 14011 14398 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:00.788 14011 14455 D SshManager: Received 25 bytes: [9A[31m✻[19;1H(B[m
+02-15 18:36:00.789 14011 14455 D SshManager: Received 38 bytes: [10;3H[33mFermenting…[19;1H(B[m
+02-15 18:36:00.791 14011 14033 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:36:00.792 14011 14033 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:00.795 14011 14033 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:00.806 14011 14033 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[10;3H⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:00.806 14011 14033 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:00.825 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:36:00.827 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:36:00.828 14011 14034 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:00.992 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:36:00.996 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:36:00.997 14011 14034 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:01.000 14011 14034 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:01.415 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 
+02-15 18:36:01.417 14011 14455 D SshManager: Received 53 bytes: [5d[37m [10;1H[31m·[CFermenting…[19;1H(B[m
+02-15 18:36:01.418 14011 14034 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:35 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:01.420 14011 14034 D OutputProcessor: chunk len=50 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[10;1H⎋[31m·⎋[CFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:01.420 14011 14034 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:01.421 14011 14034 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:01.524 14011 14455 D SshManager: Received 26 bytes: [7;16H[37m8[19;1H(B[m
+02-15 18:36:01.526 14011 14034 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;16H⎋[37m8⎋[19;1H⎋(B⎋[m
+02-15 18:36:01.527 14011 14034 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:01.527 14011 14034 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:01.534 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:36:01.536 14011 14034 D OutputProcessor: emit: '  ⎿  Running… (8s · timeout 10m)'
+02-15 18:36:01.537 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:36:01.537 14011 14034 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 32s · ↓ 6.6k tokens)' status='Fermenting… (6m 32s · ↓ 6.6k tokens)'
+02-15 18:36:01.708 14011 14455 D SshManager: Received 36 bytes: [9A[31m✶[18C[37m3[19;1H(B[m
+02-15 18:36:01.712 14011 14033 D OutputProcessor: chunk len=34 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[18C⎋[37m3⎋[19;1H⎋(B⎋[m
+02-15 18:36:01.713 14011 14033 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:01.717 14011 14033 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:01.811 14011 14455 D SshManager: Received 46 bytes: [9A[31m✻[C[33mFermenting…[19;1H(B[m
+02-15 18:36:01.815 14011 14033 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[C⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:01.817 14011 14033 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:01.820 14011 14033 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:01.915 14011 14455 D SshManager: Received 25 bytes: [9A[31m✽[19;1H(B[m
+02-15 18:36:01.918 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[19;1H⎋(B⎋[m
+02-15 18:36:01.919 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:01.920 14011 14455 D SshManager: Received 25 bytes: [5d[37m●[19;1H(B[m
+02-15 18:36:01.921 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:01.927 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[19;1H⎋(B⎋[m
+02-15 18:36:01.928 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:02.444 14011 14455 D SshManager: Received 51 bytes: [7;16H[37m9[10;3H[93mFermenting…[19;1H(B[m
+02-15 18:36:02.446 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 
+02-15 18:36:02.447 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:36:02.448 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:36:02.448 14011 14034 D OutputProcessor: chunk len=49 type=INCREMENTAL: ⎋[7;16H⎋[37m9⎋[10;3H⎋[93mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:02.450 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:02.453 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:02.457 14011 14034 D OutputProcessor: emit: '● Bash(RUN_SLOW_TESTS=1 uv run pytest tests/test_simulator.py::TestChessFullGame'
+02-15 18:36:02.457 14011 14034 D OutputProcessor: emit: '  ⎿  Running… (9s · timeout 10m)'
+02-15 18:36:02.458 14011 14034 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:35 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:02.459 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:36:02.459 14011 14034 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:02.460 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:36:02.460 14011 14034 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:02.632 14011 14455 D SshManager: Received 38 bytes: [5d[37m [10;1H[31m✢[19;1H(B[m
+02-15 18:36:02.633 14011 14455 D SshManager: Received 35 bytes: [9A[31m·[18C[37m4[19;1H(B[m
+02-15 18:36:02.636 14011 14032 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[10;1H⎋[31m✢⎋[19;1H⎋(B⎋[m
+02-15 18:36:02.638 14011 14032 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:02.640 14011 14032 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 33s · ↓ 6.6k tokens)' status='Fermenting… (6m 33s · ↓ 6.6k tokens)'
+02-15 18:36:02.644 14011 14032 D OutputProcessor: chunk len=34 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[18C⎋[37m4⎋[19;1H⎋(B⎋[m
+02-15 18:36:02.644 14011 14032 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:02.836 14011 14455 D SshManager: Received 38 bytes: [10;3H[33mFermenting…[19;1H(B[m
+02-15 18:36:02.839 14011 14398 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[10;3H⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:02.841 14011 14398 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:02.843 14011 14398 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:02.844 14011 14455 D SshManager: Received 25 bytes: [9A[31m✢[19;1H(B[m
+02-15 18:36:02.850 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[19;1H⎋(B⎋[m
+02-15 18:36:02.851 14011 14398 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:03.042 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:36:03.046 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.048 14011 14032 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:03.050 14011 14032 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:03.305 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 
+02-15 18:36:03.306 14011 14032 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:36 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:03.314 14011 14455 D SshManager: Received 56 bytes: [5d[37m●[10;1H[31m✻[CFermenting…[19;1H(B[m
+02-15 18:36:03.316 14011 14032 D OutputProcessor: chunk len=50 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[10;1H⎋[31m✻⎋[CFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.318 14011 14032 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:03.320 14011 14032 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:03.553 14011 14455 D SshManager: Received 44 bytes: [7;16H[37m10s · timeout 10m)[19;1H(B[m
+02-15 18:36:03.554 14011 14455 D SshManager: Received 25 bytes: [9A[31m✽[19;1H(B[m
+02-15 18:36:03.555 14011 14032 D OutputProcessor: chunk len=43 type=INCREMENTAL: ⎋[7;16H⎋[37m10s · timeout 10m)⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.555 14011 14032 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:03.556 14011 14032 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:03.559 14011 14032 D OutputProcessor: emit: '  ⎿  Running… (10s · timeout 10m)'
+02-15 18:36:03.560 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.561 14011 14032 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:03.570 14011 14455 D SshManager: Received 25 bytes: [9A[31m✻[19;1H(B[m
+02-15 18:36:03.572 14011 14617 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.573 14011 14617 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 34s · ↓ 6.6k tokens)' status='Fermenting… (6m 34s · ↓ 6.6k tokens)'
+02-15 18:36:03.653 14011 14455 D SshManager: Received 27 bytes: [10;20H[37m5[19;1H(B[m
+02-15 18:36:03.655 14011 14398 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[10;20H⎋[37m5⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.657 14011 14398 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:03.660 14011 14398 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:03.701 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:36:03.703 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.704 14011 14398 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:03.755 14011 14455 D SshManager: Received 38 bytes: [10;3H[33mFermenting…[19;1H(B[m
+02-15 18:36:03.759 14011 14398 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[10;3H⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.761 14011 14398 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:03.764 14011 14398 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:03.827 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:36:03.831 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.832 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:03.962 14011 14455 D SshManager: Received 23 bytes: [5d[37m [19;1H(B[m
+02-15 18:36:03.963 14011 14455 D SshManager: Received 25 bytes: [9A[31m✢[19;1H(B[m
+02-15 18:36:03.964 14011 14617 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.964 14011 14617 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:03.966 14011 14617 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:03.969 14011 14617 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[19;1H⎋(B⎋[m
+02-15 18:36:03.970 14011 14617 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:04.380 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 
+02-15 18:36:04.381 14011 14455 D SshManager: Received 38 bytes: [10;3H[93mFermenting…[19;1H(B[m
+02-15 18:36:04.383 14011 14032 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:36 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:04.389 14011 14032 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[10;3H⎋[93mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:04.390 14011 14032 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:04.392 14011 14032 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:04.577 14011 14455 D SshManager: Received 26 bytes: [7;17H[37m1[19;1H(B[m
+02-15 18:36:04.577 14011 14455 D SshManager: Received 63 bytes: [5d[37m●[10;1H[31m*[19;1H(B[m[9A[31m✶[19;1H(B[m
+02-15 18:36:04.578 14011 14032 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;17H⎋[37m1⎋[19;1H⎋(B⎋[m
+02-15 18:36:04.578 14011 14032 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:04.579 14011 14032 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:04.582 14011 14032 D OutputProcessor: emit: '  ⎿  Running… (11s · timeout 10m)'
+02-15 18:36:04.583 14011 14032 D OutputProcessor: chunk len=59 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[10;1H⎋[31m*⎋[19;1H⎋(B⎋[m⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:36:04.584 14011 14032 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 35s · ↓ 6.6k tokens)' status='Fermenting… (6m 35s · ↓ 6.6k tokens)'
+02-15 18:36:04.607 14011 14455 D SshManager: Received 27 bytes: [10;20H[37m6[19;1H(B[m
+02-15 18:36:04.610 14011 14617 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[10;20H⎋[37m6⎋[19;1H⎋(B⎋[m
+02-15 18:36:04.611 14011 14617 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 36s · ↓ 6.6k tokens)' status='Fermenting… (6m 36s · ↓ 6.6k tokens)'
+02-15 18:36:04.781 14011 14455 D SshManager: Received 25 bytes: [9A[31m✻[19;1H(B[m
+02-15 18:36:04.785 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:36:04.787 14011 14034 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 36s · ↓ 6.6k tokens)' status='Fermenting… (6m 36s · ↓ 6.6k tokens)'
+02-15 18:36:04.789 14011 14034 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 36s · ↓ 6.6k tokens)' status='Fermenting… (6m 36s · ↓ 6.6k tokens)'
+02-15 18:36:04.807 14011 14455 D SshManager: Received 46 bytes: [9A[31m✽[C[33mFermenting…[19;1H(B[m
+02-15 18:36:04.809 14011 14034 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[C⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:04.810 14011 14034 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 36s · ↓ 6.6k tokens)' status='Fermenting… (6m 36s · ↓ 6.6k tokens)'
+02-15 18:36:05.643 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 
+02-15 18:36:05.644 14011 14455 D SshManager: Received 89 bytes: [9A[31m*[CFermenting…[19;1H(B[m[7;17H[37m2[19;1H(B[m[9A[31m·[19;1H
+02-15 18:36:05.647 14011 14034 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:36 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:05.654 14011 14034 D OutputProcessor: chunk len=86 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[CFermenting…⎋[19;1H⎋(B⎋[m⎋[7;17H⎋[37m2⎋[19;1H⎋(B⎋[m⎋[9A⎋[31m·⎋[19;1H⎋(B⎋[m
+02-15 18:36:05.655 14011 14034 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 36s · ↓ 6.6k tokens)' status='Fermenting… (6m 36s · ↓ 6.6k tokens)'
+02-15 18:36:05.663 14011 14034 D OutputProcessor: emit: '  ⎿  Running… (12s · timeout 10m)'
+02-15 18:36:05.700 14011 14455 D SshManager: Received 27 bytes: [10;20H[37m7[19;1H(B[m
+02-15 18:36:05.703 14011 14034 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[10;20H⎋[37m7⎋[19;1H⎋(B⎋[m
+02-15 18:36:05.705 14011 14034 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:05.804 14011 14455 D SshManager: Received 46 bytes: [9A[31m✢[C[33mFermenting…[19;1H(B[m
+02-15 18:36:05.806 14011 14617 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[C⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:05.806 14011 14617 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:05.807 14011 14617 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:05.906 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:36:05.911 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:36:05.911 14011 14032 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:05.914 14011 14032 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:05.927 14011 14455 D SshManager: Received 23 bytes: [5d[37m [19;1H(B[m
+02-15 18:36:05.929 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[19;1H⎋(B⎋[m
+02-15 18:36:05.931 14011 14032 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:06.109 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:36:06.113 14011 14617 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:36:06.114 14011 14617 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:06.117 14011 14617 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:06.278 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 
+02-15 18:36:06.282 14011 14617 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:36 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:06.286 14011 14455 D SshManager: Received 46 bytes: [9A[31m✽[C[93mFermenting…[19;1H(B[m
+02-15 18:36:06.289 14011 14617 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[C⎋[93mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:06.291 14011 14617 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:06.291 14011 14617 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:06.523 14011 14455 D SshManager: Received 26 bytes: [7;17H[37m3[19;1H(B[m
+02-15 18:36:06.525 14011 14617 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;17H⎋[37m3⎋[19;1H⎋(B⎋[m
+02-15 18:36:06.527 14011 14617 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:06.529 14011 14617 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:06.534 14011 14617 D OutputProcessor: emit: '  ⎿  Running… (13s · timeout 10m)'
+02-15 18:36:06.534 14011 14455 D SshManager: Received 40 bytes: [5d[37m●[10;1H[31m✻[19;1H(B[m
+02-15 18:36:06.535 14011 14617 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[10;1H⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:36:06.535 14011 14617 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:06.567 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:36:06.570 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:36:06.571 14011 14032 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 37s · ↓ 6.6k tokens)' status='Fermenting… (6m 37s · ↓ 6.6k tokens)'
+02-15 18:36:06.618 14011 14455 D SshManager: Received 27 bytes: [10;20H[37m8[19;1H(B[m
+02-15 18:36:06.620 14011 14617 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[10;20H⎋[37m8⎋[19;1H⎋(B⎋[m
+02-15 18:36:06.621 14011 14617 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:06.622 14011 14617 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:06.727 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:36:06.731 14011 14617 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:36:06.732 14011 14617 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:06.734 14011 14617 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:06.826 14011 14455 D SshManager: Received 46 bytes: [9A[31m✢[C[33mFermenting…[19;1H(B[m
+02-15 18:36:06.828 14011 14617 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[C⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:06.829 14011 14617 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:06.831 14011 14617 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:07.032 14011 14455 D SshManager: Received 24 bytes: [9A[31m·[19;1H(B[m
+02-15 18:36:07.035 14011 14617 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[19;1H⎋(B⎋[m
+02-15 18:36:07.036 14011 14617 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:07.036 14011 14617 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:07.342 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 
+02-15 18:36:07.344 14011 14455 D SshManager: Received 52 bytes: [5d[37m [10;1H[31m*[CFermenting…[19;1H(B[m
+02-15 18:36:07.346 14011 14398 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:36 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:07.352 14011 14398 D OutputProcessor: chunk len=50 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[10;1H⎋[31m*⎋[CFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:07.353 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:07.355 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:07.543 14011 14455 D SshManager: Received 26 bytes: [7;17H[37m4[19;1H(B[m
+02-15 18:36:07.544 14011 14455 D SshManager: Received 25 bytes: [9A[31m✻[19;1H(B[m
+02-15 18:36:07.545 14011 14398 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;17H⎋[37m4⎋[19;1H⎋(B⎋[m
+02-15 18:36:07.545 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:07.546 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:07.548 14011 14398 D OutputProcessor: emit: '  ⎿  Running… (14s · timeout 10m)'
+02-15 18:36:07.548 14011 14398 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:36:07.549 14011 14398 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 38s · ↓ 6.6k tokens)' status='Fermenting… (6m 38s · ↓ 6.6k tokens)'
+02-15 18:36:07.751 14011 14455 D SshManager: Received 36 bytes: [9A[31m✽[18C[37m9[19;1H(B[m
+02-15 18:36:07.755 14011 14617 D OutputProcessor: chunk len=34 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[18C⎋[37m9⎋[19;1H⎋(B⎋[m
+02-15 18:36:07.757 14011 14617 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:07.758 14011 14617 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:07.773 14011 14455 D SshManager: Received 38 bytes: [10;3H[33mFermenting…[19;1H(B[m
+02-15 18:36:07.775 14011 14617 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[10;3H⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:07.777 14011 14617 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:07.955 14011 14455 D SshManager: Received 25 bytes: [9A[31m✻[19;1H(B[m
+02-15 18:36:07.957 14011 14455 D SshManager: Received 25 bytes: [5d[37m●[19;1H(B[m
+02-15 18:36:07.958 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:36:07.958 14011 14034 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:07.959 14011 14034 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:07.960 14011 14034 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[19;1H⎋(B⎋[m
+02-15 18:36:07.960 14011 14034 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.056 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:36:08.059 14011 14617 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.060 14011 14617 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.062 14011 14617 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.364 14011 14455 D SshManager: Received 26 bytes: [7;17H[37m5[19;1H(B[m
+02-15 18:36:08.366 14011 14617 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;17H⎋[37m5⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.366 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 
+02-15 18:36:08.366 14011 14617 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.366 14011 14455 D SshManager: Received 46 bytes: [9A[31m✢[C[93mFermenting…[19;1H(B[m
+02-15 18:36:08.367 14011 14617 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.367 14011 14455 D SshManager: Received 24 bytes: [9A[31m·[19;1H(B[m
+02-15 18:36:08.368 14011 14617 D OutputProcessor: emit: '  ⎿  Running… (15s · timeout 10m)'
+02-15 18:36:08.369 14011 14617 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:36 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:08.370 14011 14617 D OutputProcessor: chunk len=42 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[C⎋[93mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.370 14011 14617 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.370 14011 14617 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.371 14011 14617 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.573 14011 14455 D SshManager: Received 23 bytes: [5d[37m [19;1H(B[m
+02-15 18:36:08.577 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[5d⎋[37m ⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.579 14011 14032 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.582 14011 14032 D OutputProcessor: thinking row=9 rowText='· Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.598 14011 14455 D SshManager: Received 25 bytes: [9A[31m✢[19;1H(B[m
+02-15 18:36:08.600 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.601 14011 14032 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 39s · ↓ 6.6k tokens)' status='Fermenting… (6m 39s · ↓ 6.6k tokens)'
+02-15 18:36:08.775 14011 14455 D SshManager: Received 28 bytes: [10;19H[37m40[19;1H(B[m
+02-15 18:36:08.777 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:36:08.778 14011 14617 D OutputProcessor: chunk len=28 type=INCREMENTAL: ⎋[10;19H⎋[37m40⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.779 14011 14617 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:08.782 14011 14617 D OutputProcessor: thinking row=9 rowText='✢ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:08.785 14011 14617 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.785 14011 14617 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:08.785 14011 14455 D SshManager: Received 38 bytes: [10;3H[33mFermenting…[19;1H(B[m
+02-15 18:36:08.786 14011 14617 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[10;3H⎋[33mFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.786 14011 14617 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:08.876 14011 14455 D SshManager: Received 25 bytes: [9A[31m✶[19;1H(B[m
+02-15 18:36:08.879 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[19;1H⎋(B⎋[m
+02-15 18:36:08.879 14011 14032 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:08.880 14011 14032 D OutputProcessor: thinking row=9 rowText='✶ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:09.082 14011 14455 D SshManager: Received 25 bytes: [9A[31m✻[19;1H(B[m
+02-15 18:36:09.086 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[19;1H⎋(B⎋[m
+02-15 18:36:09.087 14011 14032 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:09.090 14011 14032 D OutputProcessor: thinking row=9 rowText='✻ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:09.277 14011 14455 D SshManager: Received 110 bytes: [30m[42m[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 
+02-15 18:36:09.280 14011 14032 D OutputProcessor: chunk len=108 type=TMUX_BAR: ⎋[30m⎋[42m⎋[24d[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:36 16-Feb-26⎋(B⎋[m⎋[19;1H
+02-15 18:36:09.290 14011 14455 D SshManager: Received 56 bytes: [5d[37m●[10;1H[31m✽[CFermenting…[19;1H(B[m
+02-15 18:36:09.292 14011 14032 D OutputProcessor: chunk len=50 type=INCREMENTAL: ⎋[5d⎋[37m●⎋[10;1H⎋[31m✽⎋[CFermenting…⎋[19;1H⎋(B⎋[m
+02-15 18:36:09.294 14011 14032 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:09.298 14011 14032 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:09.594 14011 14455 D SshManager: Received 26 bytes: [7;17H[37m6[19;1H(B[m
+02-15 18:36:09.595 14011 14455 D SshManager: Received 23 bytes: [9A[31m*[19;1H(B[m
+02-15 18:36:09.596 14011 14032 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[7;17H⎋[37m6⎋[19;1H⎋(B⎋[m
+02-15 18:36:09.598 14011 14032 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:09.601 14011 14032 D OutputProcessor: thinking row=9 rowText='✽ Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:09.604 14011 14032 D OutputProcessor: emit: '  ⎿  Running… (16s · timeout 10m)'
+02-15 18:36:09.605 14011 14032 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[19;1H⎋(B⎋[m
+02-15 18:36:09.606 14011 14032 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 40s · ↓ 6.6k tokens)' status='Fermenting… (6m 40s · ↓ 6.6k tokens)'
+02-15 18:36:09.613 14011 14455 D SshManager: Received 27 bytes: [10;20H[37m1[19;1H(B[m
+02-15 18:36:09.614 14011 14398 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[10;20H⎋[37m1⎋[19;1H⎋(B⎋[m
+02-15 18:36:09.614 14011 14398 D OutputProcessor: thinking row=9 rowText='* Fermenting… (6m 41s · ↓ 6.6k tokens)' status='Fermenting… (6m 41s · ↓ 6.6k tokens)'

@@ -1,0 +1,641 @@
+--------- beginning of main
+02-15 18:54:39.536 16462 16462 D SshManager: sendInput: 'sudo chmod -R u+rwX /self_model' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:54:39.553 16462 16620 D SshManager: Sent 31 bytes
+02-15 18:54:39.587 16462 16462 D SshManager: sendInput: '\r' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:54:39.603 16462 16621 D SshManager: Sent 1 bytes
+02-15 18:54:39.846 16462 16536 D SshManager: Received 1 bytes: s
+02-15 18:54:39.849 16462 16536 D SshManager: Received 4 bytes: sud
+02-15 18:54:39.850 16462 16536 D SshManager: Received 1 bytes: o
+02-15 18:54:39.851 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: s
+02-15 18:54:39.852 16462 16536 D SshManager: Received 1 bytes:  
+02-15 18:54:39.852 16462 16536 D SshManager: Received 1 bytes: c
+02-15 18:54:39.854 16462 16536 D SshManager: Received 1 bytes: h
+02-15 18:54:39.855 16462 16536 D SshManager: Received 1 bytes: m
+02-15 18:54:39.856 16462 16536 D SshManager: Received 1 bytes: o
+02-15 18:54:39.857 16462 16536 D SshManager: Received 1 bytes: d
+02-15 18:54:39.871 16462 16542 V OutputProcessor: buffer PROMPT: '➜  self_awareness s'
+02-15 18:54:39.871 16462 16542 D OutputProcessor: chunk len=4 type=INCREMENTAL: sud
+02-15 18:54:39.871 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: o
+02-15 18:54:39.872 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL:  
+02-15 18:54:39.872 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: c
+02-15 18:54:39.872 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: h
+02-15 18:54:39.872 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: m
+02-15 18:54:39.873 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: o
+02-15 18:54:39.873 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: d
+02-15 18:54:39.945 16462 16536 D SshManager: Received 1 bytes:  
+02-15 18:54:39.946 16462 16536 D SshManager: Received 1 bytes: -
+02-15 18:54:39.947 16462 16536 D SshManager: Received 1 bytes: R
+02-15 18:54:39.947 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL:  
+02-15 18:54:39.947 16462 16536 D SshManager: Received 1 bytes:  
+02-15 18:54:39.948 16462 16536 D SshManager: Received 1 bytes: u
+02-15 18:54:39.949 16462 16536 D SshManager: Received 1 bytes: +
+02-15 18:54:39.949 16462 16536 D SshManager: Received 1 bytes: r
+02-15 18:54:39.949 16462 16536 D SshManager: Received 1 bytes: w
+02-15 18:54:39.950 16462 16536 D SshManager: Received 2 bytes: X 
+02-15 18:54:39.950 16462 16536 D SshManager: Received 1 bytes: /
+02-15 18:54:39.950 16462 16536 D SshManager: Received 1 bytes: s
+02-15 18:54:39.951 16462 16536 D SshManager: Received 1 bytes: e
+02-15 18:54:39.951 16462 16536 D SshManager: Received 1 bytes: l
+02-15 18:54:39.952 16462 16536 D SshManager: Received 1 bytes: f
+02-15 18:54:39.952 16462 16536 D SshManager: Received 1 bytes: _
+02-15 18:54:39.953 16462 16536 D SshManager: Received 1 bytes: m
+02-15 18:54:39.954 16462 16536 D SshManager: Received 1 bytes: o
+02-15 18:54:39.954 16462 16536 D SshManager: Received 1 bytes: d
+02-15 18:54:39.955 16462 16536 D SshManager: Received 1 bytes: e
+02-15 18:54:39.955 16462 16536 D SshManager: Received 1 bytes: l
+02-15 18:54:39.956 16462 16536 D SshManager: Received 40 bytes: [1;23r[23;1H\n[K[1;24r[23;1H[?2004l
+02-15 18:54:39.956 16462 16536 D SshManager: Received 28 bytes: [sudo] password for nathan: 
+02-15 18:54:39.961 16462 16542 V OutputProcessor: buffer PROMPT: '➜  self_awareness sudo chmod'
+02-15 18:54:39.961 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: -
+02-15 18:54:39.961 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: R
+02-15 18:54:39.961 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL:  
+02-15 18:54:39.962 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: u
+02-15 18:54:39.962 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: +
+02-15 18:54:39.962 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: r
+02-15 18:54:39.962 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: w
+02-15 18:54:39.962 16462 16542 D OutputProcessor: chunk len=2 type=INCREMENTAL: X 
+02-15 18:54:39.962 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: /
+02-15 18:54:39.963 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: s
+02-15 18:54:39.963 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: e
+02-15 18:54:39.963 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: l
+02-15 18:54:39.963 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: f
+02-15 18:54:39.963 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: _
+02-15 18:54:39.964 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: m
+02-15 18:54:39.964 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: o
+02-15 18:54:39.964 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: d
+02-15 18:54:39.964 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: e
+02-15 18:54:39.964 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: l
+02-15 18:54:39.964 16462 16542 D OutputProcessor: chunk len=40 type=INCREMENTAL: ⎋[1;23r⎋[23;1H↵⎋[K⎋[1;24r⎋[23;1H⎋[?2004l
+02-15 18:54:39.965 16462 16542 D OutputProcessor: chunk len=28 type=INCREMENTAL: [sudo] password for nathan: 
+02-15 18:54:40.615 16462 16536 D SshManager: Received 126 bytes: [?25l[30m[42m\r\n[0] 0:sudo* 1:claude  2:claude-            "✳ Gradle Relocatio
+02-15 18:54:40.620 16462 16490 D OutputProcessor: chunk len=124 type=TMUX_BAR: ⎋[?25l⎋[30m⎋[42m⏎↵[0] 0:sudo* 1:claude  2:claude-            "✳ Gradle Relocation" 02:54 16-Feb-26⎋(B⎋[m⎋[?12l⎋[?25h⎋[23;29H
+02-15 18:54:58.283 16462 16462 D SshManager: sendInput: 'parabola1122==' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:54:58.289 16462 16625 D SshManager: Sent 14 bytes
+02-15 18:54:58.338 16462 16462 D SshManager: sendInput: '\r' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:54:58.343 16462 16626 D SshManager: Sent 1 bytes
+02-15 18:54:58.791 16462 16536 D SshManager: Received 32 bytes: [1;23r[23;1H\n[K[1;24r[23;1H
+02-15 18:54:58.792 16462 16536 D SshManager: Received 34 bytes: chmod: cannot access '/self_model'
+02-15 18:54:58.795 16462 16536 D SshManager: Received 69 bytes: [1;23r[23;1H\n[22;35H: No such file or directory\r\n[K[1;24r[23;1H
+02-15 18:54:58.796 16462 16542 D OutputProcessor: chunk len=32 type=INCREMENTAL: ⎋[1;23r⎋[23;1H↵⎋[K⎋[1;24r⎋[23;1H
+02-15 18:54:58.796 16462 16536 D SshManager: Received 162 bytes:                                                                                 
+02-15 18:54:58.797 16462 16536 D SshManager: Received 8 bytes: [?2004h
+02-15 18:54:58.821 16462 16542 D OutputProcessor: flush PROMPT: '➜  self_awareness sudo chmod'
+02-15 18:54:58.821 16462 16542 D OutputProcessor: emit: '➜  self_awareness sudo chmod'
+02-15 18:54:58.822 16462 16542 D OutputProcessor: emit: '[sudo] password for nathan:  -R u+rwX /self_model'
+02-15 18:54:58.823 16462 16542 D OutputProcessor: chunk len=34 type=INCREMENTAL: chmod: cannot access '/self_model'
+02-15 18:54:58.823 16462 16542 D OutputProcessor: chunk len=69 type=INCREMENTAL: ⎋[1;23r⎋[23;1H↵⎋[22;35H: No such file or directory⏎↵⎋[K⎋[1;24r⎋[23;1H
+02-15 18:54:58.833 16462 16542 V OutputProcessor: buffer PROMPT: '➜  projects2 cd self_awareness    : No such file or directory'
+02-15 18:54:58.833 16462 16542 D OutputProcessor: chunk len=160 type=INCREMENTAL:                                                                                 ⎋[23;1H⎋[1;23r⎋[23;1H⎋[K⎋[31m⎋[1m➜  ⎋[36mself_awareness⎋(B⎋[m ⎋[K⎋[1;24r⎋[23;19H
+02-15 18:54:58.841 16462 16542 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:54:58.841 16462 16542 D OutputProcessor: chunk len=8 type=INCREMENTAL: ⎋[?2004h
+02-15 18:55:08.797 16462 16462 D SshManager: sendInput: '\r' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:55:08.803 16462 16639 D SshManager: Sent 1 bytes
+02-15 18:55:09.032 16462 16536 D SshManager: Received 126 bytes: [?25l[30m[42m\r\n[0] 0:zsh* 1:claude  2:claude-             "✳ Gradle Relocatio
+02-15 18:55:09.034 16462 16536 D SshManager: Received 210 bytes: [1;23r[23;1H\n[K[1;24r[23;1H[?2004l                                        
+02-15 18:55:09.038 16462 16490 D OutputProcessor: chunk len=124 type=TMUX_BAR: ⎋[?25l⎋[30m⎋[42m⏎↵[0] 0:zsh* 1:claude  2:claude-             "✳ Gradle Relocation" 02:55 16-Feb-26⎋(B⎋[m⎋[?12l⎋[?25h⎋[23;19H
+02-15 18:55:09.044 16462 16490 D OutputProcessor: chunk len=208 type=INCREMENTAL: ⎋[1;23r⎋[23;1H↵⎋[K⎋[1;24r⎋[23;1H⎋[?2004l                                                                                ⎋[23;1H⎋[1;23r⎋[23;1H⎋[K⎋[31m⎋[1m➜  ⎋[36mself_awareness⎋(B⎋[m ⎋[K⎋[1;24r⎋[23;19H
+02-15 18:55:10.106 16462 16462 D SshManager: sendInput: '\r' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:55:10.115 16462 16640 D SshManager: Sent 1 bytes
+02-15 18:55:10.261 16462 16536 D SshManager: Received 40 bytes: [1;23r[23;1H\n[K[1;24r[23;1H[?2004l
+02-15 18:55:10.264 16462 16490 D OutputProcessor: chunk len=40 type=INCREMENTAL: ⎋[1;23r⎋[23;1H↵⎋[K⎋[1;24r⎋[23;1H⎋[?2004l
+02-15 18:55:10.269 16462 16536 D SshManager: Received 87 bytes:                                                                                 
+02-15 18:55:10.272 16462 16536 D SshManager: Received 75 bytes: [1;23r[23;1H[K[31m[1m➜  [36mself_awareness(B[m [1;24r[23;19H[K
+02-15 18:55:10.273 16462 16536 D SshManager: Received 8 bytes: [?2004h
+02-15 18:55:10.274 16462 16490 D OutputProcessor: chunk len=87 type=INCREMENTAL:                                                                                 ⎋[23;1H
+02-15 18:55:10.279 16462 16490 D OutputProcessor: chunk len=73 type=INCREMENTAL: ⎋[1;23r⎋[23;1H⎋[K⎋[31m⎋[1m➜  ⎋[36mself_awareness⎋(B⎋[m ⎋[1;24r⎋[23;19H⎋[K
+02-15 18:55:10.285 16462 16490 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:10.285 16462 16490 D OutputProcessor: chunk len=8 type=INCREMENTAL: ⎋[?2004h
+02-15 18:55:14.014 16462 16462 D SshManager: sendInput: 'ls' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:55:14.019 16462 16644 D SshManager: Sent 2 bytes
+02-15 18:55:14.062 16462 16536 D SshManager: Received 1 bytes: l
+02-15 18:55:14.063 16462 16536 D SshManager: Received 3 bytes: ls
+02-15 18:55:14.063 16462 16542 D OutputProcessor: chunk len=1 type=INCREMENTAL: l
+02-15 18:55:14.065 16462 16462 D SshManager: sendInput: '\r' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:55:14.067 16462 16645 D SshManager: Sent 1 bytes
+02-15 18:55:14.078 16462 16542 V OutputProcessor: buffer PROMPT: '➜  self_awareness l'
+02-15 18:55:14.079 16462 16542 D OutputProcessor: chunk len=3 type=INCREMENTAL: ls
+02-15 18:55:14.109 16462 16536 D SshManager: Received 40 bytes: [1;23r[23;1H\n[K[1;24r[23;1H[?2004l
+02-15 18:55:14.111 16462 16536 D SshManager: Received 67 bytes: [1;23r[23;1H\n[A[34m[42mself_model[39m[49m\r\n[K[1;24r[23;1H
+02-15 18:55:14.112 16462 16542 D OutputProcessor: chunk len=40 type=INCREMENTAL: ⎋[1;23r⎋[23;1H↵⎋[K⎋[1;24r⎋[23;1H⎋[?2004l
+02-15 18:55:14.113 16462 16536 D SshManager: Received 87 bytes:                                                                                 
+02-15 18:55:14.114 16462 16542 D OutputProcessor: chunk len=67 type=INCREMENTAL: ⎋[1;23r⎋[23;1H↵⎋[A⎋[34m⎋[42mself_model⎋[39m⎋[49m⏎↵⎋[K⎋[1;24r⎋[23;1H
+02-15 18:55:14.121 16462 16536 D SshManager: Received 75 bytes: [1;23r[23;1H[K[32m[1m➜  [36mself_awareness(B[m [K[1;24r[23;19H
+02-15 18:55:14.122 16462 16536 D SshManager: Received 8 bytes: [?2004h
+02-15 18:55:14.127 16462 16542 D OutputProcessor: flush PROMPT: '➜  self_awareness l'
+02-15 18:55:14.127 16462 16542 D OutputProcessor: emit: '➜  self_awareness l'
+02-15 18:55:14.127 16462 16542 D OutputProcessor: emit: 'self_modelareness ls'
+02-15 18:55:14.128 16462 16542 D OutputProcessor: chunk len=87 type=INCREMENTAL:                                                                                 ⎋[23;1H
+02-15 18:55:14.131 16462 16542 D OutputProcessor: chunk len=73 type=INCREMENTAL: ⎋[1;23r⎋[23;1H⎋[K⎋[32m⎋[1m➜  ⎋[36mself_awareness⎋(B⎋[m ⎋[K⎋[1;24r⎋[23;19H
+02-15 18:55:14.135 16462 16542 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:14.135 16462 16542 D OutputProcessor: chunk len=8 type=INCREMENTAL: ⎋[?2004h
+02-15 18:55:24.067 16462 16536 D SshManager: Reader thread exiting
+02-15 18:55:27.383 16658 16698 D SshManager: Full BouncyCastle provider registered at position 1
+02-15 18:55:27.725 16658 16698 D SshManager: Connecting to nathan-lambda:2222
+02-15 18:55:28.910 16658 16698 D SshManager: TCP connected, authenticating as nathan
+02-15 18:55:29.717 16658 16698 D SshManager: Authenticated
+02-15 18:55:30.736 16658 16698 D SshManager: Shell started, connected
+02-15 18:55:30.740 16658 16706 D SshManager: Shell ready (first output received)
+02-15 18:55:30.741 16658 16706 D SshManager: Received 1194 bytes: Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 6.8.0-90-generic x86_64)\r\n\r\n * Document
+02-15 18:55:30.744 16658 16698 D OutputProcessor: chunk len=1194 type=INCREMENTAL: Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 6.8.0-90-generic x86_64)⏎↵⏎↵ * Documentation:  https://help.ubuntu.com⏎↵ * Management:     https://landscape.canonical.com⏎↵ * Support:        https://ubuntu.c
+02-15 18:55:30.749 16658 16698 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:30.762 16658 16698 D OutputProcessor: emit: '  => There is 1 zombie process.'
+02-15 18:55:30.762 16658 16698 D OutputProcessor: emit: 'Expanded Security Maintenance for Applications is not enabled.'
+02-15 18:55:30.762 16658 16698 D OutputProcessor: emit: '46 updates can be applied immediately.'
+02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: 'To see these additional updates run: apt list --upgradable'
+02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: '28 additional security updates can be applied with ESM Apps.'
+02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: 'Learn more about enabling ESM Apps service at https://ubuntu.com/esm'
+02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: 'New release '24.04.4 LTS' available.'
+02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: 'Run 'do-release-upgrade' to upgrade to it.'
+02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: '15 updates could not be installed automatically. For more details,'
+02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: 'see /var/log/unattended-upgrades/unattended-upgrades.log'
+02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: 'Last login: Mon Feb 16 02:53:35 2026 from 100.83.20.1'
+02-15 18:55:31.160 16658 16706 D SshManager: Received 104 bytes: [1m[7m%[27m[1m[0m                                                          
+02-15 18:55:31.162 16658 16706 D SshManager: Received 33 bytes: ]2;nathan@nathan-lambda:~]1;~
+02-15 18:55:31.162 16658 16706 D SshManager: Received 46 bytes: \r[0m[27m[24m[J[01;32m➜  [36m~[00m [K
+02-15 18:55:31.163 16658 16706 D SshManager: Received 7 bytes: [?1h=
+02-15 18:55:31.163 16658 16679 D OutputProcessor: chunk len=104 type=INCREMENTAL: ⎋[1m⎋[7m%⎋[27m⎋[1m⎋[0m                                                                               ⏎ ⏎
+02-15 18:55:31.164 16658 16679 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:31.165 16658 16706 D SshManager: Received 8 bytes: [?2004h
+02-15 18:55:31.174 16658 16679 D OutputProcessor: chunk len=33 type=INCREMENTAL: ⎋]2;nathan@nathan-lambda:~⎋]1;~
+02-15 18:55:31.174 16658 16679 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:31.175 16658 16679 D OutputProcessor: chunk len=44 type=INCREMENTAL: ⏎⎋[0m⎋[27m⎋[24m⎋[J⎋[01;32m➜  ⎋[36m~⎋[00m ⎋[K
+02-15 18:55:31.175 16658 16679 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:31.176 16658 16679 D OutputProcessor: chunk len=7 type=INCREMENTAL: ⎋[?1h⎋=
+02-15 18:55:31.176 16658 16679 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:31.177 16658 16679 D OutputProcessor: chunk len=8 type=INCREMENTAL: ⎋[?2004h
+02-15 18:55:31.177 16658 16679 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:32.773 16658 16658 D SshManager: sendInput: 'tmux a\r' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:55:32.784 16658 16712 D SshManager: Sent 7 bytes
+02-15 18:55:32.993 16658 16706 D SshManager: Received 1 bytes: t
+02-15 18:55:32.995 16658 16706 D SshManager: Received 14 bytes: tmux a[?1l>
+02-15 18:55:32.995 16658 16706 D SshManager: Received 9 bytes: [?2004l\r
+02-15 18:55:32.997 16658 16680 D OutputProcessor: chunk len=1 type=INCREMENTAL: t
+02-15 18:55:32.998 16658 16706 D SshManager: Received 2 bytes: \r\n
+02-15 18:55:32.999 16658 16706 D SshManager: Received 20 bytes: ]2;tmux a]1;tmux
+02-15 18:55:32.999 16658 16680 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:33.003 16658 16680 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:33.020 16658 16680 D OutputProcessor: chunk len=14 type=INCREMENTAL: tmux a⎋[?1l⎋>
+02-15 18:55:33.020 16658 16680 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:33.021 16658 16680 D OutputProcessor: chunk len=9 type=INCREMENTAL: ⎋[?2004l⏎
+02-15 18:55:33.021 16658 16680 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:33.022 16658 16680 D OutputProcessor: chunk len=2 type=INCREMENTAL: ⏎↵
+02-15 18:55:33.022 16658 16680 D OutputProcessor: thinking row=18 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:33.023 16658 16680 D OutputProcessor: chunk len=20 type=INCREMENTAL: ⎋]2;tmux a⎋]1;tmux
+02-15 18:55:33.023 16658 16680 D OutputProcessor: thinking row=18 rowText='*** System restart required ***' status='System restart required ***'
+02-15 18:55:33.090 16658 16706 D SshManager: Received 178 bytes: [?1049h[22;0;0t[?1h=[H[2J[?12l[?25h[?1000l[?1002l[?1003l[?1006l[?10
+02-15 18:55:33.092 16658 16706 D SshManager: Received 1429 bytes: [?25l[32m[1m[H➜  [36mself_awareness(B[m [K[32m[1m\r\n➜  [36mself_awaren
+02-15 18:55:33.092 16658 16706 D SshManager: Received 87 bytes: (B[m[?12l[?25h[?1006l[?1000l[?1002l[?1003l[?2004l[1;1H[1;24r[23;19H
+02-15 18:55:33.094 16658 16709 D OutputProcessor: chunk len=178 type=INCREMENTAL: ⎋[?1049h⎋[22;0;0t⎋[?1h⎋=⎋[H⎋[2J⎋[?12l⎋[?25h⎋[?1000l⎋[?1002l⎋[?1003l⎋[?1006l⎋[?1005l⎋(B⎋[m⎋[?12l⎋[?25h⎋[?1006l⎋[?1000l⎋[?1002l⎋[?1003l⎋[?2004l⎋[1;1H⎋[1;24r⎋[>c⎋[>q⎋[23;19H⎋[?2004h
+02-15 18:55:33.095 16658 16706 D SshManager: Received 1429 bytes: [?25l[32m[1m[H➜  [36mself_awareness(B[m [K[32m[1m\r\n➜  [36mself_awaren
+02-15 18:55:33.111 16658 16709 D OutputProcessor: chunk len=1395 type=FULL_REDRAW: ⎋[?25l⎋[32m⎋[1m⎋[H➜  ⎋[36mself_awareness⎋(B⎋[m ⎋[K⎋[32m⎋[1m⏎↵➜  ⎋[36mself_awareness⎋(B⎋[m ls⎋[K⎋[32m⎋[1m⏎↵➜  ⎋[36mself_awareness⎋(B⎋[m cd ..⎋[K⎋[32m⎋[1m⏎↵➜  ⎋[36mprojects2⎋(B⎋[m ls⎋[K⎋[34m⎋[1m⏎↵brain_
+02-15 18:55:33.128 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:33.128 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness ls'
+02-15 18:55:33.129 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness cd ..'
+02-15 18:55:33.129 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 ls'
+02-15 18:55:33.129 16658 16709 D OutputProcessor: flush PROMPT: '➜  projects2 ls'
+02-15 18:55:33.129 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 cd ..'
+02-15 18:55:33.129 16658 16709 V OutputProcessor: buffer PROMPT: '➜  drive2 ls'
+02-15 18:55:33.130 16658 16709 D OutputProcessor: flush PROMPT: '➜  drive2 ls'
+02-15 18:55:33.130 16658 16709 V OutputProcessor: buffer PROMPT: '➜  drive2 cd projects2'
+02-15 18:55:33.130 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 ls'
+02-15 18:55:33.130 16658 16709 V OutputProcessor: filter DEDUP: 'brain_like  self_awareness  self_model'
+02-15 18:55:33.130 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 mv self_model self_awareness/'
+02-15 18:55:33.130 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 ls'
+02-15 18:55:33.131 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 cd self_awareness'
+02-15 18:55:33.131 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness sudo chmod -R u+rwX /self_model'
+02-15 18:55:33.131 16658 16709 D OutputProcessor: flush PROMPT: '➜  self_awareness sudo chmod -R u+rwX /self_model'
+02-15 18:55:33.132 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:33.132 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:33.132 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness ls'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: flush PROMPT: '➜  self_awareness ls'
+02-15 18:55:33.132 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: '➜  projects2 ls'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: 'brain_like  self_awareness  self_model'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: '➜  drive2 ls'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: 'geo_data  gradle-cache  lost+found  projects2  uv-cache'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: 'brain_like  self_awareness'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: '➜  self_awareness sudo chmod -R u+rwX /self_model'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: '[sudo] password for nathan:'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: 'chmod: cannot access '/self_model': No such file or directory'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: '➜  self_awareness ls'
+02-15 18:55:33.132 16658 16709 D OutputProcessor: emit: 'self_model'
+02-15 18:55:33.133 16658 16709 D OutputProcessor: chunk len=87 type=INCREMENTAL: ⎋(B⎋[m⎋[?12l⎋[?25h⎋[?1006l⎋[?1000l⎋[?1002l⎋[?1003l⎋[?2004l⎋[1;1H⎋[1;24r⎋[23;19H⎋[?2004h
+02-15 18:55:33.140 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:33.140 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness ls'
+02-15 18:55:33.140 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness cd ..'
+02-15 18:55:33.140 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 ls'
+02-15 18:55:33.140 16658 16709 V OutputProcessor: filter DEDUP: 'brain_like  self_awareness  self_model'
+02-15 18:55:33.140 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 cd ..'
+02-15 18:55:33.140 16658 16709 V OutputProcessor: buffer PROMPT: '➜  drive2 ls'
+02-15 18:55:33.140 16658 16709 V OutputProcessor: filter DEDUP: 'geo_data  gradle-cache  lost+found  projects2  uv-cache'
+02-15 18:55:33.140 16658 16709 V OutputProcessor: buffer PROMPT: '➜  drive2 cd projects2'
+02-15 18:55:33.140 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 ls'
+02-15 18:55:33.141 16658 16709 V OutputProcessor: filter DEDUP: 'brain_like  self_awareness  self_model'
+02-15 18:55:33.141 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 mv self_model self_awareness/'
+02-15 18:55:33.141 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 ls'
+02-15 18:55:33.141 16658 16709 V OutputProcessor: filter DEDUP: 'brain_like  self_awareness'
+02-15 18:55:33.141 16658 16709 V OutputProcessor: buffer PROMPT: '➜  projects2 cd self_awareness'
+02-15 18:55:33.141 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness sudo chmod -R u+rwX /self_model'
+02-15 18:55:33.141 16658 16709 V OutputProcessor: filter DEDUP: '[sudo] password for nathan:'
+02-15 18:55:33.142 16658 16709 V OutputProcessor: filter DEDUP: 'chmod: cannot access '/self_model': No such file or directory'
+02-15 18:55:33.142 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:33.142 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:33.142 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness ls'
+02-15 18:55:33.142 16658 16709 V OutputProcessor: filter DEDUP: 'self_model'
+02-15 18:55:33.142 16658 16709 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:33.143 16658 16709 D OutputProcessor: chunk len=1395 type=FULL_REDRAW: ⎋[?25l⎋[32m⎋[1m⎋[H➜  ⎋[36mself_awareness⎋(B⎋[m ⎋[K⎋[32m⎋[1m⏎↵➜  ⎋[36mself_awareness⎋(B⎋[m ls⎋[K⎋[32m⎋[1m⏎↵➜  ⎋[36mself_awareness⎋(B⎋[m cd ..⎋[K⎋[32m⎋[1m⏎↵➜  ⎋[36mprojects2⎋(B⎋[m ls⎋[K⎋[34m⎋[1m⏎↵brain_
+02-15 18:55:34.027 16658 16706 D SshManager: Received 8 bytes: [?7727h
+02-15 18:55:34.032 16658 16709 D OutputProcessor: chunk len=8 type=INCREMENTAL: ⎋[?7727h
+02-15 18:55:37.285 16658 16658 D SshManager: sendInput: 'ls' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:55:37.294 16658 16730 D SshManager: Sent 2 bytes
+02-15 18:55:37.336 16658 16658 D SshManager: sendInput: '\r' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:55:37.340 16658 16731 D SshManager: Sent 1 bytes
+02-15 18:55:37.495 16658 16706 D SshManager: Received 1 bytes: l
+02-15 18:55:37.497 16658 16706 D SshManager: Received 3 bytes: ls
+02-15 18:55:37.499 16658 16679 D OutputProcessor: chunk len=1 type=INCREMENTAL: l
+02-15 18:55:37.519 16658 16679 V OutputProcessor: buffer PROMPT: '➜  self_awareness ls'
+02-15 18:55:37.519 16658 16679 V OutputProcessor: buffer PROMPT: '➜  self_awareness cd ..'
+02-15 18:55:37.519 16658 16679 V OutputProcessor: buffer PROMPT: '➜  projects2 ls'
+02-15 18:55:37.519 16658 16679 V OutputProcessor: filter DEDUP: 'brain_like  self_awareness  self_model'
+02-15 18:55:37.519 16658 16679 V OutputProcessor: buffer PROMPT: '➜  projects2 cd ..'
+02-15 18:55:37.519 16658 16679 V OutputProcessor: buffer PROMPT: '➜  drive2 ls'
+02-15 18:55:37.519 16658 16679 V OutputProcessor: filter DEDUP: 'geo_data  gradle-cache  lost+found  projects2  uv-cache'
+02-15 18:55:37.520 16658 16679 V OutputProcessor: buffer PROMPT: '➜  drive2 cd projects2'
+02-15 18:55:37.520 16658 16679 V OutputProcessor: buffer PROMPT: '➜  projects2 ls'
+02-15 18:55:37.520 16658 16679 V OutputProcessor: filter DEDUP: 'brain_like  self_awareness  self_model'
+02-15 18:55:37.520 16658 16679 V OutputProcessor: buffer PROMPT: '➜  projects2 mv self_model self_awareness/'
+02-15 18:55:37.520 16658 16679 V OutputProcessor: buffer PROMPT: '➜  projects2 ls'
+02-15 18:55:37.520 16658 16679 V OutputProcessor: filter DEDUP: 'brain_like  self_awareness'
+02-15 18:55:37.520 16658 16679 V OutputProcessor: buffer PROMPT: '➜  projects2 cd self_awareness'
+02-15 18:55:37.520 16658 16679 V OutputProcessor: buffer PROMPT: '➜  self_awareness sudo chmod -R u+rwX /self_model'
+02-15 18:55:37.521 16658 16679 V OutputProcessor: filter DEDUP: '[sudo] password for nathan:'
+02-15 18:55:37.521 16658 16679 V OutputProcessor: filter DEDUP: 'chmod: cannot access '/self_model': No such file or directory'
+02-15 18:55:37.521 16658 16679 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:37.521 16658 16679 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:37.521 16658 16679 V OutputProcessor: buffer PROMPT: '➜  self_awareness ls'
+02-15 18:55:37.522 16658 16679 V OutputProcessor: filter DEDUP: 'self_model'
+02-15 18:55:37.522 16658 16679 V OutputProcessor: buffer PROMPT: '➜  self_awareness l'
+02-15 18:55:37.522 16658 16679 D OutputProcessor: chunk len=3 type=INCREMENTAL: ls
+02-15 18:55:37.703 16658 16706 D SshManager: Received 40 bytes: [1;23r[23;1H\n[K[1;24r[23;1H[?2004l
+02-15 18:55:37.705 16658 16706 D SshManager: Received 67 bytes: [1;23r[23;1H\n[A[34m[42mself_model[39m[49m\r\n[K[1;24r[23;1H
+02-15 18:55:37.706 16658 16679 D OutputProcessor: chunk len=40 type=INCREMENTAL: ⎋[1;23r⎋[23;1H↵⎋[K⎋[1;24r⎋[23;1H⎋[?2004l
+02-15 18:55:37.707 16658 16706 D SshManager: Received 87 bytes:                                                                                 
+02-15 18:55:37.708 16658 16706 D SshManager: Received 75 bytes: [1;23r[23;1H[K[32m[1m➜  [36mself_awareness(B[m [K[1;24r[23;19H
+02-15 18:55:37.709 16658 16706 D SshManager: Received 8 bytes: [?2004h
+02-15 18:55:37.726 16658 16679 V OutputProcessor: buffer PROMPT: '➜  self_awareness ls'
+02-15 18:55:37.727 16658 16679 D OutputProcessor: chunk len=67 type=INCREMENTAL: ⎋[1;23r⎋[23;1H↵⎋[A⎋[34m⎋[42mself_model⎋[39m⎋[49m⏎↵⎋[K⎋[1;24r⎋[23;1H
+02-15 18:55:37.737 16658 16679 D OutputProcessor: emit: 'self_modelareness ls'
+02-15 18:55:37.737 16658 16679 D OutputProcessor: chunk len=87 type=INCREMENTAL:                                                                                 ⎋[23;1H
+02-15 18:55:37.747 16658 16679 D OutputProcessor: chunk len=73 type=INCREMENTAL: ⎋[1;23r⎋[23;1H⎋[K⎋[32m⎋[1m➜  ⎋[36mself_awareness⎋(B⎋[m ⎋[K⎋[1;24r⎋[23;19H
+02-15 18:55:37.753 16658 16679 V OutputProcessor: buffer PROMPT: '➜  self_awareness'
+02-15 18:55:37.753 16658 16679 D OutputProcessor: chunk len=8 type=INCREMENTAL: ⎋[?2004h
+02-15 18:55:43.034 16658 16706 D SshManager: Received 2530 bytes: [?25l[H   [2X[2Cive/train_looped_diffusion_analog_tunable.py[1X[C--max_sha
+02-15 18:55:43.040 16658 16679 D OutputProcessor: chunk len=2185 type=FULL_REDRAW: ⎋[?25l⎋[H   ⎋[2X⎋[2Cive/train_looped_diffusion_analog_tunable.py⎋[1X⎋[C--max_shards⎋[1X⎋[C1⎋[1X⎋[C--max_text⎋[K⏎↵     ⎋[2m… +11 lines (ctrl+o to expand)⎋(B⎋[m                                          
+02-15 18:55:43.042 16658 16733 D SshManager: Exec: tmux next-window
+02-15 18:55:43.059 16658 16679 D OutputProcessor: flush PROMPT: '➜  self_awareness'
+02-15 18:55:43.060 16658 16679 V OutputProcessor: buffer PROMPT: '❯ check the log '
+02-15 18:55:43.060 16658 16679 D OutputProcessor: flush PROMPT: '❯ check the log'
+02-15 18:55:43.061 16658 16679 D OutputProcessor: emit: '➜  self_awareness'
+02-15 18:55:43.061 16658 16679 D OutputProcessor: emit: '     ive/train_looped_diffusion_analog_tunable.py --max_shards 1 --max_text'
+02-15 18:55:43.061 16658 16679 D OutputProcessor: emit: '     … +11 lines (ctrl+o to expand)'
+02-15 18:55:43.061 16658 16679 D OutputProcessor: emit: '● Running. Monitor with tail -f outputs/analog_tunable_run.log.'
+02-15 18:55:43.061 16658 16679 D OutputProcessor: emit: '❯ check the log '
+02-15 18:55:43.061 16658 16679 D OutputProcessor: emit: '● Read 1 file (ctrl+o to expand)'
+02-15 18:55:43.061 16658 16679 D OutputProcessor: emit: '● Running well — epoch 0 batch 2400/5258 (~46%). 49.4M total params with 27.9M'
+02-15 18:55:43.062 16658 16679 D OutputProcessor: emit: '  trainable (this one doesn't use frozen embeddings). Loss dropped from 25.0 →'
+02-15 18:55:43.062 16658 16679 D OutputProcessor: emit: '  ~11-13. The expansion_factor=8 fix worked — 49M params fits fine on the GPU vs'
+02-15 18:55:43.062 16658 16679 D OutputProcessor: emit: '   the 369M that OOM'd before.'
+02-15 18:55:46.825 16658 16706 D SshManager: Received 2635 bytes: [H                                                                             
+02-15 18:55:46.834 16658 16679 D OutputProcessor: chunk len=2301 type=FULL_REDRAW: ⎋[H                                                                                ⎋[2;1H  ⎋[1mRepetition/termination handling:⎋(B⎋[m                                              ⎋[3;1H  - Chess: Adde
+02-15 18:55:46.837 16658 16734 D SshManager: Exec: tmux next-window
+02-15 18:55:46.858 16658 16679 D OutputProcessor: thinking row=13 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  Repetition/termination handling:'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  - Chess: Added MAX_MOVES = 150 limit, repetition penalty in eval'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  (is_repetition(2) → return 0), move counter in serialization, _check_status'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  reports "Draw by move limit"'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  - Go: Added MAX_MOVES = 120 limit, auto-scores when reached'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  Test isolation:'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  - Full self-play tests skip by default'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  (@unittest.skipUnless(os.environ.get("RUN_SLOW_TESTS")))'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  - Run with RUN_SLOW_TESTS=1 uv run pytest tests/test_simulator.py -v'
+02-15 18:55:46.865 16658 16679 D OutputProcessor: emit: '  - Normal test suite: 43 pass + 2 skipped in ~9s'
+02-15 18:56:03.154 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "✳ Go and Chess Bot Te" 02:
+02-15 18:56:03.157 16658 16679 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "✳ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:11.271 16658 16658 D SshManager: sendInput: 'ok, lets try the slow tests again ' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:56:11.284 16658 16753 D SshManager: Sent 34 bytes
+02-15 18:56:11.321 16658 16658 D SshManager: sendInput: '\r' stream=net.schmizz.sshj.connection.channel.ChannelOutputStream
+02-15 18:56:11.325 16658 16754 D SshManager: Sent 1 bytes
+02-15 18:56:11.501 16658 16706 D SshManager: Received 91 bytes: [17;3Hok, lets try[Cthe[Cslow[Ctests[Cagain[C[7m [22;24H(B[m[36m2 bas
+02-15 18:56:11.507 16658 16709 D OutputProcessor: chunk len=91 type=INCREMENTAL: ⎋[17;3Hok, lets try⎋[Cthe⎋[Cslow⎋[Ctests⎋[Cagain⎋[C⎋[7m ⎋[22;24H⎋(B⎋[m⎋[36m2 bashes⏎↵⎋(B⎋[m
+02-15 18:56:11.510 16658 16709 D OutputProcessor: thinking row=13 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.007 16658 16706 D SshManager: Received 1466 bytes: [7A[30m[40m❯ [97mok, lets try the slow tests again  [39m[49m              
+02-15 18:56:12.009 16658 16709 D OutputProcessor: chunk len=1132 type=FULL_REDRAW: ⎋[7A⎋[30m⎋[40m❯ ⎋[97mok, lets try the slow tests again  ⎋[39m⎋[49m                                           ⎋[17;1H     ⎋[C    ⎋[C   ⎋[C   ⎋[C    ⎋[C     ⎋[C     ⎋[C ⏎↵⎋[31m✽⎋[39m ⎋[31mPerusing… ⎋[39
+02-15 18:56:12.012 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.024 16658 16709 V OutputProcessor: buffer PROMPT: '❯ ok, lets try the slow tests again  '
+02-15 18:56:12.212 16658 16706 D SshManager: Received 893 bytes: [A[K[10A[31m✽[39m [31mPerusing… [39m                         [14;1H[37m
+02-15 18:56:12.214 16658 16706 D SshManager: Received 37 bytes: [9A[31m✢[9C[93m…[21;1H(B[m
+02-15 18:56:12.216 16658 16710 D OutputProcessor: chunk len=721 type=INCREMENTAL: ⎋[A⎋[K⎋[10A⎋[31m✽⎋[39m ⎋[31mPerusing… ⎋[39m                         ⎋[14;1H⎋[37m⎋[2m────────────────────────────────────────────────────────────────────────────────⎋[15;1H⎋(B⎋[m⎋[37m❯ ⎋[39m⎋[7m ⎋[17;1
+02-15 18:56:12.224 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.232 16658 16710 D OutputProcessor: chunk len=33 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[9C⎋[93m…⎋[21;1H⎋(B⎋[m
+02-15 18:56:12.232 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.523 16658 16706 D SshManager: Received 814 bytes: [9A[30m[40m❯ [97mok, lets try the slow tests again  [14;1H[49m[31m✢[39m 
+02-15 18:56:12.524 16658 16706 D SshManager: Received 29 bytes: [14;11H[31m…[23;1H(B[m
+02-15 18:56:12.527 16658 16679 D OutputProcessor: chunk len=640 type=INCREMENTAL: ⎋[9A⎋[30m⎋[40m❯ ⎋[97mok, lets try the slow tests again  ⎋[14;1H⎋[49m⎋[31m✢⎋[39m ⎋[31mPerusing⎋[93m…⎋[31m ⎋[39m                                                                    ⎋[15;1H   ⎋[17;1H⎋[37m
+02-15 18:56:12.537 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.542 16658 16679 V OutputProcessor: buffer PROMPT: '❯ ok, lets try the slow tests again  '
+02-15 18:56:12.542 16658 16679 D OutputProcessor: flush PROMPT: '❯ ok, lets try the slow tests again'
+02-15 18:56:12.542 16658 16679 D OutputProcessor: emit: '❯ ok, lets try the slow tests again  '
+02-15 18:56:12.542 16658 16679 D OutputProcessor: emit: '   erusing…'
+02-15 18:56:12.542 16658 16679 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[14;11H⎋[31m…⎋[23;1H⎋(B⎋[m
+02-15 18:56:12.543 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.723 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:12.725 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:12.725 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:12.726 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.727 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.730 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:12.730 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.928 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:12.929 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:
+02-15 18:56:12.930 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:12.930 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.931 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:12.934 16658 16710 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:12.957 16658 16706 D SshManager: Received 25 bytes: [9A[31m✽[23;1H(B[m
+02-15 18:56:12.958 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[23;1H⎋(B⎋[m
+02-15 18:56:12.958 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.234 16658 16706 D SshManager: Received 61 bytes: [14;3H[93mP[23;1H(B[m[9A[31m✻[2C[93me[23;1H(B[m
+02-15 18:56:13.237 16658 16709 D OutputProcessor: chunk len=59 type=INCREMENTAL: ⎋[14;3H⎋[93mP⎋[23;1H⎋(B⎋[m⎋[9A⎋[31m✻⎋[2C⎋[93me⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.240 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.243 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.264 16658 16706 D SshManager: Received 26 bytes: [14;5H[93mr[23;1H(B[m
+02-15 18:56:13.267 16658 16709 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[14;5H⎋[93mr⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.268 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.319 16658 16706 D SshManager: Received 39 bytes: [9A[31m✶[CP[2C[93mu[23;1H(B[m
+02-15 18:56:13.323 16658 16710 D OutputProcessor: chunk len=37 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[CP⎋[2C⎋[93mu⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.325 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.328 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.442 16658 16706 D SshManager: Received 37 bytes: [14;4H[31mer[C[93msi[23;1H(B[m
+02-15 18:56:13.444 16658 16706 D SshManager: Received 38 bytes: [9A[31m*[4Cu[2C[93mn[23;1H(B[m
+02-15 18:56:13.444 16658 16710 D OutputProcessor: chunk len=37 type=INCREMENTAL: ⎋[14;4H⎋[31mer⎋[C⎋[93msi⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.444 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.445 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.448 16658 16710 D OutputProcessor: chunk len=38 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[4Cu⎋[2C⎋[93mn⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.449 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.539 16658 16706 D SshManager: Received 36 bytes: [14;7H[31ms[2C[93mg[23;1H(B[m
+02-15 18:56:13.542 16658 16679 D OutputProcessor: chunk len=36 type=INCREMENTAL: ⎋[14;7H⎋[31ms⎋[2C⎋[93mg⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.544 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.546 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.557 16658 16706 D SshManager: Received 42 bytes: [9A[31m✢[6Ci[2C[93m…[23;1H(B[m
+02-15 18:56:13.559 16658 16679 D OutputProcessor: chunk len=38 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[6Ci⎋[2C⎋[93m…⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.560 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.602 16658 16706 D SshManager: Received 26 bytes: [14;9H[31mn[23;1H(B[m
+02-15 18:56:13.604 16658 16709 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[14;9H⎋[31mn⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.606 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.747 16658 16706 D SshManager: Received 29 bytes: [9A[31m·[8Cg[23;1H(B[m
+02-15 18:56:13.749 16658 16706 D SshManager: Received 29 bytes: [14;11H[31m…[23;1H(B[m
+02-15 18:56:13.751 16658 16709 D OutputProcessor: chunk len=28 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[8Cg⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.753 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.756 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.760 16658 16709 D OutputProcessor: chunk len=27 type=INCREMENTAL: ⎋[14;11H⎋[31m…⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.761 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.848 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:
+02-15 18:56:13.850 16658 16679 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:13.942 16658 16706 D SshManager: Received 25 bytes: [9A[31m✢[23;1H(B[m
+02-15 18:56:13.944 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[23;1H⎋(B⎋[m
+02-15 18:56:13.944 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:13.946 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.048 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:14.051 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:14.052 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.054 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.260 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:14.263 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:14.263 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.264 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.291 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:14.292 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:14.292 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.464 16658 16706 D SshManager: Received 25 bytes: [9A[31m✽[23;1H(B[m
+02-15 18:56:14.467 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[23;1H⎋(B⎋[m
+02-15 18:56:14.468 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.470 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.671 16658 16706 D SshManager: Received 26 bytes: [14;3H[93mP[23;1H(B[m
+02-15 18:56:14.673 16658 16706 D SshManager: Received 35 bytes: [9A[31m✻[2C[93me[23;1H(B[m
+02-15 18:56:14.674 16658 16709 D OutputProcessor: chunk len=26 type=INCREMENTAL: ⎋[14;3H⎋[93mP⎋[23;1H⎋(B⎋[m
+02-15 18:56:14.674 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.675 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.677 16658 16709 D OutputProcessor: chunk len=33 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[2C⎋[93me⎋[23;1H⎋(B⎋[m
+02-15 18:56:14.677 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.874 16658 16706 D SshManager: Received 30 bytes: [9A[31m✶[CPe[23;1H(B[m
+02-15 18:56:14.876 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:
+02-15 18:56:14.878 16658 16710 D OutputProcessor: chunk len=28 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[CPe⎋[23;1H⎋(B⎋[m
+02-15 18:56:14.880 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.883 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:14.890 16658 16710 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:14.893 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:14.895 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:14.896 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.077 16658 16706 D SshManager: Received 25 bytes: [9A[31m✢[23;1H(B[m
+02-15 18:56:15.080 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[23;1H⎋(B⎋[m
+02-15 18:56:15.081 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.083 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.181 16658 16706 D SshManager: Received 24 bytes: [9A[31m·[23;1H(B[m
+02-15 18:56:15.184 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[23;1H⎋(B⎋[m
+02-15 18:56:15.186 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.189 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.490 16658 16706 D SshManager: Received 25 bytes: [9A[31m✢[23;1H(B[m
+02-15 18:56:15.491 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[23;1H⎋(B⎋[m
+02-15 18:56:15.491 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.492 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.503 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:15.504 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:15.505 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.693 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:15.695 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:15.697 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.701 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.720 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:15.722 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:15.722 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.767 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:
+02-15 18:56:15.770 16658 16709 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:15.899 16658 16706 D SshManager: Received 25 bytes: [9A[31m✽[23;1H(B[m
+02-15 18:56:15.903 16658 16709 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[23;1H⎋(B⎋[m
+02-15 18:56:15.905 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:15.908 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.205 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:16.209 16658 16709 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:16.211 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.215 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.228 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:16.231 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:16.232 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.411 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:16.413 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:16.413 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.414 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.449 16658 16706 D SshManager: Received 25 bytes: [9A[31m✢[23;1H(B[m
+02-15 18:56:16.452 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[23;1H⎋(B⎋[m
+02-15 18:56:16.453 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.613 16658 16706 D SshManager: Received 24 bytes: [9A[31m·[23;1H(B[m
+02-15 18:56:16.616 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[23;1H⎋(B⎋[m
+02-15 18:56:16.618 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.625 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.820 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:
+02-15 18:56:16.823 16658 16706 D SshManager: Received 25 bytes: [9A[31m✢[23;1H(B[m
+02-15 18:56:16.824 16658 16711 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:16.827 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[23;1H⎋(B⎋[m
+02-15 18:56:16.828 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.829 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.950 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:16.952 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:16.953 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:16.955 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.127 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:17.131 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:17.133 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.136 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.229 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:17.231 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:17.232 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.235 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.277 16658 16706 D SshManager: Received 25 bytes: [9A[31m✽[23;1H(B[m
+02-15 18:56:17.278 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[23;1H⎋(B⎋[m
+02-15 18:56:17.278 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.638 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:17.641 16658 16709 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:17.642 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.645 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.663 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:17.663 16658 16709 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:17.664 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.694 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:
+02-15 18:56:17.697 16658 16711 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:17.847 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:17.848 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:17.848 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.850 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:17.862 16658 16706 D SshManager: Received 25 bytes: [9A[31m✢[23;1H(B[m
+02-15 18:56:17.863 16658 16711 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[23;1H⎋(B⎋[m
+02-15 18:56:17.863 16658 16711 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.049 16658 16706 D SshManager: Received 24 bytes: [9A[31m·[23;1H(B[m
+02-15 18:56:18.050 16658 16709 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[23;1H⎋(B⎋[m
+02-15 18:56:18.051 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.052 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.252 16658 16706 D SshManager: Received 25 bytes: [9A[31m✢[23;1H(B[m
+02-15 18:56:18.254 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[23;1H⎋(B⎋[m
+02-15 18:56:18.254 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.255 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.462 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:18.467 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:18.469 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.472 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.475 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:18.477 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:18.477 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.663 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:18.667 16658 16709 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:18.669 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.670 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:
+02-15 18:56:18.673 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.678 16658 16709 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:18.711 16658 16706 D SshManager: Received 25 bytes: [9A[31m✽[23;1H(B[m
+02-15 18:56:18.712 16658 16709 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[23;1H⎋(B⎋[m
+02-15 18:56:18.712 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.971 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:18.975 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:18.977 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:18.980 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.072 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:19.075 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:19.075 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.075 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.278 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:19.282 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:19.283 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.285 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.302 16658 16706 D SshManager: Received 25 bytes: [9A[31m✢[23;1H(B[m
+02-15 18:56:19.305 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[23;1H⎋(B⎋[m
+02-15 18:56:19.306 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.483 16658 16706 D SshManager: Received 24 bytes: [9A[31m·[23;1H(B[m
+02-15 18:56:19.486 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[23;1H⎋(B⎋[m
+02-15 18:56:19.487 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.489 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.688 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:
+02-15 18:56:19.689 16658 16706 D SshManager: Received 25 bytes: [9A[31m✢[23;1H(B[m
+02-15 18:56:19.691 16658 16710 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:19.697 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✢⎋[23;1H⎋(B⎋[m
+02-15 18:56:19.698 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.700 16658 16710 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.951 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:19.953 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:19.954 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:19.955 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:20.096 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:20.098 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:20.098 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:20.098 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:20.132 16658 16706 D SshManager: Received 25 bytes: [9A[31m✽[23;1H(B[m
+02-15 18:56:20.135 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[23;1H⎋(B⎋[m
+02-15 18:56:20.136 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:20.518 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:20.522 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:20.524 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:20.527 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:20.536 16658 16706 D SshManager: Received 25 bytes: [9A[31m✶[23;1H(B[m
+02-15 18:56:20.537 16658 16679 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✶⎋[23;1H⎋(B⎋[m
+02-15 18:56:20.538 16658 16679 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:20.586 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:
+02-15 18:56:20.590 16658 16709 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠐ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:20.708 16658 16706 D SshManager: Received 23 bytes: [9A[31m*[23;1H(B[m
+02-15 18:56:20.710 16658 16709 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[23;1H⎋(B⎋[m
+02-15 18:56:20.712 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:20.714 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:21.323 16658 16706 D SshManager: Received 43 bytes: [9A[31m·[C[33mPerusing…[23;1H(B[m
+02-15 18:56:21.323 16658 16706 D SshManager: Received 37 bytes: [9A[31m*[CPerusing…[23;1H(B[m
+02-15 18:56:21.326 16658 16709 D OutputProcessor: chunk len=40 type=INCREMENTAL: ⎋[9A⎋[31m·⎋[C⎋[33mPerusing…⎋[23;1H⎋(B⎋[m
+02-15 18:56:21.327 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:21.330 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:21.337 16658 16709 D OutputProcessor: chunk len=35 type=INCREMENTAL: ⎋[9A⎋[31m*⎋[CPerusing…⎋[23;1H⎋(B⎋[m
+02-15 18:56:21.337 16658 16709 D OutputProcessor: thinking row=10 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:21.633 16658 16706 D SshManager: Received 1582 bytes: [9A[37m●[C[39m[1mBash(B[m(RUN_SLOW_TESTS=1[Cuv[Crun[Cpytest[Ctests/te
+02-15 18:56:21.634 16658 16706 D SshManager: Received 25 bytes: [9A[31m✻[23;1H(B[m
+02-15 18:56:21.634 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:
+02-15 18:56:21.634 16658 16710 D OutputProcessor: chunk len=1245 type=FULL_REDRAW: ⎋[9A⎋[37m●⎋[C⎋[39m⎋[1mBash⎋(B⎋[m(RUN_SLOW_TESTS=1⎋[Cuv⎋[Crun⎋[Cpytest⎋[Ctests/test_simulator.py::TestChessFullGame⎋[15;8Htests/test_simulator.py::TestGoFullGame⎋[C-v⎋[C-s⎋[C2>&1)⏎↵  ⎿  ⎋[37mRunning…⎋[
+02-15 18:56:21.636 16658 16710 D OutputProcessor: thinking row=7 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:21.640 16658 16706 D SshManager: Received 25 bytes: [9A[31m✽[23;1H(B[m
+02-15 18:56:21.644 16658 16710 V OutputProcessor: filter DEDUP: '  Test isolation:'
+02-15 18:56:21.644 16658 16710 V OutputProcessor: filter DEDUP: '  - Full self-play tests skip by default'
+02-15 18:56:21.644 16658 16710 V OutputProcessor: filter DEDUP: '  (@unittest.skipUnless(os.environ.get("RUN_SLOW_TESTS")))'
+02-15 18:56:21.645 16658 16710 V OutputProcessor: filter DEDUP: '  - Run with RUN_SLOW_TESTS=1 uv run pytest tests/test_simulator.py -v'
+02-15 18:56:21.645 16658 16710 V OutputProcessor: filter DEDUP: '  - Normal test suite: 43 pass + 2 skipped in ~9s'
+02-15 18:56:21.645 16658 16710 V OutputProcessor: buffer PROMPT: '❯ ok, lets try the slow tests again  '
+02-15 18:56:21.645 16658 16710 V OutputProcessor: buffer PROMPT: '❯ ok, lets try the slow tests again  '
+02-15 18:56:21.645 16658 16710 V OutputProcessor: filter FENCE: '                                         ─                                    ──'
+02-15 18:56:21.646 16658 16710 D OutputProcessor: emit: '● Bash(RUN_SLOW_TESTS=1 uv run pytest tests/test_simulator.py::TestChessFullGame'
+02-15 18:56:21.646 16658 16710 D OutputProcessor: emit: '   erustests/test_simulator.py::TestGoFullGame -v -s 2>&1)'
+02-15 18:56:21.646 16658 16710 D OutputProcessor: emit: '  ⎿  Running…'
+02-15 18:56:21.646 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✻⎋[23;1H⎋(B⎋[m
+02-15 18:56:21.646 16658 16710 D OutputProcessor: thinking row=7 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:21.647 16658 16710 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "⠂ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
+02-15 18:56:21.649 16658 16710 D OutputProcessor: chunk len=23 type=INCREMENTAL: ⎋[9A⎋[31m✽⎋[23;1H⎋(B⎋[m
+02-15 18:56:21.649 16658 16710 D OutputProcessor: thinking row=7 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:22.056 16658 16706 D SshManager: Received 1194 bytes: [9A[97m───────────────────────────────────────────────────────────────────────
+02-15 18:56:22.057 16658 16706 D SshManager: Received 107 bytes: [30m[42m\r\n[0] 0:zsh  1:claude- 2:claude*           "✳ Go and Chess Bot Te" 02:
+02-15 18:56:22.061 16658 16679 D OutputProcessor: chunk len=1030 type=FULL_REDRAW: ⎋[9A⎋[97m────────────────────────────────────────────────────────────────────────────────⎋[15;2H⎋[1mBash command⏎↵⎋(B⎋[m                                                                                
+02-15 18:56:22.070 16658 16679 D OutputProcessor: thinking row=3 rowText='✻ Cogitated for 9m 17s' status='Cogitated for 9m 17s'
+02-15 18:56:22.076 16658 16679 V OutputProcessor: filter DEDUP: '  - Run with RUN_SLOW_TESTS=1 uv run pytest tests/test_simulator.py -v'
+02-15 18:56:22.076 16658 16679 V OutputProcessor: filter DEDUP: '  - Normal test suite: 43 pass + 2 skipped in ~9s'
+02-15 18:56:22.076 16658 16679 V OutputProcessor: buffer PROMPT: '❯ ok, lets try the slow tests again  '
+02-15 18:56:22.076 16658 16679 V OutputProcessor: buffer PROMPT: '❯ ok, lets try the slow tests again  '
+02-15 18:56:22.077 16658 16679 V OutputProcessor: filter DEDUP: '● Bash(RUN_SLOW_TESTS=1 uv run pytest tests/test_simulator.py::TestChessFullGame'
+02-15 18:56:22.077 16658 16679 V OutputProcessor: filter DEDUP: '   erustests/test_simulator.py::TestGoFullGame -v -s 2>&1)'
+02-15 18:56:22.077 16658 16679 V OutputProcessor: filter DEDUP: '  ⎿  Running…'
+02-15 18:56:22.077 16658 16679 V OutputProcessor: filter FENCE: '────────────────────────────────────────────────────────────────────────────────'
+02-15 18:56:22.078 16658 16679 V OutputProcessor: filter STATUS_INFO: '                                  ciety | Context left until auto-compact: 10%'
+02-15 18:56:22.078 16658 16679 D OutputProcessor: emit: '   RUN_SLOW_TESTS=1─uv─run─pytest─tests/test_simulator.py::TestChessFullGame────'
+02-15 18:56:22.078 16658 16679 D OutputProcessor: emit: '   tests/test_simulator.py::TestGoFullGame -v -s 2>&1'
+02-15 18:56:22.078 16658 16679 D OutputProcessor: emit: '── Run both slow self-play tests         ─                                    ──'
+02-15 18:56:22.078 16658 16679 D OutputProcessor: emit: ' Do you want to proceed?'
+02-15 18:56:22.079 16658 16679 D OutputProcessor: chunk len=105 type=TMUX_BAR: ⎋[30m⎋[42m⏎↵[0] 0:zsh  1:claude- 2:claude*           "✳ Go and Chess Bot Te" 02:56 16-Feb-26⎋(B⎋[m⎋[23;1H
