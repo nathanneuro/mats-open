@@ -191,9 +191,15 @@
   </div>
 
   <div class="control-group">
-    <label>Contour Rings</label>
+    <label>Line Density</label>
     <input type="range" id="rings" min="10" max="80" value="40">
     <div class="value-display" id="rings-val">40</div>
+  </div>
+
+  <div class="control-group">
+    <label>Line Width</label>
+    <input type="range" id="line-width" min="1" max="50" value="10">
+    <div class="value-display" id="line-width-val">1.0</div>
   </div>
 
   <div class="control-group">
@@ -205,6 +211,12 @@
       <option value="monochrome">Monochrome</option>
       <option value="aurora">Aurora</option>
     </select>
+  </div>
+
+  <div class="control-group">
+    <label>Line Brightness</label>
+    <input type="range" id="line-brightness" min="5" max="200" value="100">
+    <div class="value-display" id="line-brightness-val">1.00</div>
   </div>
 
   <div class="control-group">
@@ -250,6 +262,12 @@
     <div class="value-display" id="trail-length-val">150</div>
   </div>
 
+  <div class="control-group">
+    <label>Point Brightness</label>
+    <input type="range" id="point-brightness" min="5" max="200" value="100">
+    <div class="value-display" id="point-brightness-val">1.00</div>
+  </div>
+
   <div class="btn-row">
     <button class="action-btn" id="btn-step">Step</button>
     <button class="action-btn" id="btn-play">Play</button>
@@ -277,6 +295,9 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 
 // ── Simplex Noise ───────────────────────────────────────────────
 class SimplexNoise {
@@ -513,7 +534,38 @@ function worldToNormalized(wx, wy) {
 }
 
 // Store terrain line metadata for efficient color updates
-let terrainLines = []; // { line, vertexNormals: [{nx, ny, hn}], isRadial }
+let terrainLines = []; // { line, vertexMeta, isRadial, maxOpacity }
+let allLineMaterials = []; // for updating linewidth/resolution
+
+function getLineWidth() {
+  return parseFloat(document.getElementById('line-width').value) / 10;
+}
+
+function createTerrainLine(positions, vertexMeta, isRadial) {
+  const numVerts = positions.length / 3;
+  const colors = new Float32Array(numVerts * 3); // start black
+
+  const geometry = new LineGeometry();
+  geometry.setPositions(positions);
+  geometry.setColors(colors);
+
+  const lw = getLineWidth();
+  const material = new LineMaterial({
+    vertexColors: true,
+    linewidth: lw,
+    worldUnits: false,
+    transparent: true,
+    opacity: 1.0,
+    resolution: new THREE.Vector2(
+      container.clientWidth, container.clientHeight
+    ),
+  });
+
+  const line = new Line2(geometry, material);
+  line.computeLineDistances();
+  allLineMaterials.push(material);
+  return { line, vertexMeta, isRadial, maxOpacity: isRadial ? 0.3 : 0.75 };
+}
 
 function buildTerrain(numRings, gradientName, elevScale) {
   while (terrainGroup.children.length) {
@@ -523,6 +575,7 @@ function buildTerrain(numRings, gradientName, elevScale) {
     terrainGroup.remove(c);
   }
   terrainLines = [];
+  allLineMaterials = [];
 
   const halfSize = TERRAIN_SIZE / 2;
   const maxRadius = halfSize * Math.SQRT2 * 1.05;
@@ -531,7 +584,7 @@ function buildTerrain(numRings, gradientName, elevScale) {
   for (let r = 0; r < numRings; r++) {
     const radius = ((r + 1) / numRings) * maxRadius;
     const segCount = Math.max(64, Math.floor(radius * 40));
-    const points = [];
+    const positions = new Float32Array((segCount + 1) * 3);
     const vertexMeta = [];
 
     for (let s = 0; s <= segCount; s++) {
@@ -541,23 +594,15 @@ function buildTerrain(numRings, gradientName, elevScale) {
       const [nx, ny] = worldToNormalized(wx, wz);
       const h = getHeight(nx, ny);
       const hn = (h - terrainMin) / (terrainMax - terrainMin);
-      points.push(new THREE.Vector3(wx, h * elevScale, wz));
+      positions[s*3]   = wx;
+      positions[s*3+1] = h * elevScale;
+      positions[s*3+2] = wz;
       vertexMeta.push({ nx, ny, hn });
     }
 
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const colors = new Float32Array(points.length * 3);
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    const material = new THREE.LineBasicMaterial({
-      vertexColors: true,
-      transparent: true,
-      opacity: 1.0,
-      linewidth: 1,
-    });
-    const line = new THREE.Line(geometry, material);
-    terrainGroup.add(line);
-    terrainLines.push({ line, vertexMeta, isRadial: false, maxOpacity: 0.75 });
+    const entry = createTerrainLine(positions, vertexMeta, false);
+    terrainGroup.add(entry.line);
+    terrainLines.push(entry);
   }
 
   // Radial lines
@@ -565,7 +610,7 @@ function buildTerrain(numRings, gradientName, elevScale) {
   for (let r = 0; r < numRadials; r++) {
     const angle = (r / numRadials) * Math.PI * 2;
     const segCount = 80;
-    const points = [];
+    const positions = new Float32Array((segCount + 1) * 3);
     const vertexMeta = [];
 
     for (let s = 0; s <= segCount; s++) {
@@ -575,23 +620,15 @@ function buildTerrain(numRings, gradientName, elevScale) {
       const [nx, ny] = worldToNormalized(wx, wz);
       const h = getHeight(nx, ny);
       const hn = (h - terrainMin) / (terrainMax - terrainMin);
-      points.push(new THREE.Vector3(wx, h * elevScale, wz));
+      positions[s*3]   = wx;
+      positions[s*3+1] = h * elevScale;
+      positions[s*3+2] = wz;
       vertexMeta.push({ nx, ny, hn });
     }
 
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const colors = new Float32Array(points.length * 3);
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    const material = new THREE.LineBasicMaterial({
-      vertexColors: true,
-      transparent: true,
-      opacity: 1.0,
-      linewidth: 1,
-    });
-    const line = new THREE.Line(geometry, material);
-    terrainGroup.add(line);
-    terrainLines.push({ line, vertexMeta, isRadial: true, maxOpacity: 0.3 });
+    const entry = createTerrainLine(positions, vertexMeta, true);
+    terrainGroup.add(entry.line);
+    terrainLines.push(entry);
   }
 
   // Initial color update
@@ -601,19 +638,37 @@ function buildTerrain(numRings, gradientName, elevScale) {
 let showAllTerrain = false;
 
 function updateTerrainColors(gradientName) {
+  const brightness = parseFloat(els.lineBrightness.value) / 100;
   for (const tl of terrainLines) {
-    const colorAttr = tl.line.geometry.getAttribute('color');
-    const arr = colorAttr.array;
-    for (let i = 0; i < tl.vertexMeta.length; i++) {
+    const numVerts = tl.vertexMeta.length;
+    // Compute per-vertex colors
+    const vc = new Float32Array(numVerts * 3);
+    for (let i = 0; i < numVerts; i++) {
       const vm = tl.vertexMeta[i];
       const vis = showAllTerrain ? 1 : getVisibility(vm.nx, vm.ny);
       const [cr, cg, cb] = sampleGradientRGB(gradientName, vm.hn);
-      const alpha = vis * tl.maxOpacity;
-      arr[i*3]   = cr * alpha;
-      arr[i*3+1] = cg * alpha;
-      arr[i*3+2] = cb * alpha;
+      const alpha = vis * tl.maxOpacity * brightness;
+      vc[i*3]   = cr * alpha;
+      vc[i*3+1] = cg * alpha;
+      vc[i*3+2] = cb * alpha;
     }
-    colorAttr.needsUpdate = true;
+    // Update Line2 interleaved color buffer (instanceColorStart/End)
+    const geom = tl.line.geometry;
+    const startAttr = geom.getAttribute('instanceColorStart');
+    if (!startAttr) continue;
+    const ibuf = startAttr.data; // InstancedInterleavedBuffer
+    const arr = ibuf.array;
+    const numSegs = numVerts - 1;
+    for (let s = 0; s < numSegs; s++) {
+      const off = s * 6;
+      arr[off]     = vc[s*3];
+      arr[off + 1] = vc[s*3 + 1];
+      arr[off + 2] = vc[s*3 + 2];
+      arr[off + 3] = vc[(s+1)*3];
+      arr[off + 4] = vc[(s+1)*3 + 1];
+      arr[off + 5] = vc[(s+1)*3 + 2];
+    }
+    ibuf.needsUpdate = true;
   }
 }
 
@@ -824,13 +879,15 @@ function stepOptimizers() {
       trailGroup.remove(sp.trailLine);
     }
     if (sp.trail.length > 1) {
+      const ptBright = parseFloat(els.pointBrightness.value) / 100;
       const geom = new THREE.BufferGeometry().setFromPoints(sp.trail);
       const colors = new Float32Array(sp.trail.length * 3);
       for (let i = 0; i < sp.trail.length; i++) {
         const f = i / sp.trail.length;
-        colors[i*3]   = sp.color.r * (0.3 + 0.7*f);
-        colors[i*3+1] = sp.color.g * (0.3 + 0.7*f);
-        colors[i*3+2] = sp.color.b * (0.3 + 0.7*f);
+        const b = (0.3 + 0.7*f) * ptBright;
+        colors[i*3]   = sp.color.r * b;
+        colors[i*3+1] = sp.color.g * b;
+        colors[i*3+2] = sp.color.b * b;
       }
       geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
       const mat = new THREE.LineBasicMaterial({
@@ -858,12 +915,15 @@ const els = {
   basins: document.getElementById('basins'),
   elevation: document.getElementById('elevation'),
   rings: document.getElementById('rings'),
+  lineWidth: document.getElementById('line-width'),
+  lineBrightness: document.getElementById('line-brightness'),
   gradient: document.getElementById('gradient'),
   revealRadius: document.getElementById('reveal-radius'),
   optimizer: document.getElementById('optimizer'),
   lr: document.getElementById('lr'),
   numPoints: document.getElementById('num-points'),
   trailLength: document.getElementById('trail-length'),
+  pointBrightness: document.getElementById('point-brightness'),
   btnStep: document.getElementById('btn-step'),
   btnPlay: document.getElementById('btn-play'),
   btnReset: document.getElementById('btn-reset'),
@@ -881,9 +941,12 @@ function updateDisplayValues() {
   document.getElementById('basins-val').textContent = (els.basins.value / 100).toFixed(2);
   document.getElementById('elevation-val').textContent = (els.elevation.value / 100).toFixed(2);
   document.getElementById('rings-val').textContent = els.rings.value;
+  document.getElementById('line-width-val').textContent = (els.lineWidth.value / 10).toFixed(1);
+  document.getElementById('line-brightness-val').textContent = (els.lineBrightness.value / 100).toFixed(2);
   document.getElementById('lr-val').textContent = (els.lr.value / 1000).toFixed(3);
   document.getElementById('num-points-val').textContent = els.numPoints.value;
   document.getElementById('trail-length-val').textContent = els.trailLength.value;
+  document.getElementById('point-brightness-val').textContent = (els.pointBrightness.value / 100).toFixed(2);
   document.getElementById('reveal-radius-val').textContent = (els.revealRadius.value / 100).toFixed(2);
 }
 
@@ -942,10 +1005,20 @@ for (const id of ['seed', 'base-freq', 'oct1', 'oct2', 'oct3', 'oct4', 'basins']
 els.elevation.addEventListener('input', () => { updateDisplayValues(); rebuildTerrainVisuals(); });
 els.rings.addEventListener('input', updateDisplayValues);
 els.rings.addEventListener('change', rebuildTerrainVisuals);
+els.lineWidth.addEventListener('input', () => {
+  updateDisplayValues();
+  const lw = getLineWidth();
+  for (const mat of allLineMaterials) mat.linewidth = lw;
+});
+els.lineBrightness.addEventListener('input', () => {
+  updateDisplayValues();
+  updateTerrainColors(els.gradient.value);
+});
 els.gradient.addEventListener('change', () => {
   updateTerrainColors(els.gradient.value);
 });
 els.revealRadius.addEventListener('input', updateDisplayValues);
+els.pointBrightness.addEventListener('input', updateDisplayValues);
 
 // Optimizer controls
 els.optimizer.addEventListener('change', resetPoints);
@@ -989,6 +1062,10 @@ function onResize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
+  // Update Line2 material resolution
+  for (const mat of allLineMaterials) {
+    mat.resolution.set(w, h);
+  }
 }
 window.addEventListener('resize', onResize);
 
@@ -1014,10 +1091,11 @@ function animate(time) {
     visibilityDirty = false;
   }
 
-  // Glow pulsation
+  // Glow pulsation with point brightness
+  const ptBright = parseFloat(els.pointBrightness.value) / 100;
   const pulse = 0.8 + 0.2 * Math.sin(time * 0.004);
   for (const sp of samplePoints) {
-    sp.sprite.material.opacity = pulse * 0.9;
+    sp.sprite.material.opacity = pulse * 0.9 * ptBright;
   }
 
   renderer.render(scene, camera);
