@@ -114,6 +114,13 @@
     border-top: 1px solid rgba(100, 100, 140, 0.12);
     margin: 4px 0;
   }
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #555570;
+    margin-bottom: -6px;
+  }
   #info-panel {
     font-size: 10px;
     color: #444455;
@@ -131,17 +138,51 @@
 <div id="controls">
   <h1>Loss Landscape</h1>
 
+  <div class="section-label">Terrain</div>
+
   <div class="control-group">
-    <label>Terrain Seed</label>
+    <label>Seed</label>
     <input type="range" id="seed" min="1" max="200" value="42">
     <div class="value-display" id="seed-val">42</div>
   </div>
 
   <div class="control-group">
-    <label>Terrain Roughness</label>
-    <input type="range" id="roughness" min="1" max="100" value="50">
-    <div class="value-display" id="roughness-val">0.50</div>
+    <label>Base Frequency</label>
+    <input type="range" id="base-freq" min="20" max="200" value="80">
+    <div class="value-display" id="base-freq-val">0.80</div>
   </div>
+
+  <div class="control-group">
+    <label>Octave 1 &mdash; broad hills</label>
+    <input type="range" id="oct1" min="0" max="100" value="100">
+    <div class="value-display" id="oct1-val">1.00</div>
+  </div>
+
+  <div class="control-group">
+    <label>Octave 2 &mdash; ridges</label>
+    <input type="range" id="oct2" min="0" max="100" value="50">
+    <div class="value-display" id="oct2-val">0.50</div>
+  </div>
+
+  <div class="control-group">
+    <label>Octave 3 &mdash; bumps</label>
+    <input type="range" id="oct3" min="0" max="100" value="25">
+    <div class="value-display" id="oct3-val">0.25</div>
+  </div>
+
+  <div class="control-group">
+    <label>Octave 4 &mdash; grit</label>
+    <input type="range" id="oct4" min="0" max="100" value="12">
+    <div class="value-display" id="oct4-val">0.12</div>
+  </div>
+
+  <div class="control-group">
+    <label>Basins (local minima)</label>
+    <input type="range" id="basins" min="0" max="100" value="70">
+    <div class="value-display" id="basins-val">0.70</div>
+  </div>
+
+  <hr class="section-divider">
 
   <div class="control-group">
     <label>Elevation Scale</label>
@@ -172,10 +213,17 @@
     <div class="value-display" id="reveal-radius-val">0.25</div>
   </div>
 
+  <div class="btn-row">
+    <button class="action-btn" id="btn-regenerate">Regenerate</button>
+    <button class="action-btn" id="btn-show-all">Show All</button>
+  </div>
+
   <hr class="section-divider">
 
+  <div class="section-label">Optimizer</div>
+
   <div class="control-group">
-    <label>Optimizer</label>
+    <label>Algorithm</label>
     <select id="optimizer">
       <option value="sgd">SGD</option>
       <option value="sgd_momentum">SGD + Momentum</option>
@@ -203,11 +251,10 @@
   </div>
 
   <div class="btn-row">
+    <button class="action-btn" id="btn-step">Step</button>
     <button class="action-btn" id="btn-play">Play</button>
     <button class="action-btn" id="btn-reset">Reset</button>
   </div>
-
-  <button class="action-btn" id="btn-regenerate">Regenerate Terrain</button>
 
   <div id="info-panel">
     Drag to rotate &middot; Scroll to zoom<br>
@@ -335,25 +382,26 @@ const GRID = 200;
 let heightMap = new Float64Array((GRID+1)*(GRID+1));
 let terrainMin = Infinity, terrainMax = -Infinity;
 
-function generateTerrain(seed, roughness) {
+function generateTerrain(seed, baseFreq, octaves, basinStrength) {
   const simplex = new SimplexNoise(seed);
-  const r = roughness;
   terrainMin = Infinity; terrainMax = -Infinity;
   for (let iy = 0; iy <= GRID; iy++) {
     for (let ix = 0; ix <= GRID; ix++) {
       const x = (ix / GRID - 0.5) * 6;
       const y = (iy / GRID - 0.5) * 6;
       let h = 0;
-      h += 1.0  * simplex.noise2D(x * 0.8, y * 0.8);
-      h += 0.5  * simplex.noise2D(x * 1.6 * r, y * 1.6 * r);
-      h += 0.25 * simplex.noise2D(x * 3.2 * r, y * 3.2 * r);
-      h += 0.12 * simplex.noise2D(x * 6.4 * r, y * 6.4 * r);
+      h += octaves[0] * simplex.noise2D(x * baseFreq,     y * baseFreq);
+      h += octaves[1] * simplex.noise2D(x * baseFreq * 2, y * baseFreq * 2);
+      h += octaves[2] * simplex.noise2D(x * baseFreq * 4, y * baseFreq * 4);
+      h += octaves[3] * simplex.noise2D(x * baseFreq * 8, y * baseFreq * 8);
+      // Basins (local minima) scaled by basinStrength
       const d1 = Math.sqrt((x-1.2)**2 + (y-0.8)**2);
       const d2 = Math.sqrt((x+1.5)**2 + (y+1.0)**2);
       const d3 = Math.sqrt((x+0.3)**2 + (y-1.8)**2);
-      h -= 0.6 * Math.exp(-d1*d1*0.8);
-      h -= 0.9 * Math.exp(-d2*d2*0.5);
-      h -= 0.4 * Math.exp(-d3*d3*1.2);
+      h -= basinStrength * 0.6 * Math.exp(-d1*d1*0.8);
+      h -= basinStrength * 0.9 * Math.exp(-d2*d2*0.5);
+      h -= basinStrength * 0.4 * Math.exp(-d3*d3*1.2);
+      // Bowl-ish boundary
       const dc = Math.sqrt(x*x + y*y);
       h += 0.15 * dc * dc * 0.1;
       const idx = iy * (GRID+1) + ix;
@@ -550,16 +598,16 @@ function buildTerrain(numRings, gradientName, elevScale) {
   updateTerrainColors(gradientName);
 }
 
+let showAllTerrain = false;
+
 function updateTerrainColors(gradientName) {
   for (const tl of terrainLines) {
     const colorAttr = tl.line.geometry.getAttribute('color');
     const arr = colorAttr.array;
     for (let i = 0; i < tl.vertexMeta.length; i++) {
       const vm = tl.vertexMeta[i];
-      const vis = getVisibility(vm.nx, vm.ny);
+      const vis = showAllTerrain ? 1 : getVisibility(vm.nx, vm.ny);
       const [cr, cg, cb] = sampleGradientRGB(gradientName, vm.hn);
-      // Multiply color by visibility * maxOpacity
-      // On black background, zero visibility = black = invisible
       const alpha = vis * tl.maxOpacity;
       arr[i*3]   = cr * alpha;
       arr[i*3+1] = cg * alpha;
@@ -802,7 +850,12 @@ function stepOptimizers() {
 // ── UI Controls ─────────────────────────────────────────────────
 const els = {
   seed: document.getElementById('seed'),
-  roughness: document.getElementById('roughness'),
+  baseFreq: document.getElementById('base-freq'),
+  oct1: document.getElementById('oct1'),
+  oct2: document.getElementById('oct2'),
+  oct3: document.getElementById('oct3'),
+  oct4: document.getElementById('oct4'),
+  basins: document.getElementById('basins'),
   elevation: document.getElementById('elevation'),
   rings: document.getElementById('rings'),
   gradient: document.getElementById('gradient'),
@@ -811,14 +864,21 @@ const els = {
   lr: document.getElementById('lr'),
   numPoints: document.getElementById('num-points'),
   trailLength: document.getElementById('trail-length'),
+  btnStep: document.getElementById('btn-step'),
   btnPlay: document.getElementById('btn-play'),
   btnReset: document.getElementById('btn-reset'),
   btnRegen: document.getElementById('btn-regenerate'),
+  btnShowAll: document.getElementById('btn-show-all'),
 };
 
 function updateDisplayValues() {
   document.getElementById('seed-val').textContent = els.seed.value;
-  document.getElementById('roughness-val').textContent = (els.roughness.value / 100).toFixed(2);
+  document.getElementById('base-freq-val').textContent = (els.baseFreq.value / 100).toFixed(2);
+  document.getElementById('oct1-val').textContent = (els.oct1.value / 100).toFixed(2);
+  document.getElementById('oct2-val').textContent = (els.oct2.value / 100).toFixed(2);
+  document.getElementById('oct3-val').textContent = (els.oct3.value / 100).toFixed(2);
+  document.getElementById('oct4-val').textContent = (els.oct4.value / 100).toFixed(2);
+  document.getElementById('basins-val').textContent = (els.basins.value / 100).toFixed(2);
   document.getElementById('elevation-val').textContent = (els.elevation.value / 100).toFixed(2);
   document.getElementById('rings-val').textContent = els.rings.value;
   document.getElementById('lr-val').textContent = (els.lr.value / 1000).toFixed(3);
@@ -827,14 +887,27 @@ function updateDisplayValues() {
   document.getElementById('reveal-radius-val').textContent = (els.revealRadius.value / 100).toFixed(2);
 }
 
+function getTerrainParams() {
+  return {
+    seed: parseInt(els.seed.value),
+    baseFreq: parseFloat(els.baseFreq.value) / 100,
+    octaves: [
+      parseFloat(els.oct1.value) / 100,
+      parseFloat(els.oct2.value) / 100,
+      parseFloat(els.oct3.value) / 100,
+      parseFloat(els.oct4.value) / 100,
+    ],
+    basins: parseFloat(els.basins.value) / 100,
+  };
+}
+
 function rebuildAll() {
   clearVisibility();
-  const seed = parseInt(els.seed.value);
-  const roughness = parseFloat(els.roughness.value) / 100;
+  const tp = getTerrainParams();
   const elevScale = parseFloat(els.elevation.value) / 100;
   const numRings = parseInt(els.rings.value);
   const gradName = els.gradient.value;
-  generateTerrain(seed, roughness);
+  generateTerrain(tp.seed, tp.baseFreq, tp.octaves, tp.basins);
   buildTerrain(numRings, gradName, elevScale);
   resetPoints();
 }
@@ -858,15 +931,23 @@ function resetPoints() {
   initSamplePoints(count, optName, lr);
 }
 
-els.seed.addEventListener('input', updateDisplayValues);
-els.seed.addEventListener('change', rebuildAll);
-els.roughness.addEventListener('input', updateDisplayValues);
-els.roughness.addEventListener('change', rebuildAll);
+// Terrain noise controls — update display on drag, regenerate on release
+for (const id of ['seed', 'base-freq', 'oct1', 'oct2', 'oct3', 'oct4', 'basins']) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', updateDisplayValues);
+  el.addEventListener('change', rebuildAll);
+}
+
+// Visual-only controls
 els.elevation.addEventListener('input', () => { updateDisplayValues(); rebuildTerrainVisuals(); });
 els.rings.addEventListener('input', updateDisplayValues);
 els.rings.addEventListener('change', rebuildTerrainVisuals);
-els.gradient.addEventListener('change', rebuildTerrainVisuals);
+els.gradient.addEventListener('change', () => {
+  updateTerrainColors(els.gradient.value);
+});
 els.revealRadius.addEventListener('input', updateDisplayValues);
+
+// Optimizer controls
 els.optimizer.addEventListener('change', resetPoints);
 els.lr.addEventListener('input', () => {
   updateDisplayValues();
@@ -877,6 +958,13 @@ els.numPoints.addEventListener('input', updateDisplayValues);
 els.numPoints.addEventListener('change', resetPoints);
 els.trailLength.addEventListener('input', updateDisplayValues);
 
+// Step button — single optimizer step
+els.btnStep.addEventListener('click', () => {
+  stepOptimizers();
+  updateTerrainColors(els.gradient.value);
+  visibilityDirty = false;
+});
+
 els.btnPlay.addEventListener('click', () => {
   isPlaying = !isPlaying;
   els.btnPlay.textContent = isPlaying ? 'Pause' : 'Play';
@@ -885,6 +973,14 @@ els.btnPlay.addEventListener('click', () => {
 
 els.btnReset.addEventListener('click', resetPoints);
 els.btnRegen.addEventListener('click', rebuildAll);
+
+// Show All toggle — debug mode to reveal entire terrain
+els.btnShowAll.addEventListener('click', () => {
+  showAllTerrain = !showAllTerrain;
+  els.btnShowAll.classList.toggle('active', showAllTerrain);
+  els.btnShowAll.textContent = showAllTerrain ? 'Hide' : 'Show All';
+  updateTerrainColors(els.gradient.value);
+});
 
 // ── Resize ──────────────────────────────────────────────────────
 function onResize() {
