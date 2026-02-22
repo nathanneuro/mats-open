@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loss Landscape Terrain</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000000;
+    color: #c8c8d0;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    display: flex;
+    height: 100vh;
+  }
+  #canvas-container {
+    flex: 1;
+    position: relative;
+  }
+  canvas { display: block; }
+
+  #controls {
+    width: 280px;
+    background: rgba(8, 8, 14, 0.97);
+    border-left: 1px solid rgba(80, 80, 120, 0.15);
+    padding: 20px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 10;
+  }
+  #controls h1 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #8888aa;
+    border-bottom: 1px solid rgba(100, 100, 140, 0.2);
+    padding-bottom: 10px;
+  }
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .control-group label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #666688;
+  }
+  .control-group input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(100, 100, 140, 0.3);
+    border-radius: 2px;
+    outline: none;
+  }
+  .control-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #7070aa;
+    cursor: pointer;
+  }
+  .control-group select {
+    background: rgba(20, 20, 35, 0.9);
+    color: #c8c8d0;
+    border: 1px solid rgba(100, 100, 140, 0.3);
+    padding: 6px 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    border-radius: 3px;
+  }
+  .value-display {
+    font-size: 12px;
+    color: #9999bb;
+    text-align: right;
+  }
+  button.action-btn {
+    background: rgba(60, 60, 100, 0.3);
+    color: #aaaacc;
+    border: 1px solid rgba(100, 100, 140, 0.3);
+    padding: 8px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  button.action-btn:hover {
+    background: rgba(100, 100, 160, 0.4);
+    border-color: rgba(120, 120, 180, 0.5);
+  }
+  button.action-btn.active {
+    background: rgba(80, 130, 80, 0.3);
+    border-color: rgba(100, 170, 100, 0.5);
+    color: #aaccaa;
+  }
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-row button { flex: 1; }
+  .section-divider {
+    border: none;
+    border-top: 1px solid rgba(100, 100, 140, 0.12);
+    margin: 4px 0;
+  }
+  #info-panel {
+    font-size: 10px;
+    color: #444455;
+    line-height: 1.6;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid rgba(100, 100, 140, 0.08);
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div id="controls">
+  <h1>Loss Landscape</h1>
+
+  <div class="control-group">
+    <label>Terrain Seed</label>
+    <input type="range" id="seed" min="1" max="200" value="42">
+    <div class="value-display" id="seed-val">42</div>
+  </div>
+
+  <div class="control-group">
+    <label>Terrain Roughness</label>
+    <input type="range" id="roughness" min="1" max="100" value="50">
+    <div class="value-display" id="roughness-val">0.50</div>
+  </div>
+
+  <div class="control-group">
+    <label>Elevation Scale</label>
+    <input type="range" id="elevation" min="10" max="200" value="80">
+    <div class="value-display" id="elevation-val">0.80</div>
+  </div>
+
+  <div class="control-group">
+    <label>Contour Rings</label>
+    <input type="range" id="rings" min="10" max="80" value="40">
+    <div class="value-display" id="rings-val">40</div>
+  </div>
+
+  <div class="control-group">
+    <label>Color Gradient</label>
+    <select id="gradient">
+      <option value="thermal">Thermal</option>
+      <option value="ocean">Deep Ocean</option>
+      <option value="neon">Neon Synthwave</option>
+      <option value="monochrome">Monochrome</option>
+      <option value="aurora">Aurora</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label>Reveal Radius</label>
+    <input type="range" id="reveal-radius" min="5" max="80" value="25">
+    <div class="value-display" id="reveal-radius-val">0.25</div>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="control-group">
+    <label>Optimizer</label>
+    <select id="optimizer">
+      <option value="sgd">SGD</option>
+      <option value="sgd_momentum">SGD + Momentum</option>
+      <option value="adam">Adam</option>
+      <option value="muon">Muon</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label>Learning Rate</label>
+    <input type="range" id="lr" min="1" max="100" value="30">
+    <div class="value-display" id="lr-val">0.030</div>
+  </div>
+
+  <div class="control-group">
+    <label>Sample Points</label>
+    <input type="range" id="num-points" min="1" max="100" value="20">
+    <div class="value-display" id="num-points-val">20</div>
+  </div>
+
+  <div class="control-group">
+    <label>Trail Length</label>
+    <input type="range" id="trail-length" min="10" max="500" value="150">
+    <div class="value-display" id="trail-length-val">150</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="action-btn" id="btn-play">Play</button>
+    <button class="action-btn" id="btn-reset">Reset</button>
+  </div>
+
+  <button class="action-btn" id="btn-regenerate">Regenerate Terrain</button>
+
+  <div id="info-panel">
+    Drag to rotate &middot; Scroll to zoom<br>
+    Terrain is hidden until explored.<br>
+    Each glowing point follows its local<br>
+    gradient, like randomly initialized<br>
+    networks on a shared loss surface.
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ── Simplex Noise ───────────────────────────────────────────────
+class SimplexNoise {
+  constructor(seed) {
+    this.grad3 = [
+      [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+      [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+      [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+    ];
+    this.perm = new Uint8Array(512);
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    let s = seed;
+    const rng = () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+    for (let i = 255; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) this.perm[i] = p[i & 255];
+  }
+  noise2D(x, y) {
+    const F2 = 0.5 * (Math.sqrt(3) - 1);
+    const G2 = (3 - Math.sqrt(3)) / 6;
+    const s = (x + y) * F2;
+    const i = Math.floor(x + s), j = Math.floor(y + s);
+    const t = (i + j) * G2;
+    const X0 = i - t, Y0 = j - t;
+    const x0 = x - X0, y0 = y - Y0;
+    const i1 = x0 > y0 ? 1 : 0, j1 = x0 > y0 ? 0 : 1;
+    const x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
+    const x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
+    const ii = i & 255, jj = j & 255;
+    const dot = (g, x, y) => g[0]*x + g[1]*y;
+    const contrib = (gi, x, y) => {
+      const t = 0.5 - x*x - y*y;
+      return t < 0 ? 0 : t*t*t*t * dot(this.grad3[gi % 12], x, y);
+    };
+    const n0 = contrib(this.perm[ii + this.perm[jj]], x0, y0);
+    const n1 = contrib(this.perm[ii + i1 + this.perm[jj + j1]], x1, y1);
+    const n2 = contrib(this.perm[ii + 1 + this.perm[jj + 1]], x2, y2);
+    return 70 * (n0 + n1 + n2);
+  }
+}
+
+// ── Color Gradients ─────────────────────────────────────────────
+const gradients = {
+  thermal: [
+    [0.0, [0.05, 0.0, 0.15]],
+    [0.25, [0.4, 0.0, 0.5]],
+    [0.5, [0.9, 0.2, 0.1]],
+    [0.75, [1.0, 0.7, 0.0]],
+    [1.0, [1.0, 1.0, 0.8]]
+  ],
+  ocean: [
+    [0.0, [0.0, 0.02, 0.1]],
+    [0.3, [0.0, 0.1, 0.4]],
+    [0.5, [0.0, 0.35, 0.5]],
+    [0.7, [0.1, 0.6, 0.5]],
+    [1.0, [0.7, 0.95, 0.9]]
+  ],
+  neon: [
+    [0.0, [0.02, 0.0, 0.08]],
+    [0.25, [0.3, 0.0, 0.6]],
+    [0.5, [0.9, 0.0, 0.5]],
+    [0.75, [0.0, 0.9, 0.9]],
+    [1.0, [0.9, 1.0, 0.3]]
+  ],
+  monochrome: [
+    [0.0, [0.02, 0.02, 0.04]],
+    [0.3, [0.1, 0.1, 0.15]],
+    [0.6, [0.3, 0.3, 0.38]],
+    [0.8, [0.6, 0.6, 0.7]],
+    [1.0, [0.95, 0.95, 1.0]]
+  ],
+  aurora: [
+    [0.0, [0.0, 0.05, 0.1]],
+    [0.25, [0.0, 0.2, 0.3]],
+    [0.5, [0.1, 0.7, 0.4]],
+    [0.75, [0.4, 0.3, 0.8]],
+    [1.0, [0.9, 0.5, 1.0]]
+  ]
+};
+
+function sampleGradientRGB(name, t) {
+  t = Math.max(0, Math.min(1, t));
+  const stops = gradients[name];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t >= stops[i][0] && t <= stops[i+1][0]) {
+      const f = (t - stops[i][0]) / (stops[i+1][0] - stops[i][0]);
+      const a = stops[i][1], b = stops[i+1][1];
+      return [
+        a[0] + (b[0]-a[0])*f,
+        a[1] + (b[1]-a[1])*f,
+        a[2] + (b[2]-a[2])*f
+      ];
+    }
+  }
+  return stops[stops.length-1][1];
+}
+
+// ── Terrain Generation ──────────────────────────────────────────
+const GRID = 200;
+let heightMap = new Float64Array((GRID+1)*(GRID+1));
+let terrainMin = Infinity, terrainMax = -Infinity;
+
+function generateTerrain(seed, roughness) {
+  const simplex = new SimplexNoise(seed);
+  const r = roughness;
+  terrainMin = Infinity; terrainMax = -Infinity;
+  for (let iy = 0; iy <= GRID; iy++) {
+    for (let ix = 0; ix <= GRID; ix++) {
+      const x = (ix / GRID - 0.5) * 6;
+      const y = (iy / GRID - 0.5) * 6;
+      let h = 0;
+      h += 1.0  * simplex.noise2D(x * 0.8, y * 0.8);
+      h += 0.5  * simplex.noise2D(x * 1.6 * r, y * 1.6 * r);
+      h += 0.25 * simplex.noise2D(x * 3.2 * r, y * 3.2 * r);
+      h += 0.12 * simplex.noise2D(x * 6.4 * r, y * 6.4 * r);
+      const d1 = Math.sqrt((x-1.2)**2 + (y-0.8)**2);
+      const d2 = Math.sqrt((x+1.5)**2 + (y+1.0)**2);
+      const d3 = Math.sqrt((x+0.3)**2 + (y-1.8)**2);
+      h -= 0.6 * Math.exp(-d1*d1*0.8);
+      h -= 0.9 * Math.exp(-d2*d2*0.5);
+      h -= 0.4 * Math.exp(-d3*d3*1.2);
+      const dc = Math.sqrt(x*x + y*y);
+      h += 0.15 * dc * dc * 0.1;
+      const idx = iy * (GRID+1) + ix;
+      heightMap[idx] = h;
+      if (h < terrainMin) terrainMin = h;
+      if (h > terrainMax) terrainMax = h;
+    }
+  }
+}
+
+function getHeight(nx, ny) {
+  const fx = Math.max(0, Math.min(1, nx)) * GRID;
+  const fy = Math.max(0, Math.min(1, ny)) * GRID;
+  const ix = Math.floor(fx), iy = Math.floor(fy);
+  const tx = fx - ix, ty = fy - iy;
+  const ix1 = Math.min(ix+1, GRID), iy1 = Math.min(iy+1, GRID);
+  const h00 = heightMap[iy*(GRID+1)+ix];
+  const h10 = heightMap[iy*(GRID+1)+ix1];
+  const h01 = heightMap[iy1*(GRID+1)+ix];
+  const h11 = heightMap[iy1*(GRID+1)+ix1];
+  return h00*(1-tx)*(1-ty) + h10*tx*(1-ty) + h01*(1-tx)*ty + h11*tx*ty;
+}
+
+function getGradient(nx, ny) {
+  const eps = 0.002;
+  const dhdx = (getHeight(nx+eps, ny) - getHeight(nx-eps, ny)) / (2*eps);
+  const dhdy = (getHeight(nx, ny+eps) - getHeight(nx, ny-eps)) / (2*eps);
+  return [dhdx, dhdy];
+}
+
+// ── Visibility Map (fog of war) ─────────────────────────────────
+const VIS_GRID = 200;
+let visibilityMap = new Float32Array((VIS_GRID+1)*(VIS_GRID+1));
+
+function clearVisibility() {
+  visibilityMap.fill(0);
+}
+
+function stampVisibility(nx, ny, radiusNorm) {
+  // nx, ny in [0,1], radiusNorm in [0,1]
+  const cx = nx * VIS_GRID;
+  const cy = ny * VIS_GRID;
+  const rPx = radiusNorm * VIS_GRID;
+  const rPx2 = rPx * rPx;
+  const x0 = Math.max(0, Math.floor(cx - rPx));
+  const x1 = Math.min(VIS_GRID, Math.ceil(cx + rPx));
+  const y0 = Math.max(0, Math.floor(cy - rPx));
+  const y1 = Math.min(VIS_GRID, Math.ceil(cy + rPx));
+  for (let iy = y0; iy <= y1; iy++) {
+    for (let ix = x0; ix <= x1; ix++) {
+      const dx = ix - cx, dy = iy - cy;
+      const d2 = dx*dx + dy*dy;
+      if (d2 < rPx2) {
+        const f = 1 - d2 / rPx2;
+        // Gaussian-ish falloff: strong at center, soft at edges
+        const vis = f * f;
+        const idx = iy * (VIS_GRID+1) + ix;
+        visibilityMap[idx] = Math.min(1, visibilityMap[idx] + vis);
+      }
+    }
+  }
+}
+
+function getVisibility(nx, ny) {
+  const fx = Math.max(0, Math.min(1, nx)) * VIS_GRID;
+  const fy = Math.max(0, Math.min(1, ny)) * VIS_GRID;
+  const ix = Math.floor(fx), iy = Math.floor(fy);
+  const tx = fx - ix, ty = fy - iy;
+  const ix1 = Math.min(ix+1, VIS_GRID), iy1 = Math.min(iy+1, VIS_GRID);
+  const v00 = visibilityMap[iy*(VIS_GRID+1)+ix];
+  const v10 = visibilityMap[iy*(VIS_GRID+1)+ix1];
+  const v01 = visibilityMap[iy1*(VIS_GRID+1)+ix];
+  const v11 = visibilityMap[iy1*(VIS_GRID+1)+ix1];
+  return v00*(1-tx)*(1-ty) + v10*tx*(1-ty) + v01*(1-tx)*ty + v11*tx*ty;
+}
+
+// ── Scene Setup ─────────────────────────────────────────────────
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+camera.position.set(5, 6, 5);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+container.appendChild(renderer.domElement);
+
+const orbitControls = new OrbitControls(camera, renderer.domElement);
+orbitControls.enableDamping = true;
+orbitControls.dampingFactor = 0.08;
+orbitControls.minDistance = 2;
+orbitControls.maxDistance = 20;
+orbitControls.target.set(0, 0, 0);
+
+// ── Terrain Wireframe ───────────────────────────────────────────
+let terrainGroup = new THREE.Group();
+scene.add(terrainGroup);
+
+const TERRAIN_SIZE = 6;
+
+function normalizedToWorld(nx, ny) {
+  return [(nx - 0.5) * TERRAIN_SIZE, (ny - 0.5) * TERRAIN_SIZE];
+}
+
+function worldToNormalized(wx, wy) {
+  return [wx / TERRAIN_SIZE + 0.5, wy / TERRAIN_SIZE + 0.5];
+}
+
+// Store terrain line metadata for efficient color updates
+let terrainLines = []; // { line, vertexNormals: [{nx, ny, hn}], isRadial }
+
+function buildTerrain(numRings, gradientName, elevScale) {
+  while (terrainGroup.children.length) {
+    const c = terrainGroup.children[0];
+    c.geometry?.dispose();
+    c.material?.dispose();
+    terrainGroup.remove(c);
+  }
+  terrainLines = [];
+
+  const halfSize = TERRAIN_SIZE / 2;
+  const maxRadius = halfSize * Math.SQRT2 * 1.05;
+
+  // Concentric rings
+  for (let r = 0; r < numRings; r++) {
+    const radius = ((r + 1) / numRings) * maxRadius;
+    const segCount = Math.max(64, Math.floor(radius * 40));
+    const points = [];
+    const vertexMeta = [];
+
+    for (let s = 0; s <= segCount; s++) {
+      const angle = (s / segCount) * Math.PI * 2;
+      const wx = Math.cos(angle) * radius;
+      const wz = Math.sin(angle) * radius;
+      const [nx, ny] = worldToNormalized(wx, wz);
+      const h = getHeight(nx, ny);
+      const hn = (h - terrainMin) / (terrainMax - terrainMin);
+      points.push(new THREE.Vector3(wx, h * elevScale, wz));
+      vertexMeta.push({ nx, ny, hn });
+    }
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const colors = new Float32Array(points.length * 3);
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 1.0,
+      linewidth: 1,
+    });
+    const line = new THREE.Line(geometry, material);
+    terrainGroup.add(line);
+    terrainLines.push({ line, vertexMeta, isRadial: false, maxOpacity: 0.75 });
+  }
+
+  // Radial lines
+  const numRadials = Math.floor(numRings * 0.6);
+  for (let r = 0; r < numRadials; r++) {
+    const angle = (r / numRadials) * Math.PI * 2;
+    const segCount = 80;
+    const points = [];
+    const vertexMeta = [];
+
+    for (let s = 0; s <= segCount; s++) {
+      const dist = (s / segCount) * maxRadius;
+      const wx = Math.cos(angle) * dist;
+      const wz = Math.sin(angle) * dist;
+      const [nx, ny] = worldToNormalized(wx, wz);
+      const h = getHeight(nx, ny);
+      const hn = (h - terrainMin) / (terrainMax - terrainMin);
+      points.push(new THREE.Vector3(wx, h * elevScale, wz));
+      vertexMeta.push({ nx, ny, hn });
+    }
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const colors = new Float32Array(points.length * 3);
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 1.0,
+      linewidth: 1,
+    });
+    const line = new THREE.Line(geometry, material);
+    terrainGroup.add(line);
+    terrainLines.push({ line, vertexMeta, isRadial: true, maxOpacity: 0.3 });
+  }
+
+  // Initial color update
+  updateTerrainColors(gradientName);
+}
+
+function updateTerrainColors(gradientName) {
+  for (const tl of terrainLines) {
+    const colorAttr = tl.line.geometry.getAttribute('color');
+    const arr = colorAttr.array;
+    for (let i = 0; i < tl.vertexMeta.length; i++) {
+      const vm = tl.vertexMeta[i];
+      const vis = getVisibility(vm.nx, vm.ny);
+      const [cr, cg, cb] = sampleGradientRGB(gradientName, vm.hn);
+      // Multiply color by visibility * maxOpacity
+      // On black background, zero visibility = black = invisible
+      const alpha = vis * tl.maxOpacity;
+      arr[i*3]   = cr * alpha;
+      arr[i*3+1] = cg * alpha;
+      arr[i*3+2] = cb * alpha;
+    }
+    colorAttr.needsUpdate = true;
+  }
+}
+
+// ── Optimizer Implementations ───────────────────────────────────
+class SGDOptimizer {
+  constructor(lr) { this.lr = lr; }
+  step(pos, grad) {
+    return [pos[0] - this.lr * grad[0], pos[1] - this.lr * grad[1]];
+  }
+  reset() {}
+}
+
+class SGDMomentumOptimizer {
+  constructor(lr, mu = 0.9) { this.lr = lr; this.mu = mu; this.v = [0, 0]; }
+  step(pos, grad) {
+    this.v[0] = this.mu * this.v[0] - this.lr * grad[0];
+    this.v[1] = this.mu * this.v[1] - this.lr * grad[1];
+    return [pos[0] + this.v[0], pos[1] + this.v[1]];
+  }
+  reset() { this.v = [0, 0]; }
+}
+
+class AdamOptimizer {
+  constructor(lr, beta1 = 0.9, beta2 = 0.999, eps = 1e-8) {
+    this.lr = lr; this.beta1 = beta1; this.beta2 = beta2; this.eps = eps;
+    this.m = [0, 0]; this.v = [0, 0]; this.t = 0;
+  }
+  step(pos, grad) {
+    this.t++;
+    for (let i = 0; i < 2; i++) {
+      this.m[i] = this.beta1 * this.m[i] + (1 - this.beta1) * grad[i];
+      this.v[i] = this.beta2 * this.v[i] + (1 - this.beta2) * grad[i] * grad[i];
+    }
+    const bc1 = 1 - Math.pow(this.beta1, this.t);
+    const bc2 = 1 - Math.pow(this.beta2, this.t);
+    const newPos = [0, 0];
+    for (let i = 0; i < 2; i++) {
+      const mHat = this.m[i] / bc1;
+      const vHat = this.v[i] / bc2;
+      newPos[i] = pos[i] - this.lr * mHat / (Math.sqrt(vHat) + this.eps);
+    }
+    return newPos;
+  }
+  reset() { this.m = [0, 0]; this.v = [0, 0]; this.t = 0; }
+}
+
+class MuonOptimizer {
+  constructor(lr, mu = 0.95) {
+    this.lr = lr; this.mu = mu;
+    this.v = [0, 0];
+  }
+  step(pos, grad) {
+    const lookahead = [
+      pos[0] + this.mu * this.v[0],
+      pos[1] + this.mu * this.v[1]
+    ];
+    const [nx, ny] = worldToNormalized(lookahead[0], lookahead[1]);
+    const lookaheadGrad = getGradient(
+      Math.max(0.01, Math.min(0.99, nx)),
+      Math.max(0.01, Math.min(0.99, ny))
+    );
+    const gNorm = Math.sqrt(lookaheadGrad[0]**2 + lookaheadGrad[1]**2) + 1e-8;
+    const gNormed = [lookaheadGrad[0]/gNorm, lookaheadGrad[1]/gNorm];
+    this.v[0] = this.mu * this.v[0] - this.lr * gNormed[0] * gNorm * 0.8;
+    this.v[1] = this.mu * this.v[1] - this.lr * gNormed[1] * gNorm * 0.8;
+    return [pos[0] + this.v[0], pos[1] + this.v[1]];
+  }
+  reset() { this.v = [0, 0]; }
+}
+
+function createOptimizer(name, lr) {
+  switch (name) {
+    case 'sgd': return new SGDOptimizer(lr);
+    case 'sgd_momentum': return new SGDMomentumOptimizer(lr);
+    case 'adam': return new AdamOptimizer(lr);
+    case 'muon': return new MuonOptimizer(lr);
+    default: return new SGDOptimizer(lr);
+  }
+}
+
+// ── Sample Points ───────────────────────────────────────────────
+let samplePoints = [];
+let trailGroup = new THREE.Group();
+scene.add(trailGroup);
+let pointsGroup = new THREE.Group();
+scene.add(pointsGroup);
+
+function createGlowTexture() {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.15, 'rgba(255,255,255,0.8)');
+  grad.addColorStop(0.4, 'rgba(255,200,150,0.3)');
+  grad.addColorStop(1, 'rgba(255,150,100,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(canvas);
+}
+const glowTexture = createGlowTexture();
+
+function getPointColor(index, total) {
+  const hue = (index / total) * 0.8 + 0.05;
+  return new THREE.Color().setHSL(hue, 0.8, 0.6);
+}
+
+function initSamplePoints(count, optimizerName, lr) {
+  for (const sp of samplePoints) {
+    sp.sprite.material.dispose();
+    pointsGroup.remove(sp.sprite);
+    if (sp.trailLine) {
+      sp.trailLine.geometry.dispose();
+      sp.trailLine.material.dispose();
+      trailGroup.remove(sp.trailLine);
+    }
+  }
+  samplePoints = [];
+
+  for (let i = 0; i < count; i++) {
+    const wx = (Math.random() - 0.5) * TERRAIN_SIZE * 0.85;
+    const wz = (Math.random() - 0.5) * TERRAIN_SIZE * 0.85;
+    const color = getPointColor(i, count);
+
+    const spriteMat = new THREE.SpriteMaterial({
+      map: glowTexture,
+      color: color,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.scale.set(0.18, 0.18, 0.18);
+    pointsGroup.add(sprite);
+
+    const optimizer = createOptimizer(optimizerName, lr);
+
+    samplePoints.push({
+      wx, wz,
+      sprite,
+      optimizer,
+      color,
+      trail: [],
+      trailLine: null,
+    });
+  }
+  updatePointPositions();
+
+  // Stamp initial positions into visibility
+  const revRadius = parseFloat(document.getElementById('reveal-radius').value) / 100;
+  for (const sp of samplePoints) {
+    const [nx, ny] = worldToNormalized(sp.wx, sp.wz);
+    stampVisibility(nx, ny, revRadius);
+  }
+  updateTerrainColors(document.getElementById('gradient').value);
+}
+
+function updatePointPositions() {
+  const elevScale = parseFloat(document.getElementById('elevation').value) / 100;
+  for (const sp of samplePoints) {
+    const [nx, ny] = worldToNormalized(sp.wx, sp.wz);
+    const h = getHeight(nx, ny);
+    sp.sprite.position.set(sp.wx, h * elevScale + 0.06, sp.wz);
+  }
+}
+
+// ── Animation ───────────────────────────────────────────────────
+let isPlaying = false;
+let visibilityDirty = false;
+
+function stepOptimizers() {
+  const elevScale = parseFloat(document.getElementById('elevation').value) / 100;
+  const maxTrail = parseInt(document.getElementById('trail-length').value);
+  const revRadius = parseFloat(document.getElementById('reveal-radius').value) / 100;
+
+  for (const sp of samplePoints) {
+    const [nx, ny] = worldToNormalized(sp.wx, sp.wz);
+    const grad = getGradient(nx, ny);
+
+    const noise = 0.05;
+    grad[0] += (Math.random() - 0.5) * noise;
+    grad[1] += (Math.random() - 0.5) * noise;
+
+    const [newNx, newNy] = sp.optimizer.step([nx, ny], grad);
+    const cnx = Math.max(0.05, Math.min(0.95, newNx));
+    const cny = Math.max(0.05, Math.min(0.95, newNy));
+
+    const [newWx, newWz] = normalizedToWorld(cnx, cny);
+    sp.wx = newWx;
+    sp.wz = newWz;
+
+    const h = getHeight(cnx, cny);
+    const worldY = h * elevScale + 0.06;
+    sp.sprite.position.set(sp.wx, worldY, sp.wz);
+
+    // Stamp visibility
+    stampVisibility(cnx, cny, revRadius);
+
+    // Trail
+    sp.trail.push(new THREE.Vector3(sp.wx, worldY, sp.wz));
+    if (sp.trail.length > maxTrail) sp.trail.shift();
+
+    if (sp.trailLine) {
+      sp.trailLine.geometry.dispose();
+      sp.trailLine.material.dispose();
+      trailGroup.remove(sp.trailLine);
+    }
+    if (sp.trail.length > 1) {
+      const geom = new THREE.BufferGeometry().setFromPoints(sp.trail);
+      const colors = new Float32Array(sp.trail.length * 3);
+      for (let i = 0; i < sp.trail.length; i++) {
+        const f = i / sp.trail.length;
+        colors[i*3]   = sp.color.r * (0.3 + 0.7*f);
+        colors[i*3+1] = sp.color.g * (0.3 + 0.7*f);
+        colors[i*3+2] = sp.color.b * (0.3 + 0.7*f);
+      }
+      geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      const mat = new THREE.LineBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.7,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      sp.trailLine = new THREE.Line(geom, mat);
+      trailGroup.add(sp.trailLine);
+    }
+  }
+  visibilityDirty = true;
+}
+
+// ── UI Controls ─────────────────────────────────────────────────
+const els = {
+  seed: document.getElementById('seed'),
+  roughness: document.getElementById('roughness'),
+  elevation: document.getElementById('elevation'),
+  rings: document.getElementById('rings'),
+  gradient: document.getElementById('gradient'),
+  revealRadius: document.getElementById('reveal-radius'),
+  optimizer: document.getElementById('optimizer'),
+  lr: document.getElementById('lr'),
+  numPoints: document.getElementById('num-points'),
+  trailLength: document.getElementById('trail-length'),
+  btnPlay: document.getElementById('btn-play'),
+  btnReset: document.getElementById('btn-reset'),
+  btnRegen: document.getElementById('btn-regenerate'),
+};
+
+function updateDisplayValues() {
+  document.getElementById('seed-val').textContent = els.seed.value;
+  document.getElementById('roughness-val').textContent = (els.roughness.value / 100).toFixed(2);
+  document.getElementById('elevation-val').textContent = (els.elevation.value / 100).toFixed(2);
+  document.getElementById('rings-val').textContent = els.rings.value;
+  document.getElementById('lr-val').textContent = (els.lr.value / 1000).toFixed(3);
+  document.getElementById('num-points-val').textContent = els.numPoints.value;
+  document.getElementById('trail-length-val').textContent = els.trailLength.value;
+  document.getElementById('reveal-radius-val').textContent = (els.revealRadius.value / 100).toFixed(2);
+}
+
+function rebuildAll() {
+  clearVisibility();
+  const seed = parseInt(els.seed.value);
+  const roughness = parseFloat(els.roughness.value) / 100;
+  const elevScale = parseFloat(els.elevation.value) / 100;
+  const numRings = parseInt(els.rings.value);
+  const gradName = els.gradient.value;
+  generateTerrain(seed, roughness);
+  buildTerrain(numRings, gradName, elevScale);
+  resetPoints();
+}
+
+function rebuildTerrainVisuals() {
+  const elevScale = parseFloat(els.elevation.value) / 100;
+  const numRings = parseInt(els.rings.value);
+  const gradName = els.gradient.value;
+  buildTerrain(numRings, gradName, elevScale);
+  updatePointPositions();
+}
+
+function resetPoints() {
+  isPlaying = false;
+  els.btnPlay.textContent = 'Play';
+  els.btnPlay.classList.remove('active');
+  clearVisibility();
+  const count = parseInt(els.numPoints.value);
+  const optName = els.optimizer.value;
+  const lr = parseFloat(els.lr.value) / 1000;
+  initSamplePoints(count, optName, lr);
+}
+
+els.seed.addEventListener('input', updateDisplayValues);
+els.seed.addEventListener('change', rebuildAll);
+els.roughness.addEventListener('input', updateDisplayValues);
+els.roughness.addEventListener('change', rebuildAll);
+els.elevation.addEventListener('input', () => { updateDisplayValues(); rebuildTerrainVisuals(); });
+els.rings.addEventListener('input', updateDisplayValues);
+els.rings.addEventListener('change', rebuildTerrainVisuals);
+els.gradient.addEventListener('change', rebuildTerrainVisuals);
+els.revealRadius.addEventListener('input', updateDisplayValues);
+els.optimizer.addEventListener('change', resetPoints);
+els.lr.addEventListener('input', () => {
+  updateDisplayValues();
+  const lr = parseFloat(els.lr.value) / 1000;
+  for (const sp of samplePoints) sp.optimizer.lr = lr;
+});
+els.numPoints.addEventListener('input', updateDisplayValues);
+els.numPoints.addEventListener('change', resetPoints);
+els.trailLength.addEventListener('input', updateDisplayValues);
+
+els.btnPlay.addEventListener('click', () => {
+  isPlaying = !isPlaying;
+  els.btnPlay.textContent = isPlaying ? 'Pause' : 'Play';
+  els.btnPlay.classList.toggle('active', isPlaying);
+});
+
+els.btnReset.addEventListener('click', resetPoints);
+els.btnRegen.addEventListener('click', rebuildAll);
+
+// ── Resize ──────────────────────────────────────────────────────
+function onResize() {
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', onResize);
+
+// ── Render Loop ─────────────────────────────────────────────────
+let stepAccum = 0;
+const STEP_INTERVAL = 1000 / 30;
+
+function animate(time) {
+  requestAnimationFrame(animate);
+  orbitControls.update();
+
+  if (isPlaying) {
+    stepAccum += 16.67;
+    while (stepAccum >= STEP_INTERVAL) {
+      stepOptimizers();
+      stepAccum -= STEP_INTERVAL;
+    }
+  }
+
+  // Update terrain colors when visibility has changed
+  if (visibilityDirty) {
+    updateTerrainColors(els.gradient.value);
+    visibilityDirty = false;
+  }
+
+  // Glow pulsation
+  const pulse = 0.8 + 0.2 * Math.sin(time * 0.004);
+  for (const sp of samplePoints) {
+    sp.sprite.material.opacity = pulse * 0.9;
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ── Initialize ──────────────────────────────────────────────────
+updateDisplayValues();
+onResize();
+rebuildAll();
+animate(0);
+
+</script>
+</body>
+</html>
