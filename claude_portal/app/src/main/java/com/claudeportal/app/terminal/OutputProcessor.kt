@@ -31,8 +31,11 @@ class OutputProcessor(
     private var thinkingTimeoutJob: Job? = null
     private var thinkingRow = -1 // Screen row with thinking symbol, excluded from content
 
-    // Output flows
-    private val _contentFlow = MutableSharedFlow<List<SpannableStringBuilder>>(extraBufferCapacity = 64)
+    // Output flows — buffer capacities are intentionally small. Under heavy load
+    // (e.g. 20k lines/sec), tryEmit() will drop oldest emissions rather than
+    // queueing unbounded. This is fine: the content lives on disk via HistoryBuffer,
+    // and the UI only needs to show the latest screenful.
+    private val _contentFlow = MutableSharedFlow<List<SpannableStringBuilder>>(extraBufferCapacity = 32)
     val contentFlow: SharedFlow<List<SpannableStringBuilder>> = _contentFlow
 
     private val _thinkingFlow = MutableStateFlow(ThinkingUpdate(false, null, null))
@@ -44,8 +47,9 @@ class OutputProcessor(
     private val _statusBarFlow = MutableStateFlow<String?>(null)
     val statusBarFlow: StateFlow<String?> = _statusBarFlow
 
-    // Plain text flow for history persistence
-    private val _plainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    // Plain text flow for history persistence — larger buffer since disk writes
+    // are fast and we don't want to lose history.
+    private val _plainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 128)
     val plainTextFlow: SharedFlow<String> = _plainTextFlow
 
     companion object {
@@ -85,27 +89,63 @@ class OutputProcessor(
         // These get buffered so partial command echoes are collapsed into the final version.
         private val SHELL_PROMPT_PATTERN = Regex("^(➜|\\$|%|#)\\s.*")
         private const val MIN_DIFF_INTERVAL_MS = 80L
-        private const val DEDUP_WINDOW = 20
+        // Adaptive throttle: if chunks arrive faster than this, increase diff interval
+        private const val HIGH_THROUGHPUT_DIFF_INTERVAL_MS = 200L
+        private const val HIGH_THROUGHPUT_THRESHOLD_MS = 20L // chunks <20ms apart = deluge
+        // Dedup window: only suppress lines that appeared in the last N emissions.
+        // Keep small (5) to avoid eating legitimately repeated content like log lines,
+        // test results, or repeated output. The main purpose is suppressing screen
+        // redraw artifacts where the same line appears in consecutive diffs.
+        private const val DEDUP_WINDOW = 5
         private const val TAG = "OutputProcessor"
     }
 
     // Whether the active tmux window is running Claude Code.
     // When false, Claude-specific filters (thinking detection, status area,
     // fence lines, etc.) are bypassed so non-Claude windows render cleanly.
+    // Detection: primary = tmux window name contains "claude";
+    // fallback = content-based heuristic (seeing Claude UI elements on screen).
     @Volatile
     var isClaudeWindow: Boolean = false
 
+    // Content-based Claude detection: count of recent screen frames that had
+    // Claude Code UI elements (thinking symbols in left columns + fence/prompt pattern).
+    // If we see Claude UI elements in 3+ of the last 5 frames, assume Claude is running
+    // even if the tmux window isn't named "claude".
+    private var claudeContentHits = 0
+    private var claudeContentChecks = 0
+    private var claudeDetectedByName = false
+
     // Throttle: skip expensive diffs for rapid-fire small chunks (thinking animation)
     private var lastDiffTime = 0L
+    private var lastChunkTime = 0L
+    private var consecutiveFastChunks = 0
 
     /**
      * Process a raw SSH output chunk. This is the main entry point,
      * called for every chunk emitted by SshManager.outputFlow.
      */
     fun processRawOutput(raw: String) {
+        val now = System.currentTimeMillis()
         val chunkType = classifyChunk(raw)
         val escaped = raw.replace("\u001b", "⎋").replace("\n", "↵").replace("\r", "⏎")
         Log.d(TAG, "chunk len=${raw.length} type=$chunkType: ${escaped.take(200)}")
+
+        // Track chunk arrival rate for adaptive throttling
+        if (now - lastChunkTime < HIGH_THROUGHPUT_THRESHOLD_MS) {
+            consecutiveFastChunks++
+        } else {
+            consecutiveFastChunks = maxOf(0, consecutiveFastChunks - 1)
+        }
+        lastChunkTime = now
+
+        // Adaptive diff interval: widen the throttle window under high throughput
+        // to avoid overwhelming the UI with diffs. Content still goes to disk.
+        val effectiveDiffInterval = if (consecutiveFastChunks > 10) {
+            HIGH_THROUGHPUT_DIFF_INTERVAL_MS
+        } else {
+            MIN_DIFF_INTERVAL_MS
+        }
 
         // Feed to screen interpreter
         interpreter.feed(raw)
@@ -128,8 +168,7 @@ class OutputProcessor(
                 // chunk after the throttle window will pick up any content changes.
                 if (raw.length < 60) {
                     if (isClaudeWindow) detectThinkingOnScreen()
-                    val now = System.currentTimeMillis()
-                    if (now - lastDiffTime < MIN_DIFF_INTERVAL_MS) {
+                    if (now - lastDiffTime < effectiveDiffInterval) {
                         return
                     }
                 }
@@ -137,6 +176,12 @@ class OutputProcessor(
         }
 
         if (isClaudeWindow) detectThinkingOnScreen()
+
+        // On full redraws, run content-based Claude detection for windows
+        // not named "claude" (e.g. running claude inside a "bash" window)
+        if (chunkType == ChunkType.FULL_REDRAW && !claudeDetectedByName) {
+            detectClaudeByContent()
+        }
 
         lastDiffTime = System.currentTimeMillis()
         val rawLines = diffScreens(chunkType)
@@ -282,9 +327,17 @@ class OutputProcessor(
                 pendingPrompt = null
             }
 
-            // Deduplicate: skip if this exact line was recently emitted
+            // Deduplicate: skip if this exact line was recently emitted.
+            // Only dedup "short" or "ui-like" lines (≤120 chars). Longer lines are
+            // likely real content (log output, code, test results) that may legitimately
+            // repeat. Also skip dedup for lines starting with indentation (code/output)
+            // or tool-use bullets (●) since those repeat by design.
             val textKey = text.trim()
-            if (textKey.isNotEmpty() && textKey in recentLines) {
+            val isDedupCandidate = textKey.isNotEmpty() &&
+                textKey.length <= 120 &&
+                !textKey.startsWith("●") &&
+                !textKey.startsWith("⎿")
+            if (isDedupCandidate && textKey in recentLines) {
                 Log.v(TAG, "filter DEDUP: '$text'")
                 continue
             }
@@ -741,9 +794,20 @@ class OutputProcessor(
         val activeIndex = windows.indexOfFirst { it.isActive }.takeIf { it >= 0 } ?: 0
         val activeWindow = windows.getOrNull(activeIndex)
         if (activeWindow != null) {
-            isClaudeWindow = activeWindow.name.contains("claude", ignoreCase = true)
+            claudeDetectedByName = activeWindow.name.contains("claude", ignoreCase = true)
+            if (claudeDetectedByName) {
+                isClaudeWindow = true
+                claudeContentHits = 0
+                claudeContentChecks = 0
+            } else if (claudeContentChecks < 5) {
+                // Not named "claude" — let content-based detection decide.
+                // Don't override yet; keep current state until we have enough frames.
+            } else {
+                // Content-based fallback: if 3+ of last 5 frames had Claude UI, assume Claude
+                isClaudeWindow = claudeContentHits >= 3
+            }
         }
-        Log.d(TAG, "tmuxBar parsed: windows=${windows.map { "${it.index}:${it.name}${if (it.isActive) "*" else ""}" }} isClaudeWindow=$isClaudeWindow")
+        Log.d(TAG, "tmuxBar parsed: windows=${windows.map { "${it.index}:${it.name}${if (it.isActive) "*" else ""}" }} isClaudeWindow=$isClaudeWindow (byName=$claudeDetectedByName, contentHits=$claudeContentHits/$claudeContentChecks)")
         _tmuxBarFlow.value = TmuxBarUpdate(windows, activeIndex)
     }
 
@@ -753,9 +817,59 @@ class OutputProcessor(
             .replace(Regex("\u001b[()][A-Z0-9]"), "")
     }
 
+    /**
+     * Content-based Claude detection: scan the screen for Claude Code UI patterns.
+     * Called on FULL_REDRAW when window isn't named "claude" to detect Claude
+     * running inside a generically-named window (bash, zsh, etc.).
+     */
+    private fun detectClaudeByContent() {
+        if (claudeDetectedByName) return // Already detected by name, skip
+
+        var hits = 0
+        // Check for thinking symbol in left columns
+        for (r in 0 until rows - 1) {
+            for (c in 0 until minOf(3, cols)) {
+                if (screen.cells[r][c].char in THINKING_SYMBOLS) { hits++; break }
+            }
+        }
+        // Check for Claude prompt (❯) on any row
+        for (r in 0 until rows - 1) {
+            val text = screen.getRowText(r).trimStart()
+            if (text.startsWith("❯")) { hits++; break }
+        }
+        // Check for fence lines (Claude status area)
+        var fenceCount = 0
+        for (r in rows - 6 until rows - 1) {
+            if (r < 0) continue
+            val text = screen.getRowText(r)
+            if (isFenceLine(text) && text.trim().length > 20) fenceCount++
+        }
+        if (fenceCount >= 2) hits++ // Two fences = status area
+
+        claudeContentChecks++
+        if (hits >= 2) claudeContentHits++
+
+        // Rolling window: keep only last 5 checks
+        if (claudeContentChecks > 5) {
+            claudeContentChecks = 5
+            claudeContentHits = minOf(claudeContentHits, 5)
+        }
+
+        // Update flag if we have enough data and not detected by name
+        if (claudeContentChecks >= 3) {
+            val detected = claudeContentHits >= 2
+            if (detected != isClaudeWindow) {
+                Log.d(TAG, "Claude content detection: $isClaudeWindow → $detected (hits=$claudeContentHits/$claudeContentChecks)")
+                isClaudeWindow = detected
+            }
+        }
+    }
+
     /** Reset diff state (e.g. after tmux window switch). */
     fun resetDiffState() {
         previousSnapshot = null
+        claudeContentHits = 0
+        claudeContentChecks = 0
     }
 
     fun destroy() {
