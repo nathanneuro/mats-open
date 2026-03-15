@@ -1,6 +1,7 @@
 package com.claudeportal.app
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.view.KeyEvent
@@ -22,6 +23,7 @@ import com.claudeportal.app.models.AppSettings
 import com.claudeportal.app.models.ConnectionProfile
 import com.claudeportal.app.ssh.ConnectionState
 import com.claudeportal.app.ssh.KeyCode
+import com.claudeportal.app.ssh.SshConnectionService
 import com.claudeportal.app.ssh.SshManager
 import com.claudeportal.app.terminal.HistoryBuffer
 import com.claudeportal.app.terminal.OutputProcessor
@@ -221,6 +223,7 @@ class MainActivity : AppCompatActivity() {
             sshManager.connectionState.collectLatest { state ->
                 when (state) {
                     is ConnectionState.Disconnected -> {
+                        stopSshService()
                         releaseWakeLock()
                         tmuxDetected = false
                         binding.tmuxBar.visibility = View.GONE
@@ -242,6 +245,7 @@ class MainActivity : AppCompatActivity() {
                         binding.statusText.text = getString(R.string.connected_to, state.name)
                         binding.statusText.setOnClickListener(null)
                         binding.statusIndicator.setBackgroundResource(R.drawable.status_connected)
+                        startSshService(state.name)
                         acquireWakeLock()
                         updateTerminalSize()
                         if (!tmuxDetected) showTmuxAttachButton()
@@ -614,6 +618,30 @@ class MainActivity : AppCompatActivity() {
         wasConnectedOnPause = sshManager.isConnected()
     }
 
+    /**
+     * Start the foreground service to keep the process alive in background.
+     * Without this, Android will kill the process when the app is backgrounded,
+     * which drops the SSH connection. The foreground service shows a persistent
+     * notification ("SSH Connected") that keeps the process protected.
+     */
+    private fun startSshService(serverName: String) {
+        val intent = Intent(this, SshConnectionService::class.java).apply {
+            putExtra("server_name", serverName)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    private fun stopSshService() {
+        val intent = Intent(this, SshConnectionService::class.java).apply {
+            action = SshConnectionService.ACTION_STOP
+        }
+        startService(intent)
+    }
+
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) return
         val pm = getSystemService(POWER_SERVICE) as PowerManager
@@ -635,6 +663,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopSshService()
         releaseWakeLock()
         outputProcessor.destroy()
         historyBuffer.close()
