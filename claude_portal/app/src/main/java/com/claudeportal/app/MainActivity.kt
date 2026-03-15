@@ -1,6 +1,9 @@
 package com.claudeportal.app
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
@@ -55,6 +58,15 @@ class MainActivity : AppCompatActivity() {
     // Track whether we were connected when going to background for auto-reconnect
     private var wasConnectedOnPause = false
 
+    // Receiver for "Disconnect" action from the foreground service notification.
+    // Disconnects SSH and finishes the activity without opening the app.
+    private val disconnectReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            sshManager.disconnect()
+            finishAndRemoveTask()
+        }
+    }
+
     // Thinking animation coroutine
     private var thinkingAnimJob: Job? = null
     private val thinkingSymbols = charArrayOf('\u2736', '\u273B', '\u273D', '\u00B7', '\u2722', '*')
@@ -70,6 +82,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setSupportActionBar(binding.toolbar)
+
+        registerReceiver(
+            disconnectReceiver,
+            IntentFilter(SshConnectionService.ACTION_DISCONNECT),
+            RECEIVER_NOT_EXPORTED
+        )
 
         setupTerminalView()
         setupInputBar()
@@ -663,6 +681,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        try { unregisterReceiver(disconnectReceiver) } catch (_: Exception) {}
         stopSshService()
         releaseWakeLock()
         outputProcessor.destroy()

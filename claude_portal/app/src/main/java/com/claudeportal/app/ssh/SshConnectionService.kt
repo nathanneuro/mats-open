@@ -29,6 +29,8 @@ class SshConnectionService : Service() {
         const val CHANNEL_ID = "ssh_connection"
         const val NOTIFICATION_ID = 1
         const val ACTION_STOP = "com.claudeportal.app.STOP_SSH"
+        /** Broadcast sent when the user taps "Disconnect" in the notification. */
+        const val ACTION_DISCONNECT = "com.claudeportal.app.DISCONNECT_SSH"
     }
 
     override fun onCreate() {
@@ -38,6 +40,8 @@ class SshConnectionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            // Tell MainActivity to disconnect SSH and finish
+            sendBroadcast(Intent(ACTION_DISCONNECT).setPackage(packageName))
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
