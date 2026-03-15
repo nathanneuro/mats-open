@@ -235,10 +235,23 @@
             android:scrollbars="vertical" />
 
         <ImageButton
+            android:id="@+id/historyUpButton"
+            android:layout_width="36dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="2dp"
+            android:layout_gravity="bottom"
+            android:src="@drawable/ic_arrow_up"
+            android:scaleType="center"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Previous command"
+            app:tint="@color/text_secondary" />
+
+        <ImageButton
             android:id="@+id/sendButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginStart="4dp"
+            android:layout_marginStart="2dp"
+            android:layout_gravity="bottom"
             android:src="@drawable/ic_send"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/send"

@@ -67,6 +67,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Command history: stores previously sent commands for recall via up button
+    private val commandHistory = mutableListOf<String>()
+    private var historyIndex = -1 // -1 = not browsing history
+    private var savedInput = "" // saves current input when entering history mode
+
     // Thinking animation coroutine
     private var thinkingAnimJob: Job? = null
     private val thinkingSymbols = charArrayOf('\u2736', '\u273B', '\u273D', '\u00B7', '\u2722', '*')
@@ -74,6 +79,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_CONNECTION_ID = "connection_id"
+        const val MAX_HISTORY = 100
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -180,6 +186,38 @@ class MainActivity : AppCompatActivity() {
 
         binding.sendButton.setOnClickListener {
             sendCurrentInput()
+        }
+
+        // History up button: cycle through previously sent commands
+        binding.historyUpButton.setOnClickListener {
+            if (commandHistory.isEmpty()) return@setOnClickListener
+            if (historyIndex == -1) {
+                // Entering history mode — save current input
+                savedInput = binding.inputEditText.text.toString()
+                historyIndex = commandHistory.size - 1
+            } else if (historyIndex > 0) {
+                historyIndex--
+            }
+            val cmd = commandHistory[historyIndex]
+            binding.inputEditText.setText(cmd)
+            binding.inputEditText.setSelection(cmd.length)
+        }
+
+        // Long-press: go forward (back toward most recent / saved input)
+        binding.historyUpButton.setOnLongClickListener {
+            if (historyIndex == -1) return@setOnLongClickListener false
+            if (historyIndex < commandHistory.size - 1) {
+                historyIndex++
+                val cmd = commandHistory[historyIndex]
+                binding.inputEditText.setText(cmd)
+                binding.inputEditText.setSelection(cmd.length)
+            } else {
+                // Past the end — restore saved input
+                historyIndex = -1
+                binding.inputEditText.setText(savedInput)
+                binding.inputEditText.setSelection(savedInput.length)
+            }
+            true
         }
     }
 
@@ -508,7 +546,15 @@ class MainActivity : AppCompatActivity() {
         val text = binding.inputEditText.text.toString()
         if (text.isNotEmpty()) {
             sshManager.sendInput(text)
+            // Record in command history (skip duplicates of the last entry)
+            if (commandHistory.isEmpty() || commandHistory.last() != text) {
+                commandHistory.add(text)
+                if (commandHistory.size > MAX_HISTORY) commandHistory.removeAt(0)
+            }
         }
+        // Reset history browsing state
+        historyIndex = -1
+        savedInput = ""
         // Send Enter as a separate write so TUI doesn't merge it with text
         binding.terminalView.postDelayed({
             sshManager.sendInput("\r")
