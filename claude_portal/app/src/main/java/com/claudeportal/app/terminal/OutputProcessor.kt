@@ -166,7 +166,9 @@ class OutputProcessor(
                 // rapidly (~10/sec). Skip expensive diff if we diffed recently —
                 // just update thinking state. The next larger chunk or the next
                 // chunk after the throttle window will pick up any content changes.
-                if (raw.length < 60) {
+                // Only throttle truly tiny chunks (cursor moves, thinking symbol writes).
+                // Larger chunks (>20 bytes) may contain real content like menu options.
+                if (raw.length < 20) {
                     if (isClaudeWindow) detectThinkingOnScreen()
                     if (now - lastDiffTime < effectiveDiffInterval) {
                         return
@@ -539,9 +541,12 @@ class OutputProcessor(
         // Exclude last row (tmux bar). Detect Claude's status area only on Claude windows.
         val maxRow = rows - 1
         val contentRows = if (isClaudeWindow) {
-            detectStatusArea(maxRow, updateStatusBar = chunkType == ChunkType.FULL_REDRAW)
+            // Always update the status bar — incremental chunks can carry
+            // new status info and the old FULL_REDRAW-only gate caused the
+            // status bar to appear stale or blank.
+            detectStatusArea(maxRow, updateStatusBar = true)
         } else {
-            if (chunkType == ChunkType.FULL_REDRAW) _statusBarFlow.value = null
+            _statusBarFlow.value = null
             maxRow
         }
 
