@@ -40,8 +40,12 @@ class SshConnectionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            // Tell MainActivity to disconnect SSH and finish
-            sendBroadcast(Intent(ACTION_DISCONNECT).setPackage(packageName))
+            // Only broadcast disconnect if the user tapped the notification button.
+            // When the activity calls stopSshService() it already knows we're disconnecting
+            // and just wants the service gone — broadcasting would call finishAndRemoveTask().
+            if (intent.getBooleanExtra("from_notification", false)) {
+                sendBroadcast(Intent(ACTION_DISCONNECT).setPackage(packageName))
+            }
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -83,9 +87,10 @@ class SshConnectionService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // "Disconnect" action button
+        // "Disconnect" action button (from notification)
         val stopIntent = Intent(this, SshConnectionService::class.java).apply {
             action = ACTION_STOP
+            putExtra("from_notification", true)
         }
         val stopPending = PendingIntent.getService(
             this, 0, stopIntent,
