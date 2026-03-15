@@ -24,6 +24,8 @@ class SshManager {
     private var outputStream: OutputStream? = null
     private var readerThread: Thread? = null
     @Volatile private var shellReady = false
+    @Volatile private var lastDataReceived = 0L
+    private var watchdogJob: Job? = null
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState
@@ -87,6 +89,7 @@ class SshManager {
                     while (!Thread.currentThread().isInterrupted) {
                         val n = input.read(buf)
                         if (n < 0) break
+                        lastDataReceived = System.currentTimeMillis()
                         if (!shellReady) {
                             shellReady = true
                             Log.d("SshManager", "Shell ready (first output received)")
@@ -94,7 +97,13 @@ class SshManager {
                         val text = String(buf, 0, n)
                         val preview = text.take(80).replace("\n", "\\n").replace("\r", "\\r")
                         Log.d("SshManager", "Received $n bytes: $preview")
-                        _outputFlow.tryEmit(text)
+                        // tryEmit returns false if the buffer is full — we drop the
+                        // chunk rather than blocking the reader thread. The SSH socket
+                        // must be drained continuously to avoid TCP backpressure that
+                        // could cause the server to stall or the connection to time out.
+                        if (!_outputFlow.tryEmit(text)) {
+                            Log.w("SshManager", "Output flow buffer full, dropped $n bytes")
+                        }
                     }
                 } catch (e: Exception) {
                     if (!Thread.currentThread().isInterrupted) {
@@ -111,6 +120,7 @@ class SshManager {
 
             _connectionState.value = ConnectionState.Connected(profile.name)
             Log.d("SshManager", "Shell started, connected")
+            startWatchdog()
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -241,7 +251,32 @@ class SshManager {
         }.start()
     }
 
+    /**
+     * Watchdog: periodically checks if the SSH transport is still alive.
+     * If the connection is dead (transport disconnected), transitions to Disconnected
+     * state so the UI can offer reconnection. This catches cases where the TCP
+     * connection dies silently (mobile network switch, phone sleep, etc.)
+     * without the reader thread noticing immediately.
+     */
+    private fun startWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = scope.launch {
+            while (isActive) {
+                delay(30_000) // Check every 30 seconds
+                val ssh = client
+                if (ssh != null && !ssh.isConnected) {
+                    Log.w("SshManager", "Watchdog: transport dead, marking disconnected")
+                    if (_connectionState.value is ConnectionState.Connected) {
+                        _connectionState.value = ConnectionState.Disconnected
+                    }
+                    break
+                }
+            }
+        }
+    }
+
     fun disconnect() {
+        watchdogJob?.cancel()
         readerThread?.interrupt()
         readerThread = null
         try {
