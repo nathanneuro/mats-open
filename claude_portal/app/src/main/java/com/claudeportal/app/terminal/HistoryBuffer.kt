@@ -16,7 +16,7 @@ import kotlin.concurrent.write
  * On-disk: plain text appended to per-window files ({connection}_w{N}.txt).
  * Files persist across reconnects to the same server.
  */
-class HistoryBuffer(private val maxLines: Int = 50000) {
+class HistoryBuffer(private val maxLines: Int = 10000) {
 
     private val lock = ReentrantReadWriteLock()
     private val styledContent = SpannableStringBuilder()
@@ -157,7 +157,7 @@ class HistoryBuffer(private val maxLines: Int = 50000) {
         writeJob = writeScope.launch {
             while (isActive) {
                 flushPendingWrites()
-                delay(500)
+                delay(250) // Flush every 250ms (was 500ms) for faster disk persistence
             }
         }
     }
