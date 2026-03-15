@@ -62,10 +62,15 @@ class TerminalView @JvmOverloads constructor(
     private var batchTimerRunning = false
 
     companion object {
-        private const val MAX_CHARS = 100_000
-        private const val TRIM_TO = 75_000
+        // Reduced from 100K/75K — keeping less in memory prevents OOM when
+        // hit with a deluge of output (e.g. `cat` a large file, rapid logging).
+        // Older content lives on disk via HistoryBuffer and is loaded on demand.
+        private const val MAX_CHARS = 40_000
+        private const val TRIM_TO = 30_000
         private const val BATCH_INTERVAL_MS = 100L
         private const val VISIBLE_ROWS_ESTIMATE = 30
+        // Max pending lines before we start dropping oldest (backpressure)
+        private const val MAX_PENDING_LINES = 2000
     }
 
     init {
@@ -124,10 +129,18 @@ class TerminalView @JvmOverloads constructor(
     /**
      * Append deduplicated lines from the OutputProcessor.
      * Lines are queued and flushed in batches for smooth display.
+     * Under heavy load, oldest pending lines are dropped to prevent OOM.
      */
     fun appendLines(lines: List<SpannableStringBuilder>) {
         for (line in lines) {
             pendingLines.add(line)
+        }
+        // Backpressure: if pending queue is huge, drop oldest lines.
+        // This prevents OOM when output arrives faster than we can render
+        // (e.g. 20k lines/sec from `cat` or rapid logging). The dropped
+        // lines still exist on disk via HistoryBuffer.
+        while (pendingLines.size > MAX_PENDING_LINES) {
+            pendingLines.poll()
         }
         startBatchTimer()
     }
@@ -161,7 +174,20 @@ class TerminalView @JvmOverloads constructor(
 
         if (batch.isEmpty()) return
 
-        val skipAnimation = batch.size > VISIBLE_ROWS_ESTIMATE
+        // If we have a huge batch (way more than a screen), keep only the
+        // last screen's worth for display. This prevents the TextView from
+        // being asked to layout thousands of lines at once, which causes
+        // jank and OOM. The full content is on disk via HistoryBuffer.
+        val skipAnimation: Boolean
+        if (batch.size > VISIBLE_ROWS_ESTIMATE * 3) {
+            val keep = batch.subList(batch.size - VISIBLE_ROWS_ESTIMATE * 2, batch.size)
+            val kept = ArrayList(keep)
+            batch.clear()
+            batch.addAll(kept)
+            skipAnimation = true
+        } else {
+            skipAnimation = batch.size > VISIBLE_ROWS_ESTIMATE
+        }
 
         // In history mode, save scroll position before appending
         val savedScrollY = if (!autoScrollEnabled) scrollY else -1
