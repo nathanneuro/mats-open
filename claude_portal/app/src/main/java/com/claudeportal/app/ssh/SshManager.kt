@@ -75,7 +75,7 @@ class SshManager {
             client = ssh
 
             val sess = ssh.startSession()
-            sess.allocatePTY("xterm-256color", 80, 24, 0, 0, emptyMap())
+            sess.allocatePTY("xterm-256color", 120, 24, 0, 0, emptyMap())
             val sh = sess.startShell()
             session = sess
             shell = sh

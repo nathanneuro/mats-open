@@ -237,7 +237,10 @@ class MainActivity : AppCompatActivity() {
         binding.keyEnter.setOnClickListener { sshManager.sendKeyPress(KeyCode.ENTER) }
 
         binding.keyTmuxNew.setOnClickListener { sshManager.createTmuxWindow() }
-        binding.keyTmuxNext.setOnClickListener { sshManager.nextTmuxWindow() }
+        binding.keyTmuxNext.setOnClickListener {
+            sshManager.nextTmuxWindow()
+            outputProcessor.notifyTmuxWindowNext()
+        }
         binding.keyTmuxClose.setOnClickListener { sshManager.closeTmuxWindow() }
 
         binding.scrollBottomFab.setOnClickListener {
@@ -525,7 +528,7 @@ class MainActivity : AppCompatActivity() {
         if (isClaude) {
             val borderPx = (2 * resources.displayMetrics.density).toInt()
             binding.claudeContainer.foreground = android.graphics.drawable.GradientDrawable().apply {
-                setStroke(borderPx, 0xFFDA7756.toInt())
+                setStroke(borderPx, 0xFF9E5A28.toInt())
                 setColor(0x00000000)
             }
         } else {
