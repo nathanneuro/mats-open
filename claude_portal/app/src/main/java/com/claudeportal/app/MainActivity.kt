@@ -294,12 +294,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Consume deduplicated content lines (skip while viewing history)
+        // Consume content lines — always append, even in history mode.
+        // TerminalView locks scroll position during history mode so new
+        // content is buffered below the viewport without jumping.
         lifecycleScope.launch {
             outputProcessor.contentFlow.collectLatest { lines ->
-                if (!binding.terminalView.isViewingHistory()) {
-                    binding.terminalView.appendLines(lines)
-                }
+                binding.terminalView.appendLines(lines)
             }
         }
 
@@ -487,7 +487,7 @@ class MainActivity : AppCompatActivity() {
         if (isClaude) {
             val borderPx = (2 * resources.displayMetrics.density).toInt()
             binding.claudeContainer.foreground = android.graphics.drawable.GradientDrawable().apply {
-                setStroke(borderPx, 0xFFD97706.toInt())
+                setStroke(borderPx, 0xFFDA7756.toInt())
                 setColor(0x00000000)
             }
         } else {

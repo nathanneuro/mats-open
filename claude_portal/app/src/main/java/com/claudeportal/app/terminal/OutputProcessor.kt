@@ -88,15 +88,11 @@ class OutputProcessor(
         // NOT ❯ or > — those are Claude Code prompts, handled separately.
         // These get buffered so partial command echoes are collapsed into the final version.
         private val SHELL_PROMPT_PATTERN = Regex("^(➜|\\$|%|#)\\s.*")
-        private const val MIN_DIFF_INTERVAL_MS = 80L
+        private const val MIN_DIFF_INTERVAL_MS = 400L
         // Adaptive throttle: if chunks arrive faster than this, increase diff interval
-        private const val HIGH_THROUGHPUT_DIFF_INTERVAL_MS = 200L
+        private const val HIGH_THROUGHPUT_DIFF_INTERVAL_MS = 800L
         private const val HIGH_THROUGHPUT_THRESHOLD_MS = 20L // chunks <20ms apart = deluge
-        // Dedup window: only suppress lines that appeared in the last N emissions.
-        // Keep small (5) to avoid eating legitimately repeated content like log lines,
-        // test results, or repeated output. The main purpose is suppressing screen
-        // redraw artifacts where the same line appears in consecutive diffs.
-        private const val DEDUP_WINDOW = 5
+        // (dedup removed: newest text always wins)
         private const val TAG = "OutputProcessor"
     }
 
@@ -120,6 +116,7 @@ class OutputProcessor(
     private var lastDiffTime = 0L
     private var lastChunkTime = 0L
     private var consecutiveFastChunks = 0
+    private var lastStatusUpdateTime = 0L
 
     /**
      * Process a raw SSH output chunk. This is the main entry point,
@@ -166,9 +163,9 @@ class OutputProcessor(
                 // rapidly (~10/sec). Skip expensive diff if we diffed recently —
                 // just update thinking state. The next larger chunk or the next
                 // chunk after the throttle window will pick up any content changes.
-                // Only throttle truly tiny chunks (cursor moves, thinking symbol writes).
-                // Larger chunks (>20 bytes) may contain real content like menu options.
-                if (raw.length < 20) {
+                // Only throttle small chunks (cursor moves, thinking symbol writes).
+                // Larger chunks (>40 bytes) may contain real content like menu options.
+                if (raw.length < 40) {
                     if (isClaudeWindow) detectThinkingOnScreen()
                     if (now - lastDiffTime < effectiveDiffInterval) {
                         return
@@ -224,9 +221,6 @@ class OutputProcessor(
 
         return ChunkType.INCREMENTAL
     }
-
-    // Deduplication: track recently emitted lines to avoid repeats
-    private val recentLines = ArrayDeque<String>(DEDUP_WINDOW)
 
     // Shell prompt buffering: hold prompt lines until non-prompt content arrives,
     // so partial command echoes collapse into the final version.
@@ -320,34 +314,16 @@ class OutputProcessor(
             val flushed = pendingPrompt
             if (flushed != null) {
                 val flushedText = flushed.toString().trim()
-                if (flushedText.isNotEmpty() && flushedText !in recentLines) {
+                if (flushedText.isNotEmpty()) {
                     Log.d(TAG, "flush PROMPT: '$flushedText'")
-                    recentLines.addLast(flushedText)
-                    if (recentLines.size > DEDUP_WINDOW) recentLines.removeFirst()
                     result.add(flushed)
                 }
                 pendingPrompt = null
             }
 
-            // Deduplicate: skip if this exact line was recently emitted.
-            // Only dedup "short" or "ui-like" lines (≤120 chars). Longer lines are
-            // likely real content (log output, code, test results) that may legitimately
-            // repeat. Also skip dedup for lines starting with indentation (code/output)
-            // or tool-use bullets (●) since those repeat by design.
-            val textKey = text.trim()
-            val isDedupCandidate = textKey.isNotEmpty() &&
-                textKey.length <= 120 &&
-                !textKey.startsWith("●") &&
-                !textKey.startsWith("⎿")
-            if (isDedupCandidate && textKey in recentLines) {
-                Log.v(TAG, "filter DEDUP: '$text'")
-                continue
-            }
-            if (textKey.isNotEmpty()) {
-                recentLines.addLast(textKey)
-                if (recentLines.size > DEDUP_WINDOW) recentLines.removeFirst()
-            }
-
+            // Newest text wins: always emit new lines, never suppress in favor
+            // of previously emitted content. The terminal renders early-to-late,
+            // so the latest version of any line is what the user should see.
             result.add(line)
         }
         return result
@@ -541,12 +517,15 @@ class OutputProcessor(
         // Exclude last row (tmux bar). Detect Claude's status area only on Claude windows.
         val maxRow = rows - 1
         val contentRows = if (isClaudeWindow) {
-            // Always update the status bar — incremental chunks can carry
-            // new status info and the old FULL_REDRAW-only gate caused the
-            // status bar to appear stale or blank.
-            detectStatusArea(maxRow, updateStatusBar = true)
+            // Update status bar on full redraws (reliable) and periodically
+            // on incremental diffs (every ~2s) to keep it fresh without
+            // flooding the main thread.
+            val updateStatus = chunkType == ChunkType.FULL_REDRAW ||
+                (System.currentTimeMillis() - lastStatusUpdateTime > 2000L)
+            if (updateStatus) lastStatusUpdateTime = System.currentTimeMillis()
+            detectStatusArea(maxRow, updateStatusBar = updateStatus)
         } else {
-            _statusBarFlow.value = null
+            if (chunkType == ChunkType.FULL_REDRAW) _statusBarFlow.value = null
             maxRow
         }
 
