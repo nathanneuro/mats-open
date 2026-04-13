@@ -48,6 +48,15 @@ class OutputProcessor(
     private val _plainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
     val plainTextFlow: SharedFlow<String> = _plainTextFlow
 
+    // Raw (un-deduplicated, un-filtered) parallel flows. These bypass
+    // postProcessLines so the dirty history captures everything the screen
+    // diff produced — used as a backup when dedup heuristics steal info.
+    private val _rawContentFlow = MutableSharedFlow<List<SpannableStringBuilder>>(extraBufferCapacity = 64)
+    val rawContentFlow: SharedFlow<List<SpannableStringBuilder>> = _rawContentFlow
+
+    private val _rawPlainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    val rawPlainTextFlow: SharedFlow<String> = _rawPlainTextFlow
+
     companion object {
         private val THINKING_SYMBOLS = setOf('✶', '✻', '✽', '·', '✢', '*')
         private val THINKING_SYMBOLS_STR = "✶✻✽·✢*"
@@ -140,6 +149,16 @@ class OutputProcessor(
 
         lastDiffTime = System.currentTimeMillis()
         val rawLines = diffScreens(chunkType)
+
+        // Emit raw lines (pre-filter, pre-dedup) for the dirty history.
+        // Still drop fully blank lines so the file isn't padded with whitespace.
+        val rawNonBlank = rawLines.filter { it.toString().isNotBlank() }
+        if (rawNonBlank.isNotEmpty()) {
+            _rawContentFlow.tryEmit(rawNonBlank)
+            val rawPlain = rawNonBlank.joinToString("\n") { it.toString() }
+            _rawPlainTextFlow.tryEmit(rawPlain + "\n")
+        }
+
         val newLines = postProcessLines(rawLines)
         if (newLines.isNotEmpty()) {
             for (line in newLines) {
@@ -253,7 +272,7 @@ class OutputProcessor(
                     val rawStatus = statusMatch.groupValues[1].trim()
                     val statusText = ELLIPSIS.replace(rawStatus, "").trim()
                     Log.d(TAG, "filter STATUS: '$text' → statusText='$statusText'")
-                    if (statusText.isNotEmpty()) {
+                    if (statusText.isNotEmpty() && statusText.length <= 40) {
                         handleThinking(statusText)
                     }
                     continue
@@ -683,7 +702,10 @@ class OutputProcessor(
             //   Rejects "+9 lines ctrl-o for more" and other non-status content
             // - Contains /: file paths from old row content ("Consety/tasks/...")
             // - Contains |: status bar pipes from old row content
-            if (statusText.length < 4 || statusText.firstOrNull()?.isUpperCase() != true ||
+            // Real status text is short — single phrase like "Compacting conversation".
+            // Anything longer is leaked content from another row.
+            if (statusText.length < 4 || statusText.length > 40 ||
+                statusText.firstOrNull()?.isUpperCase() != true ||
                 statusText.contains('/') || statusText.contains('|')) {
                 statusText = ""
             }

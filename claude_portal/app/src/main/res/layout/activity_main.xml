@@ -41,6 +41,23 @@
         </LinearLayout>
     </com.google.android.material.appbar.MaterialToolbar>
 
+    <!-- Broom toggle: clean vs dirty history. Anchored top-right, just below
+         the overflow menu. Tinted white when clean, default (with red overlay)
+         when dirty. -->
+    <ImageButton
+        android:id="@+id/broomToggle"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_broom"
+        android:contentDescription="@string/toggle_dirty_history"
+        android:elevation="6dp"
+        app:tint="@color/text_primary"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <!-- Claude content area: terminal + status bars, bordered when on Claude window -->
     <FrameLayout
         android:id="@+id/claudeContainer"
