@@ -1,13 +1,10 @@
 package com.claudeportal.app.terminal
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.text.SpannableStringBuilder
-import android.text.style.LeadingMarginSpan
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
@@ -38,16 +35,13 @@ class TerminalView @JvmOverloads constructor(
         setTextColor(0xFFD3D7CF.toInt()) // Light grey
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
         setPadding(16, 8, 16, 8)
-        setTextIsSelectable(true)
+        // Text selection disabled — it forces an Editable backing store which
+        // makes append/trim O(n) with span fixup, causing ANR on large text.
+        setTextIsSelectable(false)
         // Disable content capture to prevent OOM — Android's ContentCapture copies
         // the entire SpannableStringBuilder on every text change
         importantForContentCapture = IMPORTANT_FOR_CONTENT_CAPTURE_NO
     }
-
-    // Latest-line accent: thin left-edge bar on the most recently appended batch
-    private var accentSpanStart = -1
-    private var accentSpanEnd = -1
-    private var accentSpan: LatestLineSpan? = null
 
     private var autoScrollEnabled = true
     private var userTouching = false
@@ -61,11 +55,20 @@ class TerminalView @JvmOverloads constructor(
     private val handler = Handler(Looper.getMainLooper())
     private var batchTimerRunning = false
 
+    // History mode buffer: lines received while user is scrolling back.
+    // Kept in memory (not appended to TextView) to avoid expensive relayouts.
+    // Flushed when history mode exits.
+    private val historyModeBuffer = mutableListOf<SpannableStringBuilder>()
+
     companion object {
-        private const val MAX_CHARS = 100_000
-        private const val TRIM_TO = 75_000
-        private const val BATCH_INTERVAL_MS = 100L
+        // Keep the TextView small to avoid expensive relayout on append/trim.
+        // Older content lives on disk via HistoryBuffer.
+        private const val MAX_CHARS = 15_000
+        private const val TRIM_TO = 10_000
+        private const val BATCH_INTERVAL_MS = 500L
         private const val VISIBLE_ROWS_ESTIMATE = 30
+        // Max pending lines before we start dropping oldest (backpressure)
+        private const val MAX_PENDING_LINES = 500
     }
 
     init {
@@ -124,10 +127,18 @@ class TerminalView @JvmOverloads constructor(
     /**
      * Append deduplicated lines from the OutputProcessor.
      * Lines are queued and flushed in batches for smooth display.
+     * Under heavy load, oldest pending lines are dropped to prevent OOM.
      */
     fun appendLines(lines: List<SpannableStringBuilder>) {
         for (line in lines) {
             pendingLines.add(line)
+        }
+        // Backpressure: if pending queue is huge, drop oldest lines.
+        // This prevents OOM when output arrives faster than we can render
+        // (e.g. 20k lines/sec from `cat` or rapid logging). The dropped
+        // lines still exist on disk via HistoryBuffer.
+        while (pendingLines.size > MAX_PENDING_LINES) {
+            pendingLines.poll()
         }
         startBatchTimer()
     }
@@ -161,46 +172,48 @@ class TerminalView @JvmOverloads constructor(
 
         if (batch.isEmpty()) return
 
-        val skipAnimation = batch.size > VISIBLE_ROWS_ESTIMATE
+        // History mode: stash lines in memory instead of touching the TextView.
+        // This avoids expensive relayouts that cause ANR while the user is reading.
+        if (!autoScrollEnabled) {
+            historyModeBuffer.addAll(batch)
+            // Cap the buffer to prevent OOM — keep latest lines only
+            while (historyModeBuffer.size > MAX_PENDING_LINES) {
+                historyModeBuffer.removeAt(0)
+            }
+            return
+        }
 
-        // In history mode, save scroll position before appending
-        val savedScrollY = if (!autoScrollEnabled) scrollY else -1
+        appendBatchToView(batch)
+    }
+
+    /** Append a batch of lines to the TextView and scroll. */
+    private fun appendBatchToView(batch: List<SpannableStringBuilder>) {
+        // If we have a huge batch (way more than a screen), keep only the
+        // last screen's worth for display. This prevents the TextView from
+        // being asked to layout thousands of lines at once, which causes
+        // jank and OOM. The full content is on disk via HistoryBuffer.
+        val displayBatch: List<SpannableStringBuilder>
+        val skipAnimation: Boolean
+        if (batch.size > VISIBLE_ROWS_ESTIMATE * 3) {
+            displayBatch = batch.subList(batch.size - VISIBLE_ROWS_ESTIMATE * 2, batch.size)
+            skipAnimation = true
+        } else {
+            displayBatch = batch
+            skipAnimation = batch.size > VISIBLE_ROWS_ESTIMATE
+        }
 
         val combined = SpannableStringBuilder()
-        for ((i, line) in batch.withIndex()) {
+        for ((i, line) in displayBatch.withIndex()) {
             if (i > 0 || textView.length() > 0) {
                 combined.append("\n")
             }
             combined.append(line)
         }
 
-        // Remove previous latest-line accent
-        val editable = textView.editableText
-        val oldSpan = accentSpan
-        if (oldSpan != null && editable != null) {
-            editable.removeSpan(oldSpan)
-        }
-
-        val batchStart = textView.length()
         textView.append(combined)
-
-        // Apply accent bar to this batch
-        val newEditable = textView.editableText
-        if (newEditable != null) {
-            val barWidth = 3 * resources.displayMetrics.density
-            val span = LatestLineSpan(0x60D97706, barWidth)  // semi-transparent Claude orange
-            newEditable.setSpan(span, batchStart, newEditable.length, 0)
-            accentSpan = span
-            accentSpanStart = batchStart
-            accentSpanEnd = newEditable.length
-        }
-
         trimIfNeeded()
 
-        if (!autoScrollEnabled && savedScrollY >= 0) {
-            // History mode: lock scroll position so the view doesn't jump
-            post { scrollTo(0, savedScrollY) }
-        } else if (autoScrollEnabled) {
+        if (autoScrollEnabled) {
             if (skipAnimation) {
                 post { fullScroll(FOCUS_DOWN) }
             } else {
@@ -210,10 +223,14 @@ class TerminalView @JvmOverloads constructor(
     }
 
     private fun trimIfNeeded() {
-        val editable = textView.editableText
-        if (editable != null && editable.length > MAX_CHARS) {
-            val deleteEnd = editable.length - TRIM_TO
-            editable.delete(0, deleteEnd)
+        val len = textView.length()
+        if (len > MAX_CHARS) {
+            // Replace entire text with just the tail — avoids the expensive
+            // editable.delete(0, N) which copies the whole buffer and triggers
+            // a full relayout with span fixup.
+            val keepFrom = len - TRIM_TO
+            val tail = textView.text.subSequence(keepFrom, len)
+            textView.text = tail
         }
     }
 
@@ -236,10 +253,8 @@ class TerminalView @JvmOverloads constructor(
 
     fun clear() {
         pendingLines.clear()
+        historyModeBuffer.clear()
         textView.text = ""
-        accentSpan = null
-        accentSpanStart = -1
-        accentSpanEnd = -1
         autoScrollEnabled = true
     }
 
@@ -247,6 +262,14 @@ class TerminalView @JvmOverloads constructor(
         autoScrollEnabled = true
         suppressScrollDetection = true
         onHistoryModeChanged?.invoke(false)
+
+        // Flush lines that arrived during history mode
+        if (historyModeBuffer.isNotEmpty()) {
+            val buffered = ArrayList(historyModeBuffer)
+            historyModeBuffer.clear()
+            appendBatchToView(buffered)
+        }
+
         post { fullScroll(FOCUS_DOWN) }
         postDelayed({ suppressScrollDetection = false }, 600)
     }
@@ -264,26 +287,4 @@ class TerminalView @JvmOverloads constructor(
         return if (lineHeight > 0) (height / lineHeight) else 24
     }
 
-    /**
-     * A LeadingMarginSpan that draws a thin colored bar in the left margin.
-     * Applied to the most recently appended batch of lines.
-     */
-    private class LatestLineSpan(private val barColor: Int, private val barWidth: Float) :
-        LeadingMarginSpan {
-        private val paint = Paint().apply {
-            color = barColor
-            style = Paint.Style.FILL
-        }
-
-        override fun getLeadingMargin(first: Boolean): Int = 0  // no indent
-
-        override fun drawLeadingMargin(
-            c: Canvas, p: Paint, x: Int, dir: Int,
-            top: Int, baseline: Int, bottom: Int,
-            text: CharSequence, start: Int, end: Int,
-            first: Boolean, layout: android.text.Layout?
-        ) {
-            c.drawRect(x.toFloat(), top.toFloat(), x + barWidth, bottom.toFloat(), paint)
-        }
-    }
 }

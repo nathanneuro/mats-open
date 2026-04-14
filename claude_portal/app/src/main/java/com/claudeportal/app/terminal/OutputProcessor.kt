@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
  * Raw SSH data → AnsiScreenInterpreter → VirtualScreen → diff → new lines only.
  */
 class OutputProcessor(
-    private val cols: Int = 80,
+    private val cols: Int = 120,
     private val rows: Int = 24,
     private val displayCols: Int = 40,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -31,8 +31,11 @@ class OutputProcessor(
     private var thinkingTimeoutJob: Job? = null
     private var thinkingRow = -1 // Screen row with thinking symbol, excluded from content
 
-    // Output flows
-    private val _contentFlow = MutableSharedFlow<List<SpannableStringBuilder>>(extraBufferCapacity = 64)
+    // Output flows — buffer capacities are intentionally small. Under heavy load
+    // (e.g. 20k lines/sec), tryEmit() will drop oldest emissions rather than
+    // queueing unbounded. This is fine: the content lives on disk via HistoryBuffer,
+    // and the UI only needs to show the latest screenful.
+    private val _contentFlow = MutableSharedFlow<List<SpannableStringBuilder>>(extraBufferCapacity = 32)
     val contentFlow: SharedFlow<List<SpannableStringBuilder>> = _contentFlow
 
     private val _thinkingFlow = MutableStateFlow(ThinkingUpdate(false, null, null))
@@ -44,8 +47,9 @@ class OutputProcessor(
     private val _statusBarFlow = MutableStateFlow<String?>(null)
     val statusBarFlow: StateFlow<String?> = _statusBarFlow
 
-    // Plain text flow for history persistence
-    private val _plainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    // Plain text flow for history persistence — larger buffer since disk writes
+    // are fast and we don't want to lose history.
+    private val _plainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 128)
     val plainTextFlow: SharedFlow<String> = _plainTextFlow
 
     // Raw (un-deduplicated, un-filtered) parallel flows. These bypass
@@ -93,28 +97,65 @@ class OutputProcessor(
         // NOT ❯ or > — those are Claude Code prompts, handled separately.
         // These get buffered so partial command echoes are collapsed into the final version.
         private val SHELL_PROMPT_PATTERN = Regex("^(➜|\\$|%|#)\\s.*")
-        private const val MIN_DIFF_INTERVAL_MS = 80L
-        private const val DEDUP_WINDOW = 20
+        private const val MIN_DIFF_INTERVAL_MS = 400L
+        // Adaptive throttle: if chunks arrive faster than this, increase diff interval
+        private const val HIGH_THROUGHPUT_DIFF_INTERVAL_MS = 800L
+        private const val HIGH_THROUGHPUT_THRESHOLD_MS = 20L // chunks <20ms apart = deluge
+        // (dedup removed: newest text always wins)
         private const val TAG = "OutputProcessor"
     }
 
     // Whether the active tmux window is running Claude Code.
     // When false, Claude-specific filters (thinking detection, status area,
     // fence lines, etc.) are bypassed so non-Claude windows render cleanly.
+    // Detection: primary = tmux window name contains "claude";
+    // fallback = content-based heuristic (seeing Claude UI elements on screen).
     @Volatile
     var isClaudeWindow: Boolean = false
 
+    // Content-based Claude detection: count of recent screen frames that had
+    // Claude Code UI elements (thinking symbols in left columns + fence/prompt pattern).
+    // If we see Claude UI elements in 3+ of the last 5 frames, assume Claude is running
+    // even if the tmux window isn't named "claude".
+    private var claudeContentHits = 0
+    private var claudeContentChecks = 0
+    private var claudeDetectedByName = false
+
     // Throttle: skip expensive diffs for rapid-fire small chunks (thinking animation)
     private var lastDiffTime = 0L
+    private var lastChunkTime = 0L
+    private var consecutiveFastChunks = 0
+    private var lastStatusUpdateTime = 0L
+    // Per-window status bar cache: saves each window's last status so it
+    // restores when cycling back, but doesn't bleed between windows.
+    private val statusBarByWindow = mutableMapOf<Int, String>()
+    private var currentWindowIndex = -1
 
     /**
      * Process a raw SSH output chunk. This is the main entry point,
      * called for every chunk emitted by SshManager.outputFlow.
      */
     fun processRawOutput(raw: String) {
+        val now = System.currentTimeMillis()
         val chunkType = classifyChunk(raw)
         val escaped = raw.replace("\u001b", "⎋").replace("\n", "↵").replace("\r", "⏎")
         Log.d(TAG, "chunk len=${raw.length} type=$chunkType: ${escaped.take(200)}")
+
+        // Track chunk arrival rate for adaptive throttling
+        if (now - lastChunkTime < HIGH_THROUGHPUT_THRESHOLD_MS) {
+            consecutiveFastChunks++
+        } else {
+            consecutiveFastChunks = maxOf(0, consecutiveFastChunks - 1)
+        }
+        lastChunkTime = now
+
+        // Adaptive diff interval: widen the throttle window under high throughput
+        // to avoid overwhelming the UI with diffs. Content still goes to disk.
+        val effectiveDiffInterval = if (consecutiveFastChunks > 10) {
+            HIGH_THROUGHPUT_DIFF_INTERVAL_MS
+        } else {
+            MIN_DIFF_INTERVAL_MS
+        }
 
         // Feed to screen interpreter
         interpreter.feed(raw)
@@ -135,10 +176,11 @@ class OutputProcessor(
                 // rapidly (~10/sec). Skip expensive diff if we diffed recently —
                 // just update thinking state. The next larger chunk or the next
                 // chunk after the throttle window will pick up any content changes.
-                if (raw.length < 60) {
+                // Only throttle small chunks (cursor moves, thinking symbol writes).
+                // Larger chunks (>40 bytes) may contain real content like menu options.
+                if (raw.length < 40) {
                     if (isClaudeWindow) detectThinkingOnScreen()
-                    val now = System.currentTimeMillis()
-                    if (now - lastDiffTime < MIN_DIFF_INTERVAL_MS) {
+                    if (now - lastDiffTime < effectiveDiffInterval) {
                         return
                     }
                 }
@@ -146,6 +188,12 @@ class OutputProcessor(
         }
 
         if (isClaudeWindow) detectThinkingOnScreen()
+
+        // On full redraws, run content-based Claude detection for windows
+        // not named "claude" (e.g. running claude inside a "bash" window)
+        if (chunkType == ChunkType.FULL_REDRAW && !claudeDetectedByName) {
+            detectClaudeByContent()
+        }
 
         lastDiffTime = System.currentTimeMillis()
         val rawLines = diffScreens(chunkType)
@@ -196,9 +244,6 @@ class OutputProcessor(
 
         return ChunkType.INCREMENTAL
     }
-
-    // Deduplication: track recently emitted lines to avoid repeats
-    private val recentLines = ArrayDeque<String>(DEDUP_WINDOW)
 
     // Shell prompt buffering: hold prompt lines until non-prompt content arrives,
     // so partial command echoes collapse into the final version.
@@ -292,26 +337,16 @@ class OutputProcessor(
             val flushed = pendingPrompt
             if (flushed != null) {
                 val flushedText = flushed.toString().trim()
-                if (flushedText.isNotEmpty() && flushedText !in recentLines) {
+                if (flushedText.isNotEmpty()) {
                     Log.d(TAG, "flush PROMPT: '$flushedText'")
-                    recentLines.addLast(flushedText)
-                    if (recentLines.size > DEDUP_WINDOW) recentLines.removeFirst()
                     result.add(flushed)
                 }
                 pendingPrompt = null
             }
 
-            // Deduplicate: skip if this exact line was recently emitted
-            val textKey = text.trim()
-            if (textKey.isNotEmpty() && textKey in recentLines) {
-                Log.v(TAG, "filter DEDUP: '$text'")
-                continue
-            }
-            if (textKey.isNotEmpty()) {
-                recentLines.addLast(textKey)
-                if (recentLines.size > DEDUP_WINDOW) recentLines.removeFirst()
-            }
-
+            // Newest text wins: always emit new lines, never suppress in favor
+            // of previously emitted content. The terminal renders early-to-late,
+            // so the latest version of any line is what the user should see.
             result.add(line)
         }
         return result
@@ -374,15 +409,9 @@ class OutputProcessor(
      *  Must also contain stats-like keywords to avoid false positives on command lines
      *  that use pipes (e.g. "grep -E '5000|8000'"). */
     private fun isStatusInfoLine(text: String): Boolean {
-        val trimmed = text.trim()
-        if (trimmed.length < 5) return false
-        val pipeCount = trimmed.count { it == '|' }
-        val hasStats = trimmed.contains('%') || trimmed.contains("GB") ||
-            trimmed.contains("tokens") || trimmed.contains("CPU") ||
-            trimmed.contains("RAM") || trimmed.contains("GPU")
-        // Pipes + stats keywords = status info line
-        if (pipeCount >= 1 && hasStats) return true
-        return false
+        // User's status line starts with ∆ (U+2206) or Δ (U+0394) sentinel.
+        // End sentinel ~ may be truncated if line is too long, so only require start.
+        return text.contains('∆') || text.contains('Δ')
     }
 
     /** A line is a "fence" if ≥60% of its non-whitespace chars are fence characters. */
@@ -444,7 +473,8 @@ class OutputProcessor(
         }
 
         if (topStatusRow < 0) {
-            if (updateStatusBar) _statusBarFlow.value = null
+            // Don't null out — keep cached value. A missing status area
+            // on one parse is likely a transient redraw, not a real change.
             return maxRow
         }
 
@@ -460,11 +490,22 @@ class OutputProcessor(
                 }
             }
 
-            _statusBarFlow.value = if (statusLines.isNotEmpty()) {
-                statusLines.joinToString(" ") { it.trim() }
+            // Only update if we found status lines — don't null out
+            // a good cached value just because one parse missed them
+            if (statusLines.isNotEmpty()) {
+                var combined = statusLines.joinToString(" ") { it.trim() }
                     .replace(Regex("\\s{2,}"), " ")
-            } else {
-                null
+                // Strip sentinels: ∆/Δ at start, ~ and everything after at end
+                combined = combined.replace("∆", "").replace("Δ", "")
+                val tildeIdx = combined.indexOf('~')
+                if (tildeIdx >= 0) combined = combined.substring(0, tildeIdx)
+                combined = combined.trim()
+                if (combined.isNotEmpty()) {
+                    _statusBarFlow.value = combined
+                    if (currentWindowIndex >= 0) {
+                        statusBarByWindow[currentWindowIndex] = combined
+                    }
+                }
             }
         }
 
@@ -505,9 +546,17 @@ class OutputProcessor(
         // Exclude last row (tmux bar). Detect Claude's status area only on Claude windows.
         val maxRow = rows - 1
         val contentRows = if (isClaudeWindow) {
-            detectStatusArea(maxRow, updateStatusBar = chunkType == ChunkType.FULL_REDRAW)
+            // Update status bar on full redraws (reliable) and periodically
+            // on incremental diffs (every ~2s) to keep it fresh without
+            // flooding the main thread.
+            val updateStatus = chunkType == ChunkType.FULL_REDRAW ||
+                (System.currentTimeMillis() - lastStatusUpdateTime > 2000L)
+            if (updateStatus) lastStatusUpdateTime = System.currentTimeMillis()
+            detectStatusArea(maxRow, updateStatusBar = updateStatus)
         } else {
-            if (chunkType == ChunkType.FULL_REDRAW) _statusBarFlow.value = null
+            // Non-Claude window: hide status bar (per-window cache
+            // handles restore on window switch via notifyTmuxWindowNext)
+            _statusBarFlow.value = null
             maxRow
         }
 
@@ -696,15 +745,18 @@ class OutputProcessor(
             // that wasn't cleared (e.g. status bar text from a previous screen state)
             val gapIdx = statusText.indexOf("   ")
             if (gapIdx > 0) statusText = statusText.substring(0, gapIdx).trim()
-            // Reject garbled status text:
-            // - Too short: fragments from character-by-character writing ("C", "on", "nsi er")
-            // - Doesn't start uppercase: real status always starts with a word like "Thinking", "Running"
-            //   Rejects "+9 lines ctrl-o for more" and other non-status content
-            // - Contains /: file paths from old row content ("Consety/tasks/...")
-            // - Contains |: status bar pipes from old row content
-            // Real status text is short — single phrase like "Compacting conversation".
-            // Anything longer is leaked content from another row.
-            if (statusText.length < 4 || statusText.length > 40 ||
+            // Only accept a complete status message: symbol + word + ellipsis.
+            // Claude Code animates a color gradient across the thinking text,
+            // so partial renders only contain the colored fragment ("Think"
+            // instead of "Thinking..."). Requiring an ellipsis ensures we only
+            // update with the full message. Additional guards:
+            // - Too short: fragments from character-by-character writing
+            // - Too long (>40): leaked content from another row
+            // - Doesn't start uppercase: not a real status word
+            // - Contains / or |: stale row content (file paths, status bar pipes)
+            val hasEllipsis = statusText.contains("...") || statusText.contains("…") ||
+                statusText.contains("\u2024") || statusText.contains("\u2025")
+            if (!hasEllipsis || statusText.length < 4 || statusText.length > 40 ||
                 statusText.firstOrNull()?.isUpperCase() != true ||
                 statusText.contains('/') || statusText.contains('|')) {
                 statusText = ""
@@ -713,15 +765,54 @@ class OutputProcessor(
             handleThinking(statusText.ifEmpty { null })
         } else if (thinkingState != ThinkingState.IDLE) {
             this.thinkingRow = -1
-            // No thinking symbols on screen anymore — end thinking
-            thinkingTimeoutJob?.cancel()
-            thinkingState = ThinkingState.IDLE
-            lastStatusText = null
-            _thinkingFlow.value = ThinkingUpdate(false, null, null)
+            // No thinking symbols on screen — let the 2s timeout handle
+            // the transition to IDLE rather than clearing immediately.
+            // A single frame without a symbol could be a rendering glitch.
         }
     }
 
     // --- Tmux bar extraction ---
+
+    // Last known-good window list. Merged with each new parse to handle
+    // tmux truncating names on narrow screens.
+    private var cachedWindows: List<TmuxWindow>? = null
+    // After a user-initiated window switch, ignore parsed active flags
+    // for this duration to let tmux finish redrawing the bar.
+    private var userSwitchUntil = 0L
+
+    /**
+     * Called when the user explicitly switches tmux windows (next/prev button).
+     * Advances the active flag in the cache immediately so the UI updates
+     * without waiting for a clean tmux bar parse.
+     */
+    fun notifyTmuxWindowNext() {
+        val cached = cachedWindows ?: return
+        val currentIdx = cached.indexOfFirst { it.isActive }
+        if (currentIdx < 0) return
+        val nextIdx = (currentIdx + 1) % cached.size
+        // Save current window's status bar before switching
+        val currentWinIdx = cached.getOrNull(currentIdx)?.index ?: -1
+        val currentStatus = _statusBarFlow.value
+        if (currentWinIdx >= 0 && currentStatus != null) {
+            statusBarByWindow[currentWinIdx] = currentStatus
+        }
+
+        cachedWindows = cached.mapIndexed { i, w -> w.copy(isActive = i == nextIdx) }
+        userSwitchUntil = System.currentTimeMillis() + 2000L
+
+        // Restore next window's cached status bar, or clear
+        val nextWinIdx = cached.getOrNull(nextIdx)?.index ?: -1
+        currentWindowIndex = nextWinIdx
+        _statusBarFlow.value = statusBarByWindow[nextWinIdx]
+        val updated = cachedWindows!!
+        val activeIndex = updated.indexOfFirst { it.isActive }
+        val activeWindow = updated.getOrNull(activeIndex)
+        if (activeWindow != null) {
+            claudeDetectedByName = activeWindow.name.contains("claude", ignoreCase = true)
+            isClaudeWindow = claudeDetectedByName
+        }
+        _tmuxBarFlow.value = TmuxBarUpdate(updated, activeIndex)
+    }
 
     private fun extractTmuxBar() {
         // The tmux bar is typically the last row of the screen.
@@ -736,37 +827,101 @@ class OutputProcessor(
         // Must start with [session_name] to be a tmux bar
         val sessionMatch = "^\\[([^\\]]+)]\\s+".toRegex().find(lastRow) ?: return
 
-        // Extract window entries from the rest of the line.
-        // Windows are left-aligned, separated by 1-2 spaces. Right-side status
-        // (hostname, time) is separated by a large gap (3+ spaces).
-        // Truncate at the first gap of 3+ spaces to avoid matching e.g. "14:32".
+        // Extract window entries from the full line after the session tag.
+        // Tmux bar example:
+        //   [0] <ude  1:zshM 2:zsh- 3:claude* 5:claude [0,0] "⠐ Claude Code" 18:32 16-Mar-26
+        // Windows are N:name with optional flags (*=active, -=last, M=marked, Z=zoomed).
+        // Tmux may truncate long names with < prefix (e.g. "<ude" for "claude").
+        // Right-side has pane info [r,c], quoted title, time, date — we just
+        // scan the whole line for the N:word pattern and ignore non-window matches.
         val afterSession = lastRow.substring(sessionMatch.range.last + 1)
-        val gapIndex = afterSession.indexOf("   ")
-        val windowsText = if (gapIndex >= 0) afterSession.substring(0, gapIndex) else afterSession
 
-        val windowPattern = "(\\d+):(\\S+)".toRegex()
-        val matches = windowPattern.findAll(windowsText).toList()
+        // Match N:name with optional trailing flags. Name is \w+ (letters/digits/underscore).
+        // This skips timestamps like "18:32" because the "name" part would be all digits,
+        // which we filter out below.
+        val windowPattern = "\\b(\\d+):(\\w+?)([*\\-MZ]*)(?=\\s|$)".toRegex()
+        val matches = windowPattern.findAll(afterSession).toList()
 
         if (matches.isEmpty()) return
 
-        val windows = matches.map { match ->
-            val index = match.groupValues[1].toIntOrNull() ?: 0
-            val rawName = match.groupValues[2]
-            val isActive = rawName.endsWith("*") || rawName.endsWith("*-")
+        val windows = matches.mapNotNull { match ->
+            val index = match.groupValues[1].toIntOrNull() ?: return@mapNotNull null
+            val name = match.groupValues[2]
+            val flags = match.groupValues[3]
+            // Skip entries where "name" is all digits — likely a timestamp (18:32)
+            if (name.all { it.isDigit() }) return@mapNotNull null
+            val isActive = '*' in flags
             TmuxWindow(
                 index = index,
-                name = rawName.removeSuffix("*").removeSuffix("*-").removeSuffix("-"),
+                name = name,
                 isActive = isActive
             )
         }
 
-        val activeIndex = windows.indexOfFirst { it.isActive }.takeIf { it >= 0 } ?: 0
-        val activeWindow = windows.getOrNull(activeIndex)
-        if (activeWindow != null) {
-            isClaudeWindow = activeWindow.name.contains("claude", ignoreCase = true)
+        if (windows.isEmpty()) return
+
+        // Merge parsed windows with cache for a complete picture.
+        // Tmux truncates the bar on narrow screens, so some windows may be
+        // missing from any given parse. Strategy:
+        //   - Merge: union of cached + parsed windows (parsed names win on conflict)
+        //   - Active flag: always from the current parse (tmux reliably shows the active window)
+        //   - Removal: a window is only removed from cache if we get a "full" parse
+        //     (same or more windows than cache) that doesn't include it.
+        val cached = cachedWindows
+        val userSwitchActive = System.currentTimeMillis() < userSwitchUntil
+        val activeFromParse = windows.filter { it.isActive }.map { it.index }.toSet()
+        val finalWindows: List<TmuxWindow>
+
+        if (cached != null) {
+            val parsedByIndex = windows.associateBy { it.index }
+            val cachedByIndex = cached.associateBy { it.index }
+            // Union: all indices from both, prefer parsed name over cached
+            val allIndices = (cachedByIndex.keys + parsedByIndex.keys).sorted()
+            val merged = allIndices.map { idx ->
+                val parsed = parsedByIndex[idx]
+                val prev = cachedByIndex[idx]
+                val name = parsed?.name ?: prev?.name ?: "?"
+                // During user switch cooldown, keep cached active flags
+                val isActive = if (userSwitchActive) {
+                    prev?.isActive ?: false
+                } else {
+                    idx in activeFromParse
+                }
+                TmuxWindow(index = idx, name = name, isActive = isActive)
+            }
+            // If this parse has >= cached count, it's a "full" parse — drop
+            // any cached windows not present in the new parse
+            finalWindows = if (windows.size >= cached.size) {
+                merged.filter { it.index in parsedByIndex }
+            } else {
+                merged
+            }
+        } else {
+            finalWindows = windows
         }
-        Log.d(TAG, "tmuxBar parsed: windows=${windows.map { "${it.index}:${it.name}${if (it.isActive) "*" else ""}" }} isClaudeWindow=$isClaudeWindow")
-        _tmuxBarFlow.value = TmuxBarUpdate(windows, activeIndex)
+        cachedWindows = finalWindows
+
+        val activeIndex = finalWindows.indexOfFirst { it.isActive }.takeIf { it >= 0 } ?: 0
+        val activeWindow = finalWindows.getOrNull(activeIndex)
+        if (activeWindow != null) {
+            currentWindowIndex = activeWindow.index
+            claudeDetectedByName = activeWindow.name.contains("claude", ignoreCase = true)
+            if (claudeDetectedByName) {
+                isClaudeWindow = true
+                claudeContentHits = 0
+                claudeContentChecks = 0
+                // (status bar is per-window, not restored across switches)
+            } else {
+                // Not named "claude" — immediately turn off Claude mode.
+                // Content-based detection is too prone to false positives
+                // (thinking symbols appear in other programs, ❯ is a common prompt).
+                isClaudeWindow = false
+                claudeContentHits = 0
+                claudeContentChecks = 0
+            }
+        }
+        Log.d(TAG, "tmuxBar parsed: windows=${finalWindows.map { "${it.index}:${it.name}${if (it.isActive) "*" else ""}" }} isClaudeWindow=$isClaudeWindow (byName=$claudeDetectedByName)")
+        _tmuxBarFlow.value = TmuxBarUpdate(finalWindows, activeIndex)
     }
 
     private fun stripAnsiCodes(raw: String): String {
@@ -775,9 +930,59 @@ class OutputProcessor(
             .replace(Regex("\u001b[()][A-Z0-9]"), "")
     }
 
+    /**
+     * Content-based Claude detection: scan the screen for Claude Code UI patterns.
+     * Called on FULL_REDRAW when window isn't named "claude" to detect Claude
+     * running inside a generically-named window (bash, zsh, etc.).
+     */
+    private fun detectClaudeByContent() {
+        if (claudeDetectedByName) return // Already detected by name, skip
+
+        var hits = 0
+        // Check for thinking symbol in left columns
+        for (r in 0 until rows - 1) {
+            for (c in 0 until minOf(3, cols)) {
+                if (screen.cells[r][c].char in THINKING_SYMBOLS) { hits++; break }
+            }
+        }
+        // Check for Claude prompt (❯) on any row
+        for (r in 0 until rows - 1) {
+            val text = screen.getRowText(r).trimStart()
+            if (text.startsWith("❯")) { hits++; break }
+        }
+        // Check for fence lines (Claude status area)
+        var fenceCount = 0
+        for (r in rows - 6 until rows - 1) {
+            if (r < 0) continue
+            val text = screen.getRowText(r)
+            if (isFenceLine(text) && text.trim().length > 20) fenceCount++
+        }
+        if (fenceCount >= 2) hits++ // Two fences = status area
+
+        claudeContentChecks++
+        if (hits >= 2) claudeContentHits++
+
+        // Rolling window: keep only last 5 checks
+        if (claudeContentChecks > 5) {
+            claudeContentChecks = 5
+            claudeContentHits = minOf(claudeContentHits, 5)
+        }
+
+        // Update flag if we have enough data and not detected by name
+        if (claudeContentChecks >= 3) {
+            val detected = claudeContentHits >= 2
+            if (detected != isClaudeWindow) {
+                Log.d(TAG, "Claude content detection: $isClaudeWindow → $detected (hits=$claudeContentHits/$claudeContentChecks)")
+                isClaudeWindow = detected
+            }
+        }
+    }
+
     /** Reset diff state (e.g. after tmux window switch). */
     fun resetDiffState() {
         previousSnapshot = null
+        claudeContentHits = 0
+        claudeContentChecks = 0
     }
 
     fun destroy() {

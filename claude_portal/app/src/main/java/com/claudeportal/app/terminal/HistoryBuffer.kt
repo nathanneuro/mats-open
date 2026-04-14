@@ -23,7 +23,7 @@ import kotlin.concurrent.write
  * the button and the next status-bar parse is buffered in memory and then
  * flushed into the new window's files when commitPendingSwitch() lands.
  */
-class HistoryBuffer(private val maxLines: Int = 50000) {
+class HistoryBuffer(private val maxLines: Int = 10000) {
 
     private val lock = ReentrantReadWriteLock()
     private val styledContent = SpannableStringBuilder()
@@ -289,7 +289,7 @@ class HistoryBuffer(private val maxLines: Int = 50000) {
             while (isActive) {
                 flushPendingWrites()
                 checkPendingTimeout()
-                delay(500)
+                delay(250) // Flush every 250ms for faster disk persistence
             }
         }
     }
