@@ -17,6 +17,7 @@
     <string name="input_hint">Type command...</string>
     <string name="send">Send</string>
     <string name="scroll_to_bottom">Scroll to bottom</string>
+    <string name="toggle_dirty_history">Toggle dirty (raw) history</string>
 
     <!-- Connection management -->
     <string name="new_connection">New Connection</string>

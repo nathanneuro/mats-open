@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Handle (top-right) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M19.5,2.5 L21.5,4.5 L13,13 L11,11 Z" />
+    <!-- Bristle head (bottom-left) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11.5,10.5 L13.5,12.5 L9,21 L7,21 L5,21 L3,21 Z" />
+    <!-- Bristle ridges -->
+    <path
+        android:strokeColor="#FF1E1E1E"
+        android:strokeWidth="0.6"
+        android:pathData="M6,17 L6.5,21 M8,16 L8.5,21 M10,15 L10.5,21" />
+    <!-- Crossed circle overlay (no symbol) -->
+    <path
+        android:strokeColor="#FFE53935"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M16,16 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+    <path
+        android:strokeColor="#FFE53935"
+        android:strokeWidth="2"
+        android:pathData="M11.8,11.8 L20.2,20.2" />
+</vector>

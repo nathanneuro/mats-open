@@ -52,6 +52,15 @@ class OutputProcessor(
     private val _plainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 128)
     val plainTextFlow: SharedFlow<String> = _plainTextFlow
 
+    // Raw (un-deduplicated, un-filtered) parallel flows. These bypass
+    // postProcessLines so the dirty history captures everything the screen
+    // diff produced — used as a backup when dedup heuristics steal info.
+    private val _rawContentFlow = MutableSharedFlow<List<SpannableStringBuilder>>(extraBufferCapacity = 64)
+    val rawContentFlow: SharedFlow<List<SpannableStringBuilder>> = _rawContentFlow
+
+    private val _rawPlainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    val rawPlainTextFlow: SharedFlow<String> = _rawPlainTextFlow
+
     companion object {
         private val THINKING_SYMBOLS = setOf('✶', '✻', '✽', '·', '✢', '*')
         private val THINKING_SYMBOLS_STR = "✶✻✽·✢*"
@@ -188,6 +197,16 @@ class OutputProcessor(
 
         lastDiffTime = System.currentTimeMillis()
         val rawLines = diffScreens(chunkType)
+
+        // Emit raw lines (pre-filter, pre-dedup) for the dirty history.
+        // Still drop fully blank lines so the file isn't padded with whitespace.
+        val rawNonBlank = rawLines.filter { it.toString().isNotBlank() }
+        if (rawNonBlank.isNotEmpty()) {
+            _rawContentFlow.tryEmit(rawNonBlank)
+            val rawPlain = rawNonBlank.joinToString("\n") { it.toString() }
+            _rawPlainTextFlow.tryEmit(rawPlain + "\n")
+        }
+
         val newLines = postProcessLines(rawLines)
         if (newLines.isNotEmpty()) {
             for (line in newLines) {
@@ -298,7 +317,7 @@ class OutputProcessor(
                     val rawStatus = statusMatch.groupValues[1].trim()
                     val statusText = ELLIPSIS.replace(rawStatus, "").trim()
                     Log.d(TAG, "filter STATUS: '$text' → statusText='$statusText'")
-                    if (statusText.isNotEmpty()) {
+                    if (statusText.isNotEmpty() && statusText.length <= 40) {
                         handleThinking(statusText)
                     }
                     continue
@@ -732,11 +751,12 @@ class OutputProcessor(
             // instead of "Thinking..."). Requiring an ellipsis ensures we only
             // update with the full message. Additional guards:
             // - Too short: fragments from character-by-character writing
+            // - Too long (>40): leaked content from another row
             // - Doesn't start uppercase: not a real status word
             // - Contains / or |: stale row content (file paths, status bar pipes)
             val hasEllipsis = statusText.contains("...") || statusText.contains("…") ||
                 statusText.contains("\u2024") || statusText.contains("\u2025")
-            if (!hasEllipsis || statusText.length < 4 ||
+            if (!hasEllipsis || statusText.length < 4 || statusText.length > 40 ||
                 statusText.firstOrNull()?.isUpperCase() != true ||
                 statusText.contains('/') || statusText.contains('|')) {
                 statusText = ""

@@ -77,6 +77,10 @@ class MainActivity : AppCompatActivity() {
     private val thinkingSymbols = charArrayOf('\u2736', '\u273B', '\u273D', '\u00B7', '\u2722', '*')
     private var thinkingSymbolIndex = 0
 
+    // Broom toggle: when true, the terminalView shows the dirty (raw) history
+    // for the active window instead of the deduplicated clean history.
+    private var showDirtyHistory: Boolean = false
+
     companion object {
         const val EXTRA_CONNECTION_ID = "connection_id"
         const val MAX_HISTORY = 100
@@ -99,6 +103,7 @@ class MainActivity : AppCompatActivity() {
         setupInputBar()
         setupArrowOverlay()
         setupExtraKeys()
+        setupBroomToggle()
         observeSettings()
         observeConnection()
         observeOutput()
@@ -236,17 +241,55 @@ class MainActivity : AppCompatActivity() {
         binding.keyCtrlC.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_C) }
         binding.keyEnter.setOnClickListener { sshManager.sendKeyPress(KeyCode.ENTER) }
 
-        binding.keyTmuxNew.setOnClickListener { sshManager.createTmuxWindow() }
+        binding.keyTmuxNew.setOnClickListener {
+            historyBuffer.beginPendingSwitch()
+            sshManager.createTmuxWindow()
+        }
         binding.keyTmuxNext.setOnClickListener {
+            historyBuffer.beginPendingSwitch()
             sshManager.nextTmuxWindow()
             outputProcessor.notifyTmuxWindowNext()
         }
-        binding.keyTmuxClose.setOnClickListener { sshManager.closeTmuxWindow() }
+        binding.keyTmuxClose.setOnClickListener {
+            historyBuffer.beginPendingSwitch()
+            sshManager.closeTmuxWindow()
+        }
 
         binding.scrollBottomFab.setOnClickListener {
             binding.terminalView.scrollToBottom()
             binding.scrollBottomFab.visibility = View.GONE
         }
+    }
+
+    private fun setupBroomToggle() {
+        updateBroomIcon()
+        binding.broomToggle.setOnClickListener {
+            showDirtyHistory = !showDirtyHistory
+            updateBroomIcon()
+            replayActiveWindow()
+        }
+    }
+
+    private fun updateBroomIcon() {
+        binding.broomToggle.setImageResource(
+            if (showDirtyHistory) R.drawable.ic_broom_dirty else R.drawable.ic_broom
+        )
+    }
+
+    /**
+     * Reload the active window's persisted history into the terminal view.
+     * Called on tmux window switches (so the user doesn't lose history when
+     * bouncing between windows) and when the broom toggle flips between
+     * clean and dirty histories.
+     */
+    private fun replayActiveWindow() {
+        val text = if (showDirtyHistory) {
+            historyBuffer.readWindowDirty()
+        } else {
+            historyBuffer.readWindowClean()
+        }
+        val styled = android.text.SpannableStringBuilder(text)
+        binding.terminalView.setContent(styled)
     }
 
     private fun observeSettings() {
@@ -335,19 +378,39 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Consume content lines — always append, even in history mode.
+        // Consume deduplicated content lines. Skip rendering when broom is
+        // in dirty mode — the raw flow takes over rendering in that case.
         // TerminalView locks scroll position during history mode so new
-        // content is buffered below the viewport without jumping.
+        // content buffers below the viewport without jumping.
         lifecycleScope.launch {
             outputProcessor.contentFlow.collectLatest { lines ->
-                binding.terminalView.appendLines(lines)
+                if (!showDirtyHistory) {
+                    binding.terminalView.appendLines(lines)
+                }
             }
         }
 
-        // Consume plain text for history persistence
+        // Consume raw (un-deduplicated) lines: always feed the dirty history
+        // file, and render to terminalView only when the broom toggle is on.
+        lifecycleScope.launch {
+            outputProcessor.rawContentFlow.collectLatest { lines ->
+                if (showDirtyHistory) {
+                    binding.terminalView.appendLines(lines)
+                }
+            }
+        }
+
+        // Consume plain text for clean history persistence
         lifecycleScope.launch {
             outputProcessor.plainTextFlow.collectLatest { plainText ->
                 historyBuffer.appendPlain(plainText)
+            }
+        }
+
+        // Consume raw plain text for dirty history persistence
+        lifecycleScope.launch {
+            outputProcessor.rawPlainTextFlow.collectLatest { plainText ->
+                historyBuffer.appendDirtyPlain(plainText)
             }
         }
 
@@ -463,19 +526,21 @@ class MainActivity : AppCompatActivity() {
 
         tmuxDetected = true
 
-        // Route history writes to the active tmux window's file
+        // Route history writes to the active tmux window's file. If the index
+        // changed, commit any pending switch (flushes buffered output to the
+        // new window's files), then replay that window's persisted history
+        // into the terminal view so the user doesn't lose context.
         val activeWindow = update.windows.getOrNull(update.activeIndex)
         if (activeWindow != null) {
-            if (activeWindow.index != lastActiveWindowIndex) {
-                // Switched tmux windows — clear scrollback and enter live mode.
-                // The old window's history isn't relevant, and replaying
-                // the new window's history would overwhelm the UI thread.
+            val switched = activeWindow.index != lastActiveWindowIndex
+            historyBuffer.setActiveWindow(activeWindow.index)
+            if (switched) {
                 lastActiveWindowIndex = activeWindow.index
-                binding.terminalView.clear()
                 outputProcessor.resetDiffState()
+                binding.terminalView.clear()
+                replayActiveWindow()
                 binding.terminalView.scrollToBottom()
             }
-            historyBuffer.setActiveWindow(activeWindow.index)
         }
 
         // Show/hide Claude window border based on active tmux window name
