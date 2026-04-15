@@ -101,9 +101,15 @@ class OutputProcessor(
         // Adaptive throttle: if chunks arrive faster than this, increase diff interval
         private const val HIGH_THROUGHPUT_DIFF_INTERVAL_MS = 800L
         private const val HIGH_THROUGHPUT_THRESHOLD_MS = 20L // chunks <20ms apart = deluge
-        // (dedup removed: newest text always wins)
         private const val TAG = "OutputProcessor"
+        // Max recent emitted line texts for exact-text dedup
+        private const val MAX_RECENT_EMITTED = 100
     }
+
+    // Exact-text dedup: skip lines already emitted recently.
+    // Prevents re-emitting the entire visible screen on each tmux full redraw
+    // (e.g. `tail -f` scrolls by 1 line but tmux sends all 22 rows).
+    private val recentEmitted = LinkedHashSet<String>()
 
     // Whether the active tmux window is running Claude Code.
     // When false, Claude-specific filters (thinking detection, status area,
@@ -130,6 +136,9 @@ class OutputProcessor(
     // restores when cycling back, but doesn't bleed between windows.
     private val statusBarByWindow = mutableMapOf<Int, String>()
     private var currentWindowIndex = -1
+    // Track "accept edits" visibility — appends " a" to status bar when active
+    @Volatile var acceptEditsVisible = false
+    private var lastBaseStatus: String? = null // status without the " a" suffix
 
     /**
      * Process a raw SSH output chunk. This is the main entry point,
@@ -209,13 +218,29 @@ class OutputProcessor(
 
         val newLines = postProcessLines(rawLines)
         if (newLines.isNotEmpty()) {
-            for (line in newLines) {
-                Log.d(TAG, "emit: '${line.toString().take(120)}'")
+            // Exact-text dedup: skip lines already emitted recently.
+            val dedupedLines = newLines.filter { line ->
+                val text = line.toString()
+                if (text.isBlank()) return@filter true
+                if (text in recentEmitted) {
+                    Log.v(TAG, "dedup skip: '${text.take(80)}'")
+                    return@filter false
+                }
+                recentEmitted.add(text)
+                while (recentEmitted.size > MAX_RECENT_EMITTED) {
+                    recentEmitted.iterator().next().also { recentEmitted.remove(it) }
+                }
+                true
             }
-            _contentFlow.tryEmit(newLines)
-            val plainText = newLines.joinToString("\n") { it.toString() }
-            if (plainText.isNotBlank()) {
-                _plainTextFlow.tryEmit(plainText + "\n")
+            if (dedupedLines.isNotEmpty()) {
+                for (line in dedupedLines) {
+                    Log.d(TAG, "emit: '${line.toString().take(120)}'")
+                }
+                _contentFlow.tryEmit(dedupedLines)
+                val plainText = dedupedLines.joinToString("\n") { it.toString() }
+                if (plainText.isNotBlank()) {
+                    _plainTextFlow.tryEmit(plainText + "\n")
+                }
             }
         }
     }
@@ -304,6 +329,23 @@ class OutputProcessor(
                     continue
                 }
 
+                // Drop Claude Code context/model indicators: half-circle + word
+                // e.g. "◑ medium", "◐ large", "● compact" — these are status area UI
+                if (trimmed.length < 20 && Regex("^[◑◐◒◓●○◔◕]\\s+\\w+$").matches(trimmed)) {
+                    Log.v(TAG, "filter CONTEXT_INDICATOR: '$text'")
+                    continue
+                }
+
+                // Drop "accept edits" hint and track it for status bar suffix
+                if (trimmed.contains("accept edits")) {
+                    Log.v(TAG, "filter ACCEPT_EDITS: '$text'")
+                    if (!acceptEditsVisible) {
+                        acceptEditsVisible = true
+                        refreshStatusBarSuffix()
+                    }
+                    continue
+                }
+
                 // Drop tool progress lines (transient timer updates)
                 // e.g. "  ⎿  Running… (2s · timeout 10m)"
                 if (TOOL_PROGRESS_PATTERN.matches(trimmed)) {
@@ -377,6 +419,13 @@ class OutputProcessor(
         if (prev.isBlank() || curr.isBlank()) return false
         val len = minOf(prev.length, curr.length)
         if (len < 5) return false
+        val skelPrev = TerminalView.skeleton(prev)
+        val skelCurr = TerminalView.skeleton(curr)
+        // Same skeleton (only numbers differ) → new data line, not chimera.
+        if (skelPrev == skelCurr) return false
+        // One skeleton is a prefix of the other → same line with extra/fewer
+        // fields (e.g. training step with occasional util/ent/gdc columns).
+        if (skelPrev.startsWith(skelCurr) || skelCurr.startsWith(skelPrev)) return false
         var same = 0
         for (i in 0 until len) {
             if (prev[i] == curr[i]) same++
@@ -440,10 +489,13 @@ class OutputProcessor(
      *  NOTE: Prompt lines (❯/>) are NOT included here — they'd swallow
      *  answer options like "❯ Yes" in confirmation dialogs. Bare prompts
      *  are filtered in postProcessLines instead. */
+    private val CIRCLE_SYMBOLS = setOf('◑', '◐', '◒', '◓', '●', '○', '◔', '◕')
+
     private fun isStatusAreaLine(text: String): Boolean {
         val trimmed = text.trimStart()
         return (isFenceLine(text) && text.length > 20) ||
-            trimmed.startsWith("⏵") // accept/reject hints
+            trimmed.startsWith("⏵") || // accept/reject hints
+            (trimmed.isNotEmpty() && trimmed[0] in CIRCLE_SYMBOLS) // context indicator (◑ medium)
     }
 
     private fun detectStatusArea(maxRow: Int, updateStatusBar: Boolean = false): Int {
@@ -457,9 +509,11 @@ class OutputProcessor(
         //   Row N+5: ⏵⏵ accept edits on · ...
         //   Last:    [0] bash [1] claude* (tmux bar — already excluded)
         var topStatusRow = -1
+        var foundAcceptEdits = false
 
         for (r in (maxRow - 1) downTo maxOf(0, maxRow - 10)) {
             val text = screen.getRowText(r)
+            if (text.contains("accept edits")) foundAcceptEdits = true
             if (isStatusAreaLine(text) || isStatusInfoLine(text)) {
                 topStatusRow = r
                 continue
@@ -470,6 +524,12 @@ class OutputProcessor(
             } else if (topStatusRow >= 0) {
                 break // First content row above the status area
             }
+        }
+
+        // Update accept edits tracking
+        if (foundAcceptEdits != acceptEditsVisible) {
+            acceptEditsVisible = foundAcceptEdits
+            refreshStatusBarSuffix()
         }
 
         if (topStatusRow < 0) {
@@ -501,15 +561,30 @@ class OutputProcessor(
                 if (tildeIdx >= 0) combined = combined.substring(0, tildeIdx)
                 combined = combined.trim()
                 if (combined.isNotEmpty()) {
-                    _statusBarFlow.value = combined
-                    if (currentWindowIndex >= 0) {
-                        statusBarByWindow[currentWindowIndex] = combined
-                    }
+                    lastBaseStatus = combined
+                    emitStatusBar(combined)
                 }
             }
         }
 
+
         return topStatusRow
+    }
+
+    /** Emit status bar with optional " a" suffix for accept edits. */
+    private fun emitStatusBar(base: String) {
+        lastBaseStatus = base
+        val display = if (acceptEditsVisible) "$base a" else base
+        _statusBarFlow.value = display
+        if (currentWindowIndex >= 0) {
+            statusBarByWindow[currentWindowIndex] = display
+        }
+    }
+
+    /** Re-emit status bar when accept edits state changes. */
+    private fun refreshStatusBarSuffix() {
+        val base = lastBaseStatus ?: return
+        emitStatusBar(base)
     }
 
     /** Same detection but on a raw snapshot array (for previous screen). */
@@ -536,7 +611,12 @@ class OutputProcessor(
      */
     private fun diffScreens(chunkType: ChunkType = ChunkType.FULL_REDRAW): List<SpannableStringBuilder> {
         val prev = previousSnapshot
-        previousSnapshot = screen.snapshot()
+        // Only update previousSnapshot on FULL_REDRAW. Intermediate incremental
+        // chunks (cursor moves, attribute changes) would pollute the snapshot and
+        // break overlap detection on the next full redraw.
+        if (chunkType == ChunkType.FULL_REDRAW) {
+            previousSnapshot = screen.snapshot()
+        }
 
         if (prev == null) {
             // First screen - emit all non-blank lines
@@ -875,26 +955,43 @@ class OutputProcessor(
         if (cached != null) {
             val parsedByIndex = windows.associateBy { it.index }
             val cachedByIndex = cached.associateBy { it.index }
-            // Union: all indices from both, prefer parsed name over cached
-            val allIndices = (cachedByIndex.keys + parsedByIndex.keys).sorted()
-            val merged = allIndices.map { idx ->
-                val parsed = parsedByIndex[idx]
-                val prev = cachedByIndex[idx]
-                val name = parsed?.name ?: prev?.name ?: "?"
-                // During user switch cooldown, keep cached active flags
-                val isActive = if (userSwitchActive) {
-                    prev?.isActive ?: false
-                } else {
-                    idx in activeFromParse
+            val parsedIndices = parsedByIndex.keys
+            val cachedIndices = cachedByIndex.keys
+
+            // Detect new windows: indices in parse but not in cache
+            val newIndices = parsedIndices - cachedIndices
+            // A "full" parse has >= cached count, meaning it saw the whole bar
+            val isFullParse = windows.size >= cached.size
+
+            if (isFullParse) {
+                // Trust the parse completely — it's authoritative.
+                // Any cached window not in this parse has been removed.
+                val removedIndices = cachedIndices - parsedIndices
+                for (idx in removedIndices) {
+                    statusBarByWindow.remove(idx)
                 }
-                TmuxWindow(index = idx, name = name, isActive = isActive)
-            }
-            // If this parse has >= cached count, it's a "full" parse — drop
-            // any cached windows not present in the new parse
-            finalWindows = if (windows.size >= cached.size) {
-                merged.filter { it.index in parsedByIndex }
+                finalWindows = windows.map { w ->
+                    val isActive = if (userSwitchActive) {
+                        cachedByIndex[w.index]?.isActive ?: (w.index in activeFromParse)
+                    } else {
+                        w.index in activeFromParse
+                    }
+                    w.copy(isActive = isActive)
+                }
             } else {
-                merged
+                // Partial parse — merge with cache, but incorporate new windows
+                val allIndices = (cachedIndices + parsedIndices).sorted()
+                finalWindows = allIndices.map { idx ->
+                    val parsed = parsedByIndex[idx]
+                    val prev = cachedByIndex[idx]
+                    val name = parsed?.name ?: prev?.name ?: "?"
+                    val isActive = if (userSwitchActive) {
+                        prev?.isActive ?: (idx in activeFromParse)
+                    } else {
+                        idx in activeFromParse
+                    }
+                    TmuxWindow(index = idx, name = name, isActive = isActive)
+                }
             }
         } else {
             finalWindows = windows
@@ -983,6 +1080,25 @@ class OutputProcessor(
         previousSnapshot = null
         claudeContentHits = 0
         claudeContentChecks = 0
+    }
+
+    /** Full reset on reconnect — clear all cached state. */
+    fun resetAllState() {
+        resetDiffState()
+        cachedWindows = null
+        currentWindowIndex = -1
+        userSwitchUntil = 0L
+        statusBarByWindow.clear()
+        isClaudeWindow = false
+        claudeDetectedByName = false
+        acceptEditsVisible = false
+        lastBaseStatus = null
+        thinkingState = ThinkingState.IDLE
+        lastStatusText = null
+        thinkingTimeoutJob?.cancel()
+        _thinkingFlow.value = ThinkingUpdate(false, null, null)
+        _tmuxBarFlow.value = null
+        _statusBarFlow.value = null
     }
 
     fun destroy() {

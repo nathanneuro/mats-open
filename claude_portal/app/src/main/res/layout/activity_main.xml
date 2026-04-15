@@ -206,14 +206,18 @@
                 android:text="RET" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/keyTmuxNew"
-                style="@style/ExtraKeyButton"
-                android:text="@string/tmux_new_window" />
-
-            <com.google.android.material.button.MaterialButton
                 android:id="@+id/keyTmuxNext"
                 style="@style/ExtraKeyButton"
                 android:text="@string/tmux_next_window" />
+
+            <Space
+                android:layout_width="48dp"
+                android:layout_height="wrap_content" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyTmuxNew"
+                style="@style/ExtraKeyButton"
+                android:text="@string/tmux_new_window" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/keyTmuxClose"

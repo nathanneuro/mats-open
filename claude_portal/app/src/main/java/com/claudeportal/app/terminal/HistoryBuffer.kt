@@ -221,10 +221,28 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
         return try {
             // Flush pending writes to disk first so the file is up-to-date
             flushPendingWrites()
-            val text = file.readText()
+            val text = readTailBounded(file, maxChars)
             if (text.length > maxChars) text.substring(text.length - maxChars) else text
         } catch (_: Exception) {
             ""
+        }
+    }
+
+    // Read at most ~maxChars characters from the end of the file without
+    // loading the whole thing. UTF-8 is up to 4 bytes/char; the leading
+    // partial char (if any) is dropped by the BufferedReader.
+    private fun readTailBounded(file: File, maxChars: Int): String {
+        val length = file.length()
+        val maxBytes = maxChars.toLong() * 4L
+        val skip = (length - maxBytes).coerceAtLeast(0L)
+        return file.inputStream().use { fis ->
+            var remaining = skip
+            while (remaining > 0) {
+                val s = fis.skip(remaining)
+                if (s <= 0) break
+                remaining -= s
+            }
+            fis.bufferedReader(Charsets.UTF_8).readText()
         }
     }
 
@@ -236,9 +254,10 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
         val file = lock.read { windowFiles[activeWindowIndex] } ?: return null
         if (!file.exists()) return null
         return try {
-            val text = file.readText()
+            val inMemory = lock.read { plainContent.toString() }
+            // Cap read window to in-memory tail + maxChars so we don't OOM on huge files.
+            val text = readTailBounded(file, inMemory.length + maxChars)
             if (text.length > maxChars) {
-                val inMemory = lock.read { plainContent.toString() }
                 val diskOnly = if (text.endsWith(inMemory)) {
                     text.substring(0, text.length - inMemory.length)
                 } else {

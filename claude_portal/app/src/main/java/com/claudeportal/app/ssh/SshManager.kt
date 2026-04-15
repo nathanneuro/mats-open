@@ -35,6 +35,12 @@ class SshManager {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    // Single-threaded dispatcher for writes to the SSH outputStream.
+    // Serializes concurrent writes (the stream is not thread-safe) and
+    // avoids spawning a fresh Thread per keystroke / tmux command.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val writeDispatcher = Dispatchers.IO.limitedParallelism(1)
+
     suspend fun connect(profile: ConnectionProfile, filesDir: File? = null): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             _connectionState.value = ConnectionState.Connecting(profile.name)
@@ -137,7 +143,7 @@ class SshManager {
             _connectionState.value = ConnectionState.Error("Send failed: not connected")
             return
         }
-        Thread {
+        scope.launch(writeDispatcher) {
             try {
                 val bytes = text.toByteArray()
                 out.write(bytes)
@@ -147,7 +153,7 @@ class SshManager {
                 Log.e("SshManager", "Send failed: ${e.javaClass.simpleName}: ${e.message}", e)
                 _connectionState.value = ConnectionState.Error("Send failed: ${e.message}")
             }
-        }.start()
+        }
     }
 
     fun sendKeyPress(keyCode: KeyCode) {
@@ -157,6 +163,7 @@ class SshManager {
             KeyCode.ARROW_LEFT -> "\u001b[D"
             KeyCode.ARROW_RIGHT -> "\u001b[C"
             KeyCode.TAB -> "\t"
+            KeyCode.SHIFT_TAB -> "\u001b[Z" // reverse tab (CSI Z)
             KeyCode.ESCAPE -> "\u001b"
             KeyCode.ENTER -> "\r"
             KeyCode.CTRL_C -> "\u0003"
@@ -226,9 +233,9 @@ class SshManager {
     }
 
     private fun execTmuxCommand(command: String) {
-        Thread {
+        scope.launch(writeDispatcher) {
             try {
-                val ssh = client ?: return@Thread
+                val ssh = client ?: return@launch
                 val execSession = ssh.startSession()
                 val cmd = execSession.exec(command)
                 cmd.join()
@@ -237,18 +244,18 @@ class SshManager {
             } catch (e: Exception) {
                 Log.w("SshManager", "Exec failed ($command): ${e.message}")
             }
-        }.start()
+        }
     }
 
     fun attachTmuxSession(sessionName: String) {
-        Thread {
-            Thread.sleep(500)
+        scope.launch {
+            delay(500)
             if (sessionName.isBlank()) {
                 sendInput("tmux new-session -A\r")
             } else {
                 sendInput("tmux new-session -A -s $sessionName\r")
             }
-        }.start()
+        }
     }
 
     /**
@@ -311,6 +318,6 @@ sealed class ConnectionState {
 
 enum class KeyCode {
     ARROW_UP, ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT,
-    TAB, ESCAPE, ENTER,
+    TAB, SHIFT_TAB, ESCAPE, ENTER,
     CTRL_C, CTRL_D, CTRL_Z, CTRL_L, CTRL_A, CTRL_E
 }
