@@ -29,8 +29,21 @@ class HistoryRepository(private val context: Context) {
             } ?: emptyList()
     }
 
-    suspend fun loadSession(file: File): String = withContext(Dispatchers.IO) {
-        if (file.exists()) file.readText() else ""
+    suspend fun loadSession(file: File, maxChars: Int = 200_000): String = withContext(Dispatchers.IO) {
+        if (!file.exists()) return@withContext ""
+        // Tail-bounded read so opening a huge session file doesn't OOM.
+        val maxBytes = maxChars.toLong() * 4L
+        val skip = (file.length() - maxBytes).coerceAtLeast(0L)
+        file.inputStream().use { fis ->
+            var remaining = skip
+            while (remaining > 0) {
+                val s = fis.skip(remaining)
+                if (s <= 0) break
+                remaining -= s
+            }
+            val text = fis.bufferedReader(Charsets.UTF_8).readText()
+            if (text.length > maxChars) text.substring(text.length - maxChars) else text
+        }
     }
 
     suspend fun deleteSession(file: File) = withContext(Dispatchers.IO) {

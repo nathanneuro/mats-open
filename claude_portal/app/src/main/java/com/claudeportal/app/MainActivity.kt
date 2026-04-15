@@ -236,7 +236,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupExtraKeys() {
-        binding.keyTab.setOnClickListener { sshManager.sendKeyPress(KeyCode.TAB) }
+        binding.keyTab.setOnClickListener {
+            if (shiftHeld) {
+                sshManager.sendKeyPress(KeyCode.SHIFT_TAB)
+            } else {
+                sshManager.sendKeyPress(KeyCode.TAB)
+            }
+        }
         binding.keyEsc.setOnClickListener { sshManager.sendKeyPress(KeyCode.ESCAPE) }
         binding.keyCtrlC.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_C) }
         binding.keyEnter.setOnClickListener { sshManager.sendKeyPress(KeyCode.ENTER) }
@@ -656,7 +662,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun reconnect() {
         val profile = currentProfile ?: return
-        // Reuse existing history files — don't clear terminal
+        // Reset to fresh terminal state — clear tmux detection, terminal, and caches
+        tmuxDetected = false
+        lastActiveWindowIndex = -1
+        binding.tmuxBar.visibility = View.GONE
+        binding.terminalView.clear()
+        outputProcessor.resetAllState()
+        claudeBorderShowing = false
+        binding.claudeContainer.foreground = null
+        binding.statusBar.visibility = View.GONE
+        binding.thinkingIndicator.visibility = View.GONE
+
         lifecycleScope.launch {
             val result = sshManager.connect(profile, filesDir)
             result.onFailure { error ->
@@ -693,7 +709,19 @@ class MainActivity : AppCompatActivity() {
         binding.inputEditText.clearFocus()
     }
 
+    // Track shift state from keyboard events for modifier+button combos (e.g. shift+TAB)
+    private var shiftHeld = false
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Track shift key state
+        if (event.keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || event.keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {
+            shiftHeld = event.action == KeyEvent.ACTION_DOWN
+        }
+        // Also track via meta state (covers soft keyboards that report it)
+        if (event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP) {
+            shiftHeld = (event.metaState and KeyEvent.META_SHIFT_ON) != 0
+        }
+
         // Route all key events to the input field so typing always goes there
         if (event.action == KeyEvent.ACTION_DOWN && !binding.inputEditText.hasFocus()) {
             val keyCode = event.keyCode

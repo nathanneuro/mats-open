@@ -4,9 +4,12 @@ import android.content.Context
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
+import android.text.Selection
+import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.widget.TextView
 import androidx.core.widget.NestedScrollView
@@ -46,6 +49,13 @@ class TerminalView @JvmOverloads constructor(
     private var autoScrollEnabled = true
     private var userTouching = false
     private var suppressScrollDetection = false
+    private var selectionMode = false
+
+    private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+        override fun onLongPress(e: MotionEvent) {
+            enterSelectionMode(e.x, e.y)
+        }
+    })
 
     /** Called when history mode changes: true = viewing history, false = live. */
     var onHistoryModeChanged: ((Boolean) -> Unit)? = null
@@ -60,6 +70,16 @@ class TerminalView @JvmOverloads constructor(
     // Flushed when history mode exits.
     private val historyModeBuffer = mutableListOf<SpannableStringBuilder>()
 
+    // Skeleton of the last displayed line, for update-in-place dedup.
+    // When a new line has the same skeleton as the last line, we replace
+    // instead of appending — so progress bars and counters update in place.
+    private var lastLineSkeleton: String? = null
+
+    // Exact-text dedup: skip lines already displayed recently.
+    // Handles `tail -f` where tmux re-emits the entire screen on each scroll,
+    // producing ~20 duplicate lines per genuinely new line.
+    private val recentLineTexts = LinkedHashSet<String>()
+
     companion object {
         // Keep the TextView small to avoid expensive relayout on append/trim.
         // Older content lives on disk via HistoryBuffer.
@@ -69,6 +89,14 @@ class TerminalView @JvmOverloads constructor(
         private const val VISIBLE_ROWS_ESTIMATE = 30
         // Max pending lines before we start dropping oldest (backpressure)
         private const val MAX_PENDING_LINES = 500
+        // Max recent line texts to remember for exact dedup
+        private const val MAX_RECENT_LINES = 100
+
+        /** Replace digit sequences (including decimals like 3.14) with # */
+        private val SKELETON_NUMBERS = Regex("\\d+\\.?\\d*")
+
+        fun skeleton(text: String): String =
+            SKELETON_NUMBERS.replace(text.trim(), "#")
     }
 
     init {
@@ -103,11 +131,23 @@ class TerminalView @JvmOverloads constructor(
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+        handleTouchTracking(ev)
+        // Don't run long-press detection while already selecting — let the
+        // selectable TextView handle drags / handle-grabs natively.
+        if (!selectionMode) gestureDetector.onTouchEvent(ev)
+        return super.onInterceptTouchEvent(ev)
+    }
+
+    override fun onTouchEvent(ev: MotionEvent): Boolean {
+        handleTouchTracking(ev)
+        if (!selectionMode) gestureDetector.onTouchEvent(ev)
+        return super.onTouchEvent(ev)
+    }
+
+    private fun handleTouchTracking(ev: MotionEvent) {
         when (ev.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
-                // Only mark as user-touching on actual drag, not on taps.
-                // Taps can cause spurious scroll events (from trim or layout)
-                // that would falsely trigger history mode.
+                // Mark as user-touching on actual drag, not on taps.
                 userTouching = true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -117,7 +157,65 @@ class TerminalView @JvmOverloads constructor(
                 }
             }
         }
-        return super.onInterceptTouchEvent(ev)
+    }
+
+    /**
+     * Enter selection / copy mode at the given scroll-view coordinates.
+     * Freezes live updates (history mode), turns the TextView selectable so
+     * Android's native action bar (Copy / Select All / Share) appears, and
+     * places the selection caret at the touched word.
+     *
+     * Selectable mode is normally off because it forces an Editable backing
+     * store with O(n) span fixup on every append — fine while frozen.
+     */
+    private fun enterSelectionMode(scrollX: Float, scrollY: Float) {
+        if (selectionMode) return
+        selectionMode = true
+
+        // Freeze live output: same path as user-initiated scroll-up.
+        if (autoScrollEnabled) {
+            autoScrollEnabled = false
+            userTouching = false
+            suppressScrollDetection = true
+            onHistoryModeChanged?.invoke(true)
+            postDelayed({ suppressScrollDetection = false }, 1000)
+        }
+
+        textView.setTextIsSelectable(true)
+
+        // Translate scrollview-local coords into TextView-local coords.
+        val tvX = scrollX - textView.left
+        val tvY = scrollY - textView.top + this.scrollY
+
+        // Defer one frame so the selectable transition completes before
+        // we ask Android to start its selection action mode.
+        post {
+            val offset = textView.getOffsetForPosition(tvX, tvY)
+            val text = textView.text
+            if (offset in 0..text.length && text is Spannable) {
+                // Select the whitespace-bounded word at the offset.
+                var start = offset
+                var end = offset
+                while (start > 0 && !text[start - 1].isWhitespace()) start--
+                while (end < text.length && !text[end].isWhitespace()) end++
+                if (start == end && start < text.length) end = start + 1
+                try {
+                    Selection.setSelection(text, start, end)
+                    textView.requestFocus()
+                    // Triggers Android's selection action mode (Copy / Share).
+                    textView.performLongClick()
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
+
+    private fun exitSelectionMode() {
+        if (!selectionMode) return
+        selectionMode = false
+        // Drop selectable backing store so live appends are cheap again.
+        textView.setTextIsSelectable(false)
+        textView.importantForContentCapture = IMPORTANT_FOR_CONTENT_CAPTURE_NO
     }
 
     fun setFontSize(sp: Float) {
@@ -152,7 +250,13 @@ class TerminalView @JvmOverloads constructor(
     private val batchRunnable = object : Runnable {
         override fun run() {
             flushPendingLines()
-            if (pendingLines.isNotEmpty()) {
+            // In live mode, ensure we're at the bottom even if no new lines —
+            // layout changes (status bar resize, keyboard) can shift scroll position.
+            if (autoScrollEnabled) {
+                ensureScrolledToBottom()
+            }
+            if (pendingLines.isNotEmpty() || autoScrollEnabled) {
+                // Keep ticking in live mode for scroll correction
                 handler.postDelayed(this, BATCH_INTERVAL_MS)
             } else {
                 batchTimerRunning = false
@@ -186,7 +290,9 @@ class TerminalView @JvmOverloads constructor(
         appendBatchToView(batch)
     }
 
-    /** Append a batch of lines to the TextView and scroll. */
+    /** Append a batch of lines to the TextView and scroll.
+     *  Lines whose skeleton matches the last displayed line replace it in-place,
+     *  so rapidly updating output (tail -f, progress bars) doesn't flood the view. */
     private fun appendBatchToView(batch: List<SpannableStringBuilder>) {
         // If we have a huge batch (way more than a screen), keep only the
         // last screen's worth for display. This prevents the TextView from
@@ -202,15 +308,56 @@ class TerminalView @JvmOverloads constructor(
             skipAnimation = batch.size > VISIBLE_ROWS_ESTIMATE
         }
 
-        val combined = SpannableStringBuilder()
-        for ((i, line) in displayBatch.withIndex()) {
-            if (i > 0 || textView.length() > 0) {
-                combined.append("\n")
+        for (line in displayBatch) {
+            val text = line.toString()
+
+            // Skip blank lines for dedup — always append them
+            if (text.isBlank()) {
+                if (textView.length() > 0) textView.append("\n")
+                textView.append(line)
+                lastLineSkeleton = null
+                continue
             }
-            combined.append(line)
+
+            // Exact-text dedup: skip lines we've already displayed recently.
+            // This handles `tail -f` where tmux re-emits the whole screen
+            // on each scroll (~20 duplicates per 1 new line).
+            if (text in recentLineTexts) continue
+
+            val skel = skeleton(text)
+
+            if (skel == lastLineSkeleton && skel.isNotEmpty() && textView.length() > 0) {
+                // Same structure, different numbers → replace last line in-place.
+                // Handles progress bars and counters that update values.
+                val fullText = textView.text
+                val lastNewline = fullText.toString().lastIndexOf('\n')
+                if (lastNewline >= 0) {
+                    val editable = textView.editableText
+                    if (editable != null) {
+                        editable.replace(lastNewline + 1, editable.length, line)
+                    } else {
+                        val before = fullText.subSequence(0, lastNewline + 1)
+                        val rebuilt = SpannableStringBuilder(before).append(line)
+                        textView.text = rebuilt
+                    }
+                } else {
+                    textView.text = line
+                }
+                // Update the dedup set: remove old version, add new
+                recentLineTexts.removeIf { skeleton(it) == skel }
+            } else {
+                // Normal append
+                if (textView.length() > 0) textView.append("\n")
+                textView.append(line)
+            }
+
+            recentLineTexts.add(text)
+            while (recentLineTexts.size > MAX_RECENT_LINES) {
+                recentLineTexts.iterator().next().also { recentLineTexts.remove(it) }
+            }
+            lastLineSkeleton = skel
         }
 
-        textView.append(combined)
         trimIfNeeded()
 
         if (autoScrollEnabled) {
@@ -243,22 +390,38 @@ class TerminalView @JvmOverloads constructor(
         }
     }
 
+    /** Snap to bottom if not already there. Skips during active touch to avoid
+     *  fighting the user's scroll gesture. */
+    private fun ensureScrolledToBottom() {
+        if (userTouching) return
+        val maxScroll = textView.height - height
+        if (maxScroll > 0 && scrollY < maxScroll - 10) {
+            scrollTo(0, maxScroll)
+        }
+    }
+
     /**
      * Replace all content (e.g., when loading saved session history).
      */
     fun setContent(styled: SpannableStringBuilder) {
         textView.text = styled
+        lastLineSkeleton = null
+        recentLineTexts.clear()
         post { fullScroll(FOCUS_DOWN) }
     }
 
     fun clear() {
+        exitSelectionMode()
         pendingLines.clear()
         historyModeBuffer.clear()
         textView.text = ""
         autoScrollEnabled = true
+        lastLineSkeleton = null
+        recentLineTexts.clear()
     }
 
     fun scrollToBottom() {
+        exitSelectionMode()
         autoScrollEnabled = true
         suppressScrollDetection = true
         onHistoryModeChanged?.invoke(false)
@@ -272,6 +435,8 @@ class TerminalView @JvmOverloads constructor(
 
         post { fullScroll(FOCUS_DOWN) }
         postDelayed({ suppressScrollDetection = false }, 600)
+        // Restart batch timer for live-mode scroll correction
+        startBatchTimer()
     }
 
     fun isViewingHistory(): Boolean = !autoScrollEnabled
