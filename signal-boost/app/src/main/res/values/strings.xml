@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Signal Boost</string>
+    <string name="probe_service_label">Signal Boost notification probe</string>
+
+    <string name="alarm_active_title">Signal Boost alarm</string>
+    <string name="alarm_active_body">Triggered: %1$s</string>
+    <string name="alarm_channel_name">Trigger alarms</string>
+    <string name="alarm_channel_desc">Plays an escalating alarm when a configured trigger phrase is detected.</string>
+    <string name="stop_alarm">Stop</string>
+</resources>
