@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
@@ -36,6 +38,8 @@ class AlarmService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var currentTrigger: Trigger? = null
+    private var savedAlarmVolume: Int? = null
+    private var audioFocusRequest: AudioFocusRequest? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -82,6 +86,8 @@ class AlarmService : Service() {
         }
         mediaPlayer = null
         runCatching { vibrator()?.cancel() }
+        abandonAudioFocus()
+        restoreAlarmStreamVolume()
         wakeLock?.takeIf { it.isHeld }?.release()
         wakeLock = null
         active.value = false
@@ -89,6 +95,41 @@ class AlarmService : Service() {
         currentTrigger = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun forceAlarmStreamToMax() {
+        val am = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        runCatching {
+            if (savedAlarmVolume == null) {
+                savedAlarmVolume = am.getStreamVolume(AudioManager.STREAM_ALARM)
+            }
+            val max = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            am.setStreamVolume(AudioManager.STREAM_ALARM, max, 0)
+        }
+    }
+
+    private fun restoreAlarmStreamVolume() {
+        val saved = savedAlarmVolume ?: return
+        val am = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, saved, 0) }
+        savedAlarmVolume = null
+    }
+
+    private fun requestAudioFocus(attributes: AudioAttributes) {
+        val am = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(attributes)
+            .setOnAudioFocusChangeListener { /* keep playing regardless */ }
+            .build()
+        runCatching { am.requestAudioFocus(request) }
+        audioFocusRequest = request
+    }
+
+    private fun abandonAudioFocus() {
+        val request = audioFocusRequest ?: return
+        val am = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        runCatching { am.abandonAudioFocusRequest(request) }
+        audioFocusRequest = null
     }
 
     override fun onDestroy() {
@@ -102,14 +143,19 @@ class AlarmService : Service() {
             val ringtoneUri = profile.ringtoneUri?.let(Uri::parse)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
 
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
+            if (profile.forceMaxVolume) {
+                forceAlarmStreamToMax()
+            }
+            requestAudioFocus(audioAttributes)
+
             val player = runCatching {
                 MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ALARM)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build()
-                    )
+                    setAudioAttributes(audioAttributes)
                     setDataSource(this@AlarmService, ringtoneUri)
                     isLooping = true
                     setVolume(0f, 0f)
@@ -266,6 +312,7 @@ private const val EXTRA_RINGTONE = "alarm_ringtone"
 private const val EXTRA_VIBRATION = "alarm_vibration"
 private const val EXTRA_ESCALATION = "alarm_escalation"
 private const val EXTRA_VOLUME = "alarm_max_volume"
+private const val EXTRA_FORCE_MAX = "alarm_force_max"
 
 fun Trigger.toBundle(): Bundle = Bundle().apply {
     putString(EXTRA_ID, id)
@@ -276,6 +323,7 @@ fun Trigger.toBundle(): Bundle = Bundle().apply {
     putString(EXTRA_VIBRATION, alarm.vibration.name)
     putInt(EXTRA_ESCALATION, alarm.escalationSeconds)
     putInt(EXTRA_VOLUME, alarm.maxVolumePercent)
+    putBoolean(EXTRA_FORCE_MAX, alarm.forceMaxVolume)
 }
 
 fun Intent.getTrigger(): Trigger? {
@@ -293,6 +341,7 @@ fun Intent.getTrigger(): Trigger? {
             }.getOrDefault(VibrationStyle.NORMAL),
             escalationSeconds = getIntExtra(EXTRA_ESCALATION, 20),
             maxVolumePercent = getIntExtra(EXTRA_VOLUME, 100),
+            forceMaxVolume = getBooleanExtra(EXTRA_FORCE_MAX, true),
         )
     )
 }

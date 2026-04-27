@@ -22,12 +22,14 @@ data class AlarmProfile(
     val vibration: VibrationStyle = VibrationStyle.NORMAL,
     val escalationSeconds: Int = 20,
     val maxVolumePercent: Int = 100,
+    val forceMaxVolume: Boolean = true,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("ringtoneUri", ringtoneUri ?: JSONObject.NULL)
         put("vibration", vibration.name)
         put("escalationSeconds", escalationSeconds)
         put("maxVolumePercent", maxVolumePercent)
+        put("forceMaxVolume", forceMaxVolume)
     }
 
     companion object {
@@ -37,6 +39,7 @@ data class AlarmProfile(
                 .getOrDefault(VibrationStyle.NORMAL),
             escalationSeconds = obj.optInt("escalationSeconds", 20).coerceIn(1, 600),
             maxVolumePercent = obj.optInt("maxVolumePercent", 100).coerceIn(0, 100),
+            forceMaxVolume = obj.optBoolean("forceMaxVolume", true),
         )
     }
 }

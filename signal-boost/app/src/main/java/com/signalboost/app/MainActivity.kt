@@ -320,10 +320,14 @@ private fun TriggerCard(
                 }
             }
             Text(
-                text = "Vibration: ${trigger.alarm.vibration.name.lowercase()} • " +
-                    "Ramp: ${trigger.alarm.escalationSeconds}s • " +
-                    "Max: ${trigger.alarm.maxVolumePercent}% • " +
-                    if (trigger.caseSensitive) "Case-sensitive" else "Case-insensitive",
+                text = buildString {
+                    append("Vibration: ${trigger.alarm.vibration.name.lowercase()} • ")
+                    append("Ramp: ${trigger.alarm.escalationSeconds}s • ")
+                    append("Max: ${trigger.alarm.maxVolumePercent}%")
+                    if (trigger.alarm.forceMaxVolume) append(" (forced)")
+                    append(" • ")
+                    append(if (trigger.caseSensitive) "Case-sensitive" else "Case-insensitive")
+                },
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -345,6 +349,7 @@ private fun TriggerEditor(
     var escalation by remember { mutableStateOf(initial.alarm.escalationSeconds.toFloat()) }
     var maxVolume by remember { mutableStateOf(initial.alarm.maxVolumePercent.toFloat()) }
     var ringtoneUri by remember { mutableStateOf(initial.alarm.ringtoneUri) }
+    var forceMaxVolume by remember { mutableStateOf(initial.alarm.forceMaxVolume) }
 
     val ringtoneLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -401,6 +406,16 @@ private fun TriggerEditor(
                         valueRange = 0f..100f,
                     )
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Force max alarm volume")
+                        Text(
+                            "Overrides the device alarm-stream volume while sounding, then restores it.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Switch(checked = forceMaxVolume, onCheckedChange = { forceMaxVolume = it })
+                }
                 FilledTonalButton(
                     onClick = {
                         val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
@@ -433,6 +448,7 @@ private fun TriggerEditor(
                                 vibration = vibration,
                                 escalationSeconds = escalation.toInt().coerceIn(1, 600),
                                 maxVolumePercent = maxVolume.toInt().coerceIn(0, 100),
+                                forceMaxVolume = forceMaxVolume,
                             ),
                         )
                     )
