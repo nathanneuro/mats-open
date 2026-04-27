@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Megaphone / signal icon -->
+
+    <!-- Concentric signal arcs -->
+    <path android:strokeColor="#F4F4F5" android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:pathData="M70,42 q10,12 0,24" />
+    <path android:strokeColor="#F4F4F5" android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:pathData="M76,36 q16,18 0,36" />
+    <path android:strokeColor="#F4F4F5" android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:pathData="M82,30 q22,24 0,48" />
+
+    <!-- Megaphone body (cone) -->
+    <path android:fillColor="#F4F4F5"
+        android:pathData="M30,45 L60,32 L60,76 L30,63 Z" />
+
+    <!-- Megaphone handle -->
+    <path android:fillColor="#F4F4F5"
+        android:pathData="M22,50 h10 v8 h-10 z" />
+</vector>
