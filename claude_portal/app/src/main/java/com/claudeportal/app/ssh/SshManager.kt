@@ -247,6 +247,34 @@ class SshManager {
         }
     }
 
+    /**
+     * Run a command via a non-shell exec session and capture stdout.
+     * Used for tmux introspection (e.g. `tmux display-message -p '#I'`)
+     * where the result needs to feed back into local state. Result is
+     * delivered on the main scope; failures resolve to null.
+     */
+    fun execCapture(command: String, callback: (String?) -> Unit) {
+        scope.launch(writeDispatcher) {
+            val out: String? = try {
+                val ssh = client
+                if (ssh == null) {
+                    null
+                } else {
+                    val execSession = ssh.startSession()
+                    val cmd = execSession.exec(command)
+                    val text = cmd.inputStream.bufferedReader().readText().trim()
+                    cmd.join()
+                    execSession.close()
+                    text
+                }
+            } catch (e: Exception) {
+                Log.w("SshManager", "Capture failed ($command): ${e.message}")
+                null
+            }
+            callback(out)
+        }
+    }
+
     fun attachTmuxSession(sessionName: String) {
         scope.launch {
             delay(500)

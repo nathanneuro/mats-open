@@ -86,7 +86,7 @@ class ArrowOverlayView @JvmOverloads constructor(
         val viewHeight = height.toFloat()
 
         // Button position (left or right edge, near the bottom)
-        val buttonLeft = if (position == ArrowPosition.RIGHT) viewWidth - buttonSizePx - 8 * density else 8 * density
+        val buttonLeft = if (position == ArrowPosition.RIGHT) viewWidth - buttonSizePx - 4 * density else 4 * density
         val buttonRight = buttonLeft + buttonSizePx
 
         // Down button is at the bottom
@@ -132,7 +132,7 @@ class ArrowOverlayView @JvmOverloads constructor(
         val viewWidth = width.toFloat()
         val viewHeight = height.toFloat()
 
-        val buttonLeft = if (position == ArrowPosition.RIGHT) viewWidth - buttonSizePx - 8 * density else 8 * density
+        val buttonLeft = if (position == ArrowPosition.RIGHT) viewWidth - buttonSizePx - 4 * density else 4 * density
         val buttonRight = buttonLeft + buttonSizePx
 
         val downBottom = viewHeight - bottomMarginPx
