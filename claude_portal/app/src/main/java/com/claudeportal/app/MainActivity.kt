@@ -769,8 +769,19 @@ class MainActivity : AppCompatActivity() {
                 historyBuffer.setActiveWindow(0)
                 lastActiveWindowIndex = 0
                 tmuxAttachPendingUntil = System.currentTimeMillis() + 3000
-                outputProcessor.resetDiffState()
+                // Hard-wipe the virtual screen too, not just the diff
+                // snapshot. Otherwise the first post-tmux diff (which has
+                // no prev snapshot) emits every non-blank row of the
+                // shell screen as "new", leaking shell content into w0.
+                outputProcessor.resetScreenState()
                 binding.terminalView.clear()
+                // Show the previous session's saved history for w0 right
+                // away. If we let the tmux-bar parse drive the replay,
+                // the "switched" check (lastActiveWindowIndex changed)
+                // wouldn't trigger — we already set it to 0 above — and
+                // the saved history would never appear.
+                replayActiveWindow()
+                binding.terminalView.scrollToBottom()
                 sshManager.sendInput("tmux a\r")
             }
         }

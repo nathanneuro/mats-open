@@ -146,12 +146,25 @@ class OutputProcessor(
     private var lastStatusUpdateTime = 0L
     // Per-window status bar cache: saves each window's last status so it
     // restores when cycling back, but doesn't bleed between windows.
-    private val statusBarByWindow = mutableMapOf<Int, String>()
+    /** Snapshot of a window's status bar AND its current mode flags so the
+     *  full state can be restored when the user switches back. Mode flags
+     *  outlive a single screen and stay sticky until we positively observe
+     *  a different mode (auto/accept/plan are mutually exclusive in Claude
+     *  Code; shift-tab cycles between them). */
+    private data class WindowStatus(
+        val baseStatus: String? = null,
+        val auto: Boolean = false,
+        val accept: Boolean = false,
+        val plan: Boolean = false
+    )
+    private val statusByWindow = mutableMapOf<Int, WindowStatus>()
     private var currentWindowIndex = -1
-    // Track "accept edits" visibility — appends " a" to status bar when active
+    // Suffix flags are toggled only on explicit observation. The user must
+    // see us flip a mode by seeing the new mode's hint line — we never
+    // infer "off" from absence.
     @Volatile var acceptEditsVisible = false
-    // Track "auto mode on" — appends " auto" to status bar when active
     @Volatile var autoModeVisible = false
+    @Volatile var planModeVisible = false
     private var lastBaseStatus: String? = null // status without the suffixes
 
     /**
@@ -338,25 +351,30 @@ class OutputProcessor(
                     continue
                 }
 
-                // Drop "accept edits" hint and track it for status bar suffix
+                // Mode hint lines from Claude Code (e.g. "⏵⏵ auto mode on
+                // (shift+tab to cycle)"). Modes are mutually exclusive —
+                // observing one explicitly turns the others off. We never
+                // infer a mode change from absence: the suffix sticks
+                // until the user actually switches modes.
                 if (trimmed.contains("accept edits")) {
                     Log.v(TAG, "filter ACCEPT_EDITS: '$text'")
-                    if (!acceptEditsVisible) {
-                        acceptEditsVisible = true
-                        refreshStatusBarSuffix()
-                    }
+                    setMode(accept = true)
                     continue
                 }
-
-                // Drop "auto mode on" hint and track it for status bar suffix.
-                // Line looks like: "  ⏵⏵ auto mode on (shift+tab to cycle)"
-                if (trimmed.contains("auto mode")) {
-                    Log.v(TAG, "filter AUTO_MODE: '$text'")
-                    val on = trimmed.contains("auto mode on")
-                    if (on != autoModeVisible) {
-                        autoModeVisible = on
-                        refreshStatusBarSuffix()
-                    }
+                if (trimmed.contains("auto mode on")) {
+                    Log.v(TAG, "filter AUTO_MODE_ON: '$text'")
+                    setMode(auto = true)
+                    continue
+                }
+                if (trimmed.contains("plan mode on")) {
+                    Log.v(TAG, "filter PLAN_MODE_ON: '$text'")
+                    setMode(plan = true)
+                    continue
+                }
+                if (trimmed.contains("auto mode") || trimmed.contains("plan mode")) {
+                    // Cycle help / off variants — drop the line but don't
+                    // touch flags (no positive evidence of a new mode).
+                    Log.v(TAG, "filter MODE_HINT: '$text'")
                     continue
                 }
 
@@ -492,6 +510,55 @@ class OutputProcessor(
         return false
     }
 
+    /**
+     * Parse the user's status bar from combined row text. The status is
+     * bracketed by ƕ (start) and "%~" (end). Three cases:
+     *
+     *  - Full bar (ƕ ... %~ found): return the cleaned content between
+     *    them. Note the trailing % is part of the data (e.g. "ctx: 45%")
+     *    and ~ is the terminator — keep the %, drop only the ~.
+     *  - Partial bar (ƕ found, %~ missing): the bar got truncated or
+     *    over-written mid-render. Don't ignore it (we'd lose the latest
+     *    info) and don't blindly accept the whole tail (it likely contains
+     *    chimera fragments from old screen content). Instead, walk through
+     *    the well-formed `WORD: value` components and stop at the first
+     *    chunk that looks broken. Append "…" so the user can tell the
+     *    parse was incomplete.
+     *  - No ƕ at all: return null.
+     */
+    private fun parseStatusBar(combined: String): String? {
+        val startIdx = combined.indexOf(STATUS_SENTINEL)
+        if (startIdx < 0) return null
+        val afterStart = combined.substring(startIdx + 1)
+        val endIdx = afterStart.indexOf("%~")
+        // endIdx points at '%' — keep through it (substring(0, endIdx + 1)),
+        // dropping only the trailing ~ terminator. The % belongs to the
+        // last value (typically "ctx: NN%").
+        val raw = if (endIdx >= 0) afterStart.substring(0, endIdx + 1) else afterStart
+        val cleaned = raw.replace(STATUS_SENTINEL.toString(), "").trim()
+        if (cleaned.isEmpty()) return null
+        if (endIdx >= 0) return cleaned
+
+        // Partial parse: keep only the consecutive well-formed components.
+        // Components are pipe-separated; the first may be a path-like
+        // prefix (e.g. "~/projects/foo"), the rest should look like
+        // "LABEL: value" or "LABEL=value".
+        val pathLike = Regex("^[A-Za-z~/.][\\w./~\\-]*$")
+        val labeled = Regex("^[A-Za-z][\\w/]*\\s*[:=]\\s*\\S.*$")
+        val chunks = cleaned.split("|").map { it.trim() }
+        val kept = mutableListOf<String>()
+        for ((i, chunk) in chunks.withIndex()) {
+            if (chunk.isEmpty()) continue
+            val ok = when {
+                i == 0 -> pathLike.matches(chunk) || labeled.matches(chunk)
+                else -> labeled.matches(chunk)
+            }
+            if (ok) kept.add(chunk) else break
+        }
+        if (kept.isEmpty()) return null
+        return kept.joinToString(" | ") + "…"
+    }
+
     /** A line is a "fence" if ≥60% of its non-whitespace chars are fence characters. */
     private fun isFenceLine(text: String): Boolean {
         val nonSpace = text.count { it != ' ' }
@@ -538,13 +605,16 @@ class OutputProcessor(
         //   Row N+5: ⏵⏵ accept edits on · ...
         //   Last:    [0] bash [1] claude* (tmux bar — already excluded)
         var topStatusRow = -1
-        var foundAcceptEdits = false
-        var foundAutoMode = false
 
         for (r in (maxRow - 1) downTo maxOf(0, maxRow - 10)) {
             val text = screen.getRowText(r)
-            if (text.contains("accept edits")) foundAcceptEdits = true
-            if (text.contains("auto mode on")) foundAutoMode = true
+            // Positive sightings of mode hints update the flags here too,
+            // since postProcessLines may not see them on every redraw.
+            // Absence is intentionally NOT used to clear flags — modes
+            // stay sticky until we positively observe a different mode.
+            if (text.contains("accept edits")) setMode(accept = true)
+            if (text.contains("auto mode on")) setMode(auto = true)
+            if (text.contains("plan mode on")) setMode(plan = true)
             if (isStatusAreaLine(text) || isStatusInfoLine(text)) {
                 topStatusRow = r
                 continue
@@ -557,17 +627,7 @@ class OutputProcessor(
             }
         }
 
-        // Update accept edits / auto mode tracking
-        var suffixChanged = false
-        if (foundAcceptEdits != acceptEditsVisible) {
-            acceptEditsVisible = foundAcceptEdits
-            suffixChanged = true
-        }
-        if (foundAutoMode != autoModeVisible) {
-            autoModeVisible = foundAutoMode
-            suffixChanged = true
-        }
-        if (suffixChanged) refreshStatusBarSuffix()
+        // No absence-based clearing here on purpose — see setMode().
 
         if (topStatusRow < 0) {
             // Don't null out — keep cached value. A missing status area
@@ -590,16 +650,12 @@ class OutputProcessor(
             // Only update if we found status lines — don't null out
             // a good cached value just because one parse missed them
             if (statusLines.isNotEmpty()) {
-                var combined = statusLines.joinToString(" ") { it.trim() }
+                val combined = statusLines.joinToString(" ") { it.trim() }
                     .replace(Regex("\\s{2,}"), " ")
-                // Strip sentinels: ƕ wherever it appears, ~ and everything after at end
-                combined = combined.replace(STATUS_SENTINEL.toString(), "")
-                val tildeIdx = combined.indexOf('~')
-                if (tildeIdx >= 0) combined = combined.substring(0, tildeIdx)
-                combined = combined.trim()
-                if (combined.isNotEmpty()) {
-                    lastBaseStatus = combined
-                    emitStatusBar(combined)
+                val parsed = parseStatusBar(combined)
+                if (parsed != null && parsed.isNotEmpty()) {
+                    lastBaseStatus = parsed
+                    emitStatusBar(parsed)
                 }
             }
         }
@@ -608,23 +664,70 @@ class OutputProcessor(
         return topStatusRow
     }
 
-    /** Emit status bar with optional suffixes: " a" (accept edits), " auto" (auto mode). */
+    /** Emit status bar with optional suffixes: " a" (accept edits),
+     *  " auto" (auto mode), " plan" (plan mode). */
     private fun emitStatusBar(base: String) {
         lastBaseStatus = base
         val sb = StringBuilder(base)
         if (acceptEditsVisible) sb.append(" a")
         if (autoModeVisible) sb.append(" auto")
+        if (planModeVisible) sb.append(" plan")
         val display = sb.toString()
         _statusBarFlow.value = display
-        if (currentWindowIndex >= 0) {
-            statusBarByWindow[currentWindowIndex] = display
-        }
+        saveCurrentWindowStatus()
     }
 
-    /** Re-emit status bar when accept edits state changes. */
+    /** Re-emit status bar when a mode flag changes. */
     private fun refreshStatusBarSuffix() {
-        val base = lastBaseStatus ?: return
+        val base = lastBaseStatus ?: run {
+            // No base yet, but mode change still needs to be persisted
+            // so it survives a window switch + restore.
+            saveCurrentWindowStatus()
+            return
+        }
         emitStatusBar(base)
+    }
+
+    /** Set mode flags positively (mutually exclusive). Any flag set true
+     *  forces the others false. Pass nothing to leave flags unchanged.
+     *  Re-emits the status bar if anything actually changed. */
+    private fun setMode(auto: Boolean = false, accept: Boolean = false, plan: Boolean = false) {
+        if (!auto && !accept && !plan) return
+        val newAuto = auto
+        val newAccept = accept
+        val newPlan = plan
+        if (newAuto == autoModeVisible && newAccept == acceptEditsVisible && newPlan == planModeVisible) return
+        autoModeVisible = newAuto
+        acceptEditsVisible = newAccept
+        planModeVisible = newPlan
+        refreshStatusBarSuffix()
+    }
+
+    /** Persist the active window's status + mode flags so a switch back
+     *  restores the same suffix even if no new mode hint is observed. */
+    private fun saveCurrentWindowStatus() {
+        if (currentWindowIndex < 0) return
+        statusByWindow[currentWindowIndex] = WindowStatus(
+            baseStatus = lastBaseStatus,
+            auto = autoModeVisible,
+            accept = acceptEditsVisible,
+            plan = planModeVisible
+        )
+    }
+
+    /** Restore status + mode flags for the named window (called on switch). */
+    private fun restoreWindowStatus(windowIdx: Int) {
+        currentWindowIndex = windowIdx
+        val saved = statusByWindow[windowIdx] ?: WindowStatus()
+        autoModeVisible = saved.auto
+        acceptEditsVisible = saved.accept
+        planModeVisible = saved.plan
+        lastBaseStatus = saved.baseStatus
+        if (saved.baseStatus != null) {
+            emitStatusBar(saved.baseStatus)
+        } else {
+            _statusBarFlow.value = null
+        }
     }
 
     /** Same detection but on a raw snapshot array (for previous screen). */
@@ -910,20 +1013,15 @@ class OutputProcessor(
         val currentIdx = cached.indexOfFirst { it.isActive }
         if (currentIdx < 0) return
         val nextIdx = (currentIdx + 1) % cached.size
-        // Save current window's status bar before switching
-        val currentWinIdx = cached.getOrNull(currentIdx)?.index ?: -1
-        val currentStatus = _statusBarFlow.value
-        if (currentWinIdx >= 0 && currentStatus != null) {
-            statusBarByWindow[currentWinIdx] = currentStatus
-        }
+        // Save current window's full status (base + mode flags) first
+        saveCurrentWindowStatus()
 
         cachedWindows = cached.mapIndexed { i, w -> w.copy(isActive = i == nextIdx) }
         userSwitchUntil = System.currentTimeMillis() + 2000L
 
-        // Restore next window's cached status bar, or clear
+        // Restore next window's status + mode flags
         val nextWinIdx = cached.getOrNull(nextIdx)?.index ?: -1
-        currentWindowIndex = nextWinIdx
-        _statusBarFlow.value = statusBarByWindow[nextWinIdx]
+        restoreWindowStatus(nextWinIdx)
         val updated = cachedWindows!!
         val activeIndex = updated.indexOfFirst { it.isActive }
         val activeWindow = updated.getOrNull(activeIndex)
@@ -943,19 +1041,20 @@ class OutputProcessor(
      */
     fun forceSetWindows(windows: List<TmuxWindow>) {
         if (windows.isEmpty()) return
+        // Persist current state before any switch happens
+        saveCurrentWindowStatus()
         val keepIndices = windows.map { it.index }.toSet()
-        val droppedIndices = statusBarByWindow.keys - keepIndices
-        droppedIndices.forEach { statusBarByWindow.remove(it) }
+        val droppedIndices = statusByWindow.keys - keepIndices
+        droppedIndices.forEach { statusByWindow.remove(it) }
         cachedWindows = windows
         userSwitchUntil = 0L
         val activeIndex = windows.indexOfFirst { it.isActive }.takeIf { it >= 0 } ?: 0
         val activeWindow = windows[activeIndex]
-        currentWindowIndex = activeWindow.index
         claudeDetectedByName = activeWindow.name.contains("claude", ignoreCase = true)
         isClaudeWindow = claudeDetectedByName
         claudeContentHits = 0
         claudeContentChecks = 0
-        _statusBarFlow.value = statusBarByWindow[activeWindow.index]
+        restoreWindowStatus(activeWindow.index)
         _tmuxBarFlow.value = TmuxBarUpdate(windows, activeIndex)
     }
 
@@ -1033,7 +1132,7 @@ class OutputProcessor(
                 // Any cached window not in this parse has been removed.
                 val removedIndices = cachedIndices - parsedIndices
                 for (idx in removedIndices) {
-                    statusBarByWindow.remove(idx)
+                    statusByWindow.remove(idx)
                 }
                 finalWindows = windows.map { w ->
                     val isActive = if (userSwitchActive) {
@@ -1066,13 +1165,18 @@ class OutputProcessor(
         val activeIndex = finalWindows.indexOfFirst { it.isActive }.takeIf { it >= 0 } ?: 0
         val activeWindow = finalWindows.getOrNull(activeIndex)
         if (activeWindow != null) {
-            currentWindowIndex = activeWindow.index
+            // If the bar parse changed the active window, persist the
+            // outgoing window's status + restore the new window's saved
+            // status (mode flags survive the switch).
+            if (activeWindow.index != currentWindowIndex) {
+                saveCurrentWindowStatus()
+                restoreWindowStatus(activeWindow.index)
+            }
             claudeDetectedByName = activeWindow.name.contains("claude", ignoreCase = true)
             if (claudeDetectedByName) {
                 isClaudeWindow = true
                 claudeContentHits = 0
                 claudeContentChecks = 0
-                // (status bar is per-window, not restored across switches)
             } else {
                 // Not named "claude" — immediately turn off Claude mode.
                 // Content-based detection is too prone to false positives
@@ -1147,17 +1251,31 @@ class OutputProcessor(
         claudeContentChecks = 0
     }
 
+    /** Hard reset of the screen state itself. Use this when transitioning
+     *  contexts in a way that the next chunk WON'T be a tmux full redraw —
+     *  notably, "tmux a" — because diffScreens with no previous snapshot
+     *  will otherwise emit every non-blank row of the current screen as
+     *  "new", leaking pre-transition content into the new context. */
+    fun resetScreenState() {
+        previousSnapshot = null
+        claudeContentHits = 0
+        claudeContentChecks = 0
+        screen.eraseEntireScreen()
+        interpreter.reset()
+    }
+
     /** Full reset on reconnect — clear all cached state. */
     fun resetAllState() {
         resetDiffState()
         cachedWindows = null
         currentWindowIndex = -1
         userSwitchUntil = 0L
-        statusBarByWindow.clear()
+        statusByWindow.clear()
         isClaudeWindow = false
         claudeDetectedByName = false
         acceptEditsVisible = false
         autoModeVisible = false
+        planModeVisible = false
         lastBaseStatus = null
         thinkingState = ThinkingState.IDLE
         lastStatusText = null
