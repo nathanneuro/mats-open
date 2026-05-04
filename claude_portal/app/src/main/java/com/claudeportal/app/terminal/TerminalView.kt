@@ -116,17 +116,29 @@ class TerminalView @JvmOverloads constructor(
 
         /** Replace digit sequences (including decimals like 3.14) with # */
         private val SKELETON_NUMBERS = Regex("\\d+\\.?\\d*")
-        /** Collapse runs of whitespace so spacing variations don't split skeletons. */
-        private val SKELETON_WHITESPACE = Regex("\\s+")
-        /** Leading UI markers that vary frame-to-frame (selectors, bullets, arrows). */
-        private val SKELETON_LEADING_MARKERS =
-            Regex("^[❯>●○◑◐◒◓◔◕✶✻✽·✢*⏵▶▸→\\-•◦‣⁃]+\\s*")
+        /** Collapse runs of whitespace + punctuation into a single space so
+         *  variations in spacing, brackets, separators, and trailing
+         *  punctuation don't split skeletons. Anything that isn't a letter,
+         *  digit, or # collapses to one space. */
+        private val SKELETON_NONALNUM = Regex("[^A-Za-z0-9#]+")
+        /** Cap the skeleton at this many chars so very long lines with the
+         *  same prefix dedupe even when their tails differ. */
+        private const val SKELETON_MAX_LEN = 80
 
         fun skeleton(text: String): String {
-            val trimmed = text.trim()
-            val noLeader = SKELETON_LEADING_MARKERS.replace(trimmed, "")
-            val numbersStripped = SKELETON_NUMBERS.replace(noLeader, "#")
-            return SKELETON_WHITESPACE.replace(numbersStripped, " ")
+            // Lowercase + digit→# + collapse all non-alphanumeric runs to
+            // single spaces. This is intentionally aggressive: minor
+            // re-renderings of the "same" line (different spacing,
+            // punctuation, ANSI artifacts that survived stripping, case
+            // changes, trailing ellipsis variants) all collapse to the
+            // same skeleton and dedupe.
+            val lowered = text.lowercase().trim()
+            if (lowered.isEmpty()) return ""
+            val numbersStripped = SKELETON_NUMBERS.replace(lowered, "#")
+            val collapsed = SKELETON_NONALNUM.replace(numbersStripped, " ").trim()
+            return if (collapsed.length > SKELETON_MAX_LEN) {
+                collapsed.substring(0, SKELETON_MAX_LEN)
+            } else collapsed
         }
     }
 
