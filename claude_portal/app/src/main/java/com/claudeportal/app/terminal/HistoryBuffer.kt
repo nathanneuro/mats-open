@@ -23,24 +23,37 @@ import kotlin.concurrent.write
  * the button and the next status-bar parse is buffered in memory and then
  * flushed into the new window's files when commitPendingSwitch() lands.
  */
-class HistoryBuffer(private val maxLines: Int = 10000) {
+class HistoryBuffer(private val maxLines: Int = 1000) {
+
+    companion object {
+        // Files older than this in the history dir are purged on connect.
+        private const val MAX_FILE_AGE_MS = 2L * 24 * 60 * 60 * 1000
+    }
 
     private val lock = ReentrantReadWriteLock()
     private val styledContent = SpannableStringBuilder()
     private val plainContent = StringBuilder()
     private var lineCount = 0
 
-    // Per-window disk persistence
+    // Per-window disk persistence (clean only — dirty stays in memory)
     private var historyDir: File? = null
     private var connectionName: String? = null
-    private var activeWindowIndex: Int = 0
+    // -1 = pre-tmux raw shell. Once the tmux status bar is parsed, this
+    // switches to the real tmux window index, leaving the shell history
+    // preserved in its own file ({conn}_w-1.txt).
+    private var activeWindowIndex: Int = -1
     private val windowWriters = mutableMapOf<Int, FileWriter>()
     private val windowFiles = mutableMapOf<Int, File>()
-    private val dirtyWindowWriters = mutableMapOf<Int, FileWriter>()
-    private val dirtyWindowFiles = mutableMapOf<Int, File>()
 
-    // (windowIdx, text, isDirty)
-    private val pendingWrites = ConcurrentLinkedQueue<Triple<Int, String, Boolean>>()
+    // Per-window in-memory dirty (raw, un-deduplicated) buffers. Used by the
+    // broom toggle as a backup view when the dedup heuristic eats real output.
+    // Bounded — no disk persistence; old text is discarded once the cap is hit.
+    private val dirtyBuffers = mutableMapOf<Int, StringBuilder>()
+    private val DIRTY_MAX_CHARS = 60_000
+    private val DIRTY_TRIM_TO = 40_000
+
+    // (windowIdx, text)
+    private val pendingWrites = ConcurrentLinkedQueue<Pair<Int, String>>()
     private val writeScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var writeJob: Job? = null
 
@@ -67,11 +80,27 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
             closeWriters()
             this.historyDir = historyDir
             this.connectionName = connectionName
-            activeWindowIndex = 0
+            activeWindowIndex = -1
             pendingSwitch = null
         }
-        ensureWriter(0)
+        purgeOldFiles(historyDir)
+        ensureWriter(-1)
         startDiskWriter()
+    }
+
+    /** Delete history files in `dir` whose mtime is older than MAX_FILE_AGE_MS,
+     *  plus any leftover *_dirty.txt files (no longer persisted to disk). */
+    private fun purgeOldFiles(dir: File) {
+        try {
+            val cutoff = System.currentTimeMillis() - MAX_FILE_AGE_MS
+            dir.listFiles()?.forEach { f ->
+                if (!f.isFile) return@forEach
+                if (f.lastModified() < cutoff || f.name.endsWith("_dirty.txt")) {
+                    f.delete()
+                }
+            }
+        } catch (_: Exception) {
+        }
     }
 
     /**
@@ -91,8 +120,8 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
         if (pending != null) {
             val clean = pending.cleanBuf.toString()
             val dirty = pending.dirtyBuf.toString()
-            if (clean.isNotEmpty()) pendingWrites.add(Triple(index, clean, false))
-            if (dirty.isNotEmpty()) pendingWrites.add(Triple(index, dirty, true))
+            if (clean.isNotEmpty()) pendingWrites.add(index to clean)
+            if (dirty.isNotEmpty()) appendToDirtyBuf(index, dirty)
         }
     }
 
@@ -128,8 +157,18 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
             val idx = activeWindowIndex
             val clean = pending.cleanBuf.toString()
             val dirty = pending.dirtyBuf.toString()
-            if (clean.isNotEmpty()) pendingWrites.add(Triple(idx, clean, false))
-            if (dirty.isNotEmpty()) pendingWrites.add(Triple(idx, dirty, true))
+            if (clean.isNotEmpty()) pendingWrites.add(idx to clean)
+            if (dirty.isNotEmpty()) appendToDirtyBuf(idx, dirty)
+        }
+    }
+
+    private fun appendToDirtyBuf(windowIndex: Int, text: String) {
+        lock.write {
+            val buf = dirtyBuffers.getOrPut(windowIndex) { StringBuilder() }
+            buf.append(text)
+            if (buf.length > DIRTY_MAX_CHARS) {
+                buf.delete(0, buf.length - DIRTY_TRIM_TO)
+            }
         }
     }
 
@@ -142,11 +181,6 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
                 val file = File(dir, "${safeName}_w${windowIndex}.txt")
                 windowFiles[windowIndex] = file
                 windowWriters[windowIndex] = FileWriter(file, true)
-            }
-            if (!dirtyWindowWriters.containsKey(windowIndex)) {
-                val file = File(dir, "${safeName}_w${windowIndex}_dirty.txt")
-                dirtyWindowFiles[windowIndex] = file
-                dirtyWindowWriters[windowIndex] = FileWriter(file, true)
             }
         }
     }
@@ -166,21 +200,23 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
                 pending.cleanBuf.append(text)
                 return@write
             }
-            pendingWrites.add(Triple(activeWindowIndex, text, false))
+            pendingWrites.add(activeWindowIndex to text)
         }
     }
 
-    /** Append raw, un-deduplicated text to the active window's dirty file. */
+    /** Append raw, un-deduplicated text to the active window's in-memory
+     *  dirty buffer. Not persisted to disk — old text is dropped past a cap. */
     fun appendDirtyPlain(text: String) {
         checkPendingTimeout()
-        lock.write {
-            val pending = pendingSwitch
-            if (pending != null) {
-                pending.dirtyBuf.append(text)
-                return@write
-            }
-            pendingWrites.add(Triple(activeWindowIndex, text, true))
+        val (target, pendingBuf) = lock.read {
+            val p = pendingSwitch
+            if (p != null) -1 to p.dirtyBuf else activeWindowIndex to null
         }
+        if (pendingBuf != null) {
+            lock.write { pendingBuf.append(text) }
+            return
+        }
+        appendToDirtyBuf(target, text)
     }
 
     fun getStyledContent(): SpannableStringBuilder = lock.read {
@@ -208,10 +244,39 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
         return readTail(file, maxChars)
     }
 
-    /** Read the full dirty (un-deduplicated) history file for the given window. */
-    fun readWindowDirty(windowIndex: Int = activeWindowIndex, maxChars: Int = 200_000): String {
-        val file = lock.read { dirtyWindowFiles[windowIndex] } ?: return ""
-        return readTail(file, maxChars)
+    /**
+     * Snapshot the tail of each known per-window clean history file.
+     * Used by the W? recovery to score each file against tmux's live
+     * pane capture and pick the one that actually matches reality.
+     */
+    fun snapshotAllWindowTails(maxChars: Int = 8_000): Map<Int, String> {
+        flushPendingWrites()
+        val files = lock.read { windowFiles.toMap() }
+        val out = HashMap<Int, String>()
+        for ((idx, file) in files) {
+            try {
+                if (!file.exists()) continue
+                val text = readTailBounded(file, maxChars)
+                val tail = if (text.length > maxChars) text.substring(text.length - maxChars) else text
+                out[idx] = tail
+            } catch (_: Exception) {
+            }
+        }
+        return out
+    }
+
+    /** Snapshot all in-memory dirty buffers — raw, un-deduplicated text per
+     *  window. Used by W? to compare against the live tmux pane capture: the
+     *  raw stream typically matches what tmux shows much more closely than
+     *  the filtered/deduped clean file does. */
+    fun snapshotAllDirtyBuffers(): Map<Int, String> = lock.read {
+        dirtyBuffers.mapValues { it.value.toString() }
+    }
+
+    /** Read the in-memory dirty (un-deduplicated) buffer for the given window. */
+    fun readWindowDirty(windowIndex: Int = activeWindowIndex, maxChars: Int = DIRTY_MAX_CHARS): String {
+        val text = lock.read { dirtyBuffers[windowIndex]?.toString() } ?: return ""
+        return if (text.length > maxChars) text.substring(text.length - maxChars) else text
     }
 
     fun activeWindow(): Int = activeWindowIndex
@@ -243,6 +308,56 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
                 remaining -= s
             }
             fis.bufferedReader(Charsets.UTF_8).readText()
+        }
+    }
+
+    /**
+     * Read a chunk of older content from the active window's clean disk file,
+     * ending at byte offset `length - skipFromEndBytes` and going `chunkBytes`
+     * further back. Returns null if there is nothing more to read at this
+     * offset. Used to page older history into the terminal view when the
+     * user scrolls to the top in history mode.
+     *
+     * Bytes (not chars) so the caller can advance the offset by the returned
+     * String's `toByteArray(UTF_8).size` without re-decoding.
+     */
+    fun readWindowCleanChunk(
+        windowIndex: Int = activeWindowIndex,
+        skipFromEndBytes: Long,
+        chunkBytes: Int = 50_000
+    ): String? {
+        val file = lock.read { windowFiles[windowIndex] } ?: return null
+        if (!file.exists()) return null
+        val length = file.length()
+        if (length <= skipFromEndBytes) return null
+        return try {
+            flushPendingWrites()
+            val endOffset = length - skipFromEndBytes
+            val startOffset = (endOffset - chunkBytes).coerceAtLeast(0L)
+            val readLen = (endOffset - startOffset).toInt()
+            file.inputStream().use { fis ->
+                var remaining = startOffset
+                while (remaining > 0) {
+                    val s = fis.skip(remaining)
+                    if (s <= 0) break
+                    remaining -= s
+                }
+                val buf = ByteArray(readLen)
+                var off = 0
+                while (off < readLen) {
+                    val r = fis.read(buf, off, readLen - off)
+                    if (r <= 0) break
+                    off += r
+                }
+                // Drop the leading partial UTF-8 char if we didn't start at a boundary.
+                val raw = String(buf, 0, off, Charsets.UTF_8)
+                if (startOffset > 0) {
+                    val firstNl = raw.indexOf('\n')
+                    if (firstNl >= 0 && firstNl < raw.length - 1) raw.substring(firstNl + 1) else raw
+                } else raw
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -282,6 +397,38 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
         lineCount = 0
     }
 
+    /**
+     * Truncate the active window's persisted clean file and dirty buffer.
+     * Used when transitioning from a non-tmux shell into tmux: pre-tmux
+     * shell output would otherwise blend with the new tmux window's
+     * content (both land under window index 0).
+     */
+    fun resetActiveWindow() {
+        val idx = activeWindowIndex
+        // Drain anything queued for this window so it doesn't land after the truncate.
+        val keep = ArrayList<Pair<Int, String>>()
+        while (true) {
+            val p = pendingWrites.poll() ?: break
+            if (p.first != idx) keep.add(p)
+        }
+        keep.forEach { pendingWrites.add(it) }
+        lock.write {
+            dirtyBuffers[idx]?.clear()
+            try {
+                windowWriters[idx]?.close()
+            } catch (_: Exception) {}
+            windowWriters.remove(idx)
+            windowFiles[idx]?.let { f ->
+                try { f.delete() } catch (_: Exception) {}
+            }
+            windowFiles.remove(idx)
+            styledContent.clear()
+            plainContent.clear()
+            lineCount = 0
+        }
+        ensureWriter(idx)
+    }
+
     fun close() {
         writeJob?.cancel()
         writeScope.cancel()
@@ -293,13 +440,9 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
         for (writer in windowWriters.values) {
             try { writer.close() } catch (_: Exception) {}
         }
-        for (writer in dirtyWindowWriters.values) {
-            try { writer.close() } catch (_: Exception) {}
-        }
         windowWriters.clear()
         windowFiles.clear()
-        dirtyWindowWriters.clear()
-        dirtyWindowFiles.clear()
+        dirtyBuffers.clear()
     }
 
     private fun startDiskWriter() {
@@ -316,21 +459,15 @@ class HistoryBuffer(private val maxLines: Int = 10000) {
     private fun flushPendingWrites() {
         try {
             val flushedClean = mutableSetOf<Int>()
-            val flushedDirty = mutableSetOf<Int>()
             while (true) {
-                val triple = pendingWrites.poll() ?: break
-                val (windowIdx, text, isDirty) = triple
-                val writer = lock.read {
-                    if (isDirty) dirtyWindowWriters[windowIdx] else windowWriters[windowIdx]
-                } ?: continue
+                val pair = pendingWrites.poll() ?: break
+                val (windowIdx, text) = pair
+                val writer = lock.read { windowWriters[windowIdx] } ?: continue
                 writer.write(text)
-                if (isDirty) flushedDirty.add(windowIdx) else flushedClean.add(windowIdx)
+                flushedClean.add(windowIdx)
             }
             for (idx in flushedClean) {
                 lock.read { windowWriters[idx] }?.flush()
-            }
-            for (idx in flushedDirty) {
-                lock.read { dirtyWindowWriters[idx] }?.flush()
             }
         } catch (_: Exception) {
             // Disk write failure is non-fatal

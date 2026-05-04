@@ -130,6 +130,18 @@
 
         </LinearLayout>
 
+        <!-- "Loading older history" spinner — shown briefly when the user
+             pulls past the top of the loaded buffer and we page from disk. -->
+        <ProgressBar
+            android:id="@+id/historyLoadingIndicator"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="6dp"
+            android:indeterminateTint="@color/accent"
+            android:visibility="gone" />
+
         <!-- Arrow key overlay (transparent, on top of terminal) -->
         <com.claudeportal.app.ui.ArrowOverlayView
             android:id="@+id/arrowOverlay"
@@ -141,7 +153,8 @@
             android:id="@+id/scrollBottomFab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="16dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="152dp"
             android:layout_gravity="bottom|end"
             android:src="@drawable/ic_arrow_down"
             android:visibility="gone"
@@ -210,9 +223,10 @@
                 style="@style/ExtraKeyButton"
                 android:text="@string/tmux_next_window" />
 
-            <Space
-                android:layout_width="48dp"
-                android:layout_height="wrap_content" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyTmuxSync"
+                style="@style/ExtraKeyButton"
+                android:text="@string/tmux_sync_window" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/keyTmuxNew"

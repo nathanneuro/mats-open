@@ -93,6 +93,18 @@ class OutputProcessor(
         private val STATUS_TEXT_PATTERN = Regex("[$THINKING_SYMBOLS_STR]\\s*([A-Z][a-z].{1,38}?)(?:[.…\u2024\u2025]+|\\s*$)")
         // Tool progress: "⎿  Running… (2s · timeout 10m)" — transient timer updates
         private val TOOL_PROGRESS_PATTERN = Regex("^⎿\\s+\\S+…\\s*\\(\\d+s.*\\)$")
+        // Claude Code session-feedback prompt — appears as two lines:
+        //   "how is claude doing this session? (optional)"
+        //   "1:bad   2:fine   3:good   0:dismiss"
+        // Both should be silently dropped from rendered output.
+        private val FEEDBACK_PROMPT_PATTERN = Regex(
+            "how\\s+is\\s+claude\\s+doing\\s+this\\s+session\\??.*",
+            RegexOption.IGNORE_CASE
+        )
+        private val FEEDBACK_OPTIONS_PATTERN = Regex(
+            "1\\s*:\\s*bad\\s+2\\s*:\\s*fine\\s+3\\s*:\\s*good\\s+0\\s*:\\s*dismiss.*",
+            RegexOption.IGNORE_CASE
+        )
         // Shell prompt patterns: ➜, $, %, # at line start (with optional leading whitespace)
         // NOT ❯ or > — those are Claude Code prompts, handled separately.
         // These get buffered so partial command echoes are collapsed into the final version.
@@ -102,14 +114,14 @@ class OutputProcessor(
         private const val HIGH_THROUGHPUT_DIFF_INTERVAL_MS = 800L
         private const val HIGH_THROUGHPUT_THRESHOLD_MS = 20L // chunks <20ms apart = deluge
         private const val TAG = "OutputProcessor"
-        // Max recent emitted line texts for exact-text dedup
-        private const val MAX_RECENT_EMITTED = 100
+        // Component keywords confirmed alongside the sentinel char (ƕ, U+0195).
+        // Both must match to count as a status line; ≥2 keyword hits required.
+        private val STATUS_COMPONENT_KEYWORDS = arrayOf("GPU0", "GPU1", "CPU", "RAM", "ctx")
+        // Sentinel character bracketing the user's status line (start and end).
+        // ƕ (U+0195, LATIN SMALL LETTER HV) is rare enough to avoid log false
+        // positives; ∆/Δ were too common in scientific output.
+        private const val STATUS_SENTINEL = 'ƕ'
     }
-
-    // Exact-text dedup: skip lines already emitted recently.
-    // Prevents re-emitting the entire visible screen on each tmux full redraw
-    // (e.g. `tail -f` scrolls by 1 line but tmux sends all 22 rows).
-    private val recentEmitted = LinkedHashSet<String>()
 
     // Whether the active tmux window is running Claude Code.
     // When false, Claude-specific filters (thinking detection, status area,
@@ -138,7 +150,9 @@ class OutputProcessor(
     private var currentWindowIndex = -1
     // Track "accept edits" visibility — appends " a" to status bar when active
     @Volatile var acceptEditsVisible = false
-    private var lastBaseStatus: String? = null // status without the " a" suffix
+    // Track "auto mode on" — appends " auto" to status bar when active
+    @Volatile var autoModeVisible = false
+    private var lastBaseStatus: String? = null // status without the suffixes
 
     /**
      * Process a raw SSH output chunk. This is the main entry point,
@@ -218,29 +232,17 @@ class OutputProcessor(
 
         val newLines = postProcessLines(rawLines)
         if (newLines.isNotEmpty()) {
-            // Exact-text dedup: skip lines already emitted recently.
-            val dedupedLines = newLines.filter { line ->
-                val text = line.toString()
-                if (text.isBlank()) return@filter true
-                if (text in recentEmitted) {
-                    Log.v(TAG, "dedup skip: '${text.take(80)}'")
-                    return@filter false
-                }
-                recentEmitted.add(text)
-                while (recentEmitted.size > MAX_RECENT_EMITTED) {
-                    recentEmitted.iterator().next().also { recentEmitted.remove(it) }
-                }
-                true
+            // No dedup here — TerminalView handles "newest occurrence wins"
+            // by removing any older copy of the same line from the view.
+            // Filtering at this layer was stranding fresh text whenever an
+            // identical line had been emitted earlier in the session.
+            for (line in newLines) {
+                Log.d(TAG, "emit: '${line.toString().take(120)}'")
             }
-            if (dedupedLines.isNotEmpty()) {
-                for (line in dedupedLines) {
-                    Log.d(TAG, "emit: '${line.toString().take(120)}'")
-                }
-                _contentFlow.tryEmit(dedupedLines)
-                val plainText = dedupedLines.joinToString("\n") { it.toString() }
-                if (plainText.isNotBlank()) {
-                    _plainTextFlow.tryEmit(plainText + "\n")
-                }
+            _contentFlow.tryEmit(newLines)
+            val plainText = newLines.joinToString("\n") { it.toString() }
+            if (plainText.isNotBlank()) {
+                _plainTextFlow.tryEmit(plainText + "\n")
             }
         }
     }
@@ -343,6 +345,26 @@ class OutputProcessor(
                         acceptEditsVisible = true
                         refreshStatusBarSuffix()
                     }
+                    continue
+                }
+
+                // Drop "auto mode on" hint and track it for status bar suffix.
+                // Line looks like: "  ⏵⏵ auto mode on (shift+tab to cycle)"
+                if (trimmed.contains("auto mode")) {
+                    Log.v(TAG, "filter AUTO_MODE: '$text'")
+                    val on = trimmed.contains("auto mode on")
+                    if (on != autoModeVisible) {
+                        autoModeVisible = on
+                        refreshStatusBarSuffix()
+                    }
+                    continue
+                }
+
+                // Drop the session-feedback prompt (both the question line
+                // and the "1:bad 2:fine 3:good 0:dismiss" options line).
+                if (FEEDBACK_PROMPT_PATTERN.containsMatchIn(trimmed) ||
+                    FEEDBACK_OPTIONS_PATTERN.containsMatchIn(trimmed)) {
+                    Log.v(TAG, "filter FEEDBACK_PROMPT: '$text'")
                     continue
                 }
 
@@ -454,13 +476,20 @@ class OutputProcessor(
         return false
     }
 
-    /** A line looks like Claude Code status info if it has pipe separators with stats.
-     *  Must also contain stats-like keywords to avoid false positives on command lines
-     *  that use pipes (e.g. "grep -E '5000|8000'"). */
+    /** A line looks like Claude Code status info only when BOTH signals match:
+     *  the user's ƕ sentinel AND ≥2 of the named status components
+     *  (GPU0, GPU1, CPU, RAM, ctx). Both-required avoids false positives
+     *  from command lines that happen to contain ƕ or one keyword alone. */
     private fun isStatusInfoLine(text: String): Boolean {
-        // User's status line starts with ∆ (U+2206) or Δ (U+0394) sentinel.
-        // End sentinel ~ may be truncated if line is too long, so only require start.
-        return text.contains('∆') || text.contains('Δ')
+        if (!text.contains(STATUS_SENTINEL)) return false
+        var hits = 0
+        for (kw in STATUS_COMPONENT_KEYWORDS) {
+            if (text.contains(kw)) {
+                hits++
+                if (hits >= 2) return true
+            }
+        }
+        return false
     }
 
     /** A line is a "fence" if ≥60% of its non-whitespace chars are fence characters. */
@@ -510,10 +539,12 @@ class OutputProcessor(
         //   Last:    [0] bash [1] claude* (tmux bar — already excluded)
         var topStatusRow = -1
         var foundAcceptEdits = false
+        var foundAutoMode = false
 
         for (r in (maxRow - 1) downTo maxOf(0, maxRow - 10)) {
             val text = screen.getRowText(r)
             if (text.contains("accept edits")) foundAcceptEdits = true
+            if (text.contains("auto mode on")) foundAutoMode = true
             if (isStatusAreaLine(text) || isStatusInfoLine(text)) {
                 topStatusRow = r
                 continue
@@ -526,11 +557,17 @@ class OutputProcessor(
             }
         }
 
-        // Update accept edits tracking
+        // Update accept edits / auto mode tracking
+        var suffixChanged = false
         if (foundAcceptEdits != acceptEditsVisible) {
             acceptEditsVisible = foundAcceptEdits
-            refreshStatusBarSuffix()
+            suffixChanged = true
         }
+        if (foundAutoMode != autoModeVisible) {
+            autoModeVisible = foundAutoMode
+            suffixChanged = true
+        }
+        if (suffixChanged) refreshStatusBarSuffix()
 
         if (topStatusRow < 0) {
             // Don't null out — keep cached value. A missing status area
@@ -555,8 +592,8 @@ class OutputProcessor(
             if (statusLines.isNotEmpty()) {
                 var combined = statusLines.joinToString(" ") { it.trim() }
                     .replace(Regex("\\s{2,}"), " ")
-                // Strip sentinels: ∆/Δ at start, ~ and everything after at end
-                combined = combined.replace("∆", "").replace("Δ", "")
+                // Strip sentinels: ƕ wherever it appears, ~ and everything after at end
+                combined = combined.replace(STATUS_SENTINEL.toString(), "")
                 val tildeIdx = combined.indexOf('~')
                 if (tildeIdx >= 0) combined = combined.substring(0, tildeIdx)
                 combined = combined.trim()
@@ -571,10 +608,13 @@ class OutputProcessor(
         return topStatusRow
     }
 
-    /** Emit status bar with optional " a" suffix for accept edits. */
+    /** Emit status bar with optional suffixes: " a" (accept edits), " auto" (auto mode). */
     private fun emitStatusBar(base: String) {
         lastBaseStatus = base
-        val display = if (acceptEditsVisible) "$base a" else base
+        val sb = StringBuilder(base)
+        if (acceptEditsVisible) sb.append(" a")
+        if (autoModeVisible) sb.append(" auto")
+        val display = sb.toString()
         _statusBarFlow.value = display
         if (currentWindowIndex >= 0) {
             statusBarByWindow[currentWindowIndex] = display
@@ -894,6 +934,31 @@ class OutputProcessor(
         _tmuxBarFlow.value = TmuxBarUpdate(updated, activeIndex)
     }
 
+    /**
+     * Replace the cached tmux window list with an authoritative snapshot
+     * from `tmux list-windows`. Used by the W? resync button when the
+     * status-bar parser has drifted out of sync with reality. Drops cached
+     * status bars for windows that no longer exist, marks the parsed
+     * active window as Claude or not, and emits the new tab list.
+     */
+    fun forceSetWindows(windows: List<TmuxWindow>) {
+        if (windows.isEmpty()) return
+        val keepIndices = windows.map { it.index }.toSet()
+        val droppedIndices = statusBarByWindow.keys - keepIndices
+        droppedIndices.forEach { statusBarByWindow.remove(it) }
+        cachedWindows = windows
+        userSwitchUntil = 0L
+        val activeIndex = windows.indexOfFirst { it.isActive }.takeIf { it >= 0 } ?: 0
+        val activeWindow = windows[activeIndex]
+        currentWindowIndex = activeWindow.index
+        claudeDetectedByName = activeWindow.name.contains("claude", ignoreCase = true)
+        isClaudeWindow = claudeDetectedByName
+        claudeContentHits = 0
+        claudeContentChecks = 0
+        _statusBarFlow.value = statusBarByWindow[activeWindow.index]
+        _tmuxBarFlow.value = TmuxBarUpdate(windows, activeIndex)
+    }
+
     private fun extractTmuxBar() {
         // The tmux bar is typically the last row of the screen.
         // Tmux format: "[session] 0:bash  1:claude*  2:htop-"
@@ -1092,6 +1157,7 @@ class OutputProcessor(
         isClaudeWindow = false
         claudeDetectedByName = false
         acceptEditsVisible = false
+        autoModeVisible = false
         lastBaseStatus = null
         thinkingState = ThinkingState.IDLE
         lastStatusText = null

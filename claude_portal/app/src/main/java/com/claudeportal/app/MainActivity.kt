@@ -67,6 +67,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val quitReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            saveInputState()
+            sshManager.disconnect()
+            stopSshService()
+            finishAndRemoveTask()
+            // Hard-kill the process so any background coroutines / threads
+            // (SSH IO, foreground service handler) actually go away.
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
+    }
+
     // Command history: stores previously sent commands for recall via up button
     private val commandHistory = mutableListOf<String>()
     private var historyIndex = -1 // -1 = not browsing history
@@ -81,9 +93,26 @@ class MainActivity : AppCompatActivity() {
     // for the active window instead of the deduplicated clean history.
     private var showDirtyHistory: Boolean = false
 
+    // After a "tmux a" click we optimistically switch the active history
+    // window to 0. If the server reports tmux isn't running, we roll back
+    // to the pre-tmux shell history (window -1). This deadline bounds how
+    // long we'll watch for that failure response.
+    private var tmuxAttachPendingUntil: Long = 0L
+    private val tmuxFailurePatterns = listOf(
+        "no server running",
+        "no sessions",
+        "no current session",
+        "error connecting"
+    )
+
     companion object {
         const val EXTRA_CONNECTION_ID = "connection_id"
-        const val MAX_HISTORY = 100
+        const val MAX_HISTORY = 30
+        private const val INPUT_PREFS = "input_state"
+        private const val KEY_PENDING_INPUT = "pending_input"
+        private const val KEY_COMMAND_HISTORY = "command_history"
+        // Separator unlikely to appear in commands;  is "start of header".
+        private const val HISTORY_SEP = ""
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,9 +127,15 @@ class MainActivity : AppCompatActivity() {
             IntentFilter(SshConnectionService.ACTION_DISCONNECT),
             RECEIVER_NOT_EXPORTED
         )
+        registerReceiver(
+            quitReceiver,
+            IntentFilter(SshConnectionService.ACTION_QUIT_BROADCAST),
+            RECEIVER_NOT_EXPORTED
+        )
 
         setupTerminalView()
         setupInputBar()
+        restoreInputState()
         setupArrowOverlay()
         setupExtraKeys()
         setupBroomToggle()
@@ -120,6 +155,20 @@ class MainActivity : AppCompatActivity() {
     private fun setupTerminalView() {
         binding.terminalView.setOnClickListener {
             showKeyboard()
+        }
+        binding.terminalView.onLoadOlder = { skipFromEndBytes, callback ->
+            // Read the next disk chunk off the main thread.
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                val chunk = historyBuffer.readWindowCleanChunk(
+                    skipFromEndBytes = skipFromEndBytes,
+                    chunkBytes = 50_000
+                )
+                callback(chunk)
+            }
+        }
+        binding.terminalView.onLoadOlderStateChanged = { loading ->
+            binding.historyLoadingIndicator.visibility =
+                if (loading) View.VISIBLE else View.GONE
         }
         binding.terminalView.onHistoryModeChanged = { viewingHistory ->
             if (viewingHistory) {
@@ -250,15 +299,21 @@ class MainActivity : AppCompatActivity() {
         binding.keyTmuxNew.setOnClickListener {
             historyBuffer.beginPendingSwitch()
             sshManager.createTmuxWindow()
+            scheduleTmuxStateQuery()
         }
         binding.keyTmuxNext.setOnClickListener {
             historyBuffer.beginPendingSwitch()
             sshManager.nextTmuxWindow()
             outputProcessor.notifyTmuxWindowNext()
+            scheduleTmuxStateQuery()
+        }
+        binding.keyTmuxSync.setOnClickListener {
+            syncTmuxWindow()
         }
         binding.keyTmuxClose.setOnClickListener {
             historyBuffer.beginPendingSwitch()
             sshManager.closeTmuxWindow()
+            scheduleTmuxStateQuery()
         }
 
         binding.scrollBottomFab.setOnClickListener {
@@ -269,9 +324,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupBroomToggle() {
         updateBroomIcon()
+        binding.terminalView.setDedupEnabled(!showDirtyHistory)
         binding.broomToggle.setOnClickListener {
             showDirtyHistory = !showDirtyHistory
             updateBroomIcon()
+            binding.terminalView.setDedupEnabled(!showDirtyHistory)
             replayActiveWindow()
         }
     }
@@ -280,6 +337,198 @@ class MainActivity : AppCompatActivity() {
         binding.broomToggle.setImageResource(
             if (showDirtyHistory) R.drawable.ic_broom_dirty else R.drawable.ic_broom
         )
+    }
+
+    /**
+     * Authoritatively re-sync our cached tmux window index against tmux itself.
+     * Used as a recovery when our parsed status-bar state has drifted (e.g.
+     * the user used Ctrl-b shortcuts directly instead of our buttons, or a
+     * tmux bar parse missed a switch). Asks tmux for its real active window
+     * via `tmux display-message`, then replays that window's history into
+     * the terminal view so the user is looking at the right thing.
+     */
+    private fun syncTmuxWindow() {
+        // Ask tmux directly for the full window list + active flag. This is
+        // authoritative — used to recover when the status-bar parser has
+        // drifted (truncated names, missed switches, stale active index).
+        // Format per line: "<index>:<name>:<flags>"  e.g. "2:claude:*"
+        sshManager.execCapture("tmux list-windows -F '#I:#W:#F'") { listResult ->
+            val listText = listResult?.trim().orEmpty()
+            if (listText.isEmpty()) return@execCapture
+            val windows = listText.lines().mapNotNull { line ->
+                val parts = line.split(":", limit = 3)
+                if (parts.size < 2) return@mapNotNull null
+                val idx = parts[0].toIntOrNull() ?: return@mapNotNull null
+                val name = parts[1]
+                val flags = parts.getOrNull(2).orEmpty()
+                com.claudeportal.app.terminal.TmuxWindow(
+                    index = idx,
+                    name = name,
+                    isActive = '*' in flags
+                )
+            }
+            if (windows.isEmpty()) return@execCapture
+            val active = windows.firstOrNull { it.isActive } ?: windows.first()
+
+            // Capture the live pane content so we can compare against each
+            // saved per-window file and figure out which file is the *real*
+            // history of the window we're now looking at. Previous routing
+            // bugs may have written current output into a different window's
+            // file — replaying from the file that actually matches the live
+            // pane is the right repair (without destroying any history).
+            sshManager.execCapture("tmux capture-pane -p -S -200") { paneResult ->
+                val livePane = paneResult.orEmpty()
+                // Match against raw dirty buffers — they preserve the
+                // exact lines tmux's capture-pane returns. The clean files
+                // are deduped/filtered and lose the fingerprints we need.
+                val dirty = historyBuffer.snapshotAllDirtyBuffers()
+                val tails = historyBuffer.snapshotAllWindowTails()
+                val combined = HashMap<Int, String>()
+                for ((i, t) in dirty) combined[i] = t
+                for ((i, t) in tails) combined[i] = (combined[i].orEmpty() + "\n" + t)
+                val bestIdx = pickBestMatchingHistory(livePane, combined, fallback = active.index)
+                android.util.Log.d("MainActivity",
+                    "W? authoritativeActive=${active.index} matchedHistory=$bestIdx")
+                runOnUiThread {
+                    outputProcessor.forceSetWindows(windows)
+                    lastActiveWindowIndex = active.index
+                    historyBuffer.setActiveWindow(active.index)
+                    outputProcessor.resetDiffState()
+                    binding.terminalView.clear()
+                    val replayText = tails[bestIdx]
+                        ?: historyBuffer.readWindowClean(active.index)
+                    binding.terminalView.setContent(
+                        android.text.SpannableStringBuilder(replayText)
+                    )
+                    binding.terminalView.scrollToBottom()
+                }
+            }
+        }
+    }
+
+    /**
+     * Score each window-file tail by how many of the live pane's recent
+     * non-blank lines it contains, and return the index of the best match.
+     * Falls back to `fallback` when no file scores meaningfully (>=2 line
+     * matches), since picking by a single coincidental line would be worse
+     * than just trusting the authoritative active-window file.
+     */
+    private fun pickBestMatchingHistory(
+        livePane: String,
+        candidates: Map<Int, String>,
+        fallback: Int
+    ): Int {
+        if (candidates.isEmpty()) return fallback
+        val signatureLines = livePane.lines()
+            .map { it.trimEnd() }
+            .filter { line ->
+                val t = line.trim()
+                t.length >= 10 &&
+                    !t.startsWith("[") &&  // tmux status bar
+                    !t.matches(Regex("^[\\s─═━\\-=]+$")) &&  // fence/blank
+                    !t.matches(Regex("^[❯>$%#]\\s*.{0,3}$"))  // bare prompts
+            }
+            .takeLast(30)
+            .distinct()
+        if (signatureLines.size < 3) return fallback
+        // Compute weighted score per candidate: each unique-across-candidates
+        // matching line counts double (rare lines are stronger evidence).
+        val matchCounts = HashMap<String, Int>()
+        for (line in signatureLines) {
+            val n = candidates.values.count { it.contains(line) }
+            matchCounts[line] = n
+        }
+        var bestIdx = fallback
+        var bestScore = 0
+        for ((idx, history) in candidates) {
+            var score = 0
+            for (line in signatureLines) {
+                if (history.contains(line)) {
+                    val matchedIn = matchCounts[line] ?: 1
+                    score += if (matchedIn == 1) 3 else if (matchedIn == 2) 2 else 1
+                }
+            }
+            android.util.Log.d("MainActivity", "W? candidate w=$idx score=$score")
+            if (score > bestScore) {
+                bestScore = score
+                bestIdx = idx
+            }
+        }
+        // Require the best to clearly beat noise — at least 6 weighted points
+        // (e.g. 2 unique line matches, or 6 common line matches). Otherwise
+        // fall back to whatever tmux says is the active window.
+        return if (bestScore >= 6) bestIdx else fallback
+    }
+
+    /**
+     * Query tmux directly for its authoritative window list and active
+     * window, after a short delay to let the server process the keystroke.
+     * This is the reliable path: parse-the-status-bar is for the steady
+     * state, but right after a switch/new/close the bar may still show the
+     * old state. tmux's own answer is ground truth.
+     */
+    private fun scheduleTmuxStateQuery(delayMs: Long = 250) {
+        binding.terminalView.postDelayed({
+            sshManager.execCapture("tmux list-windows -F '#I:#W:#F'") { result ->
+                val text = result?.trim().orEmpty()
+                if (text.isEmpty()) return@execCapture
+                val windows = text.lines().mapNotNull { line ->
+                    val parts = line.split(":", limit = 3)
+                    if (parts.size < 2) return@mapNotNull null
+                    val idx = parts[0].toIntOrNull() ?: return@mapNotNull null
+                    com.claudeportal.app.terminal.TmuxWindow(
+                        index = idx,
+                        name = parts[1],
+                        isActive = '*' in parts.getOrNull(2).orEmpty()
+                    )
+                }
+                if (windows.isEmpty()) return@execCapture
+                val active = windows.firstOrNull { it.isActive } ?: return@execCapture
+                runOnUiThread {
+                    outputProcessor.forceSetWindows(windows)
+                    if (active.index != lastActiveWindowIndex) {
+                        lastActiveWindowIndex = active.index
+                        historyBuffer.setActiveWindow(active.index)
+                        outputProcessor.resetDiffState()
+                        binding.terminalView.clear()
+                        replayActiveWindow()
+                        binding.terminalView.scrollToBottom()
+                    } else {
+                        // Same active index, but commit any pendingSwitch
+                        // that the button press queued so buffered output
+                        // lands in the right file.
+                        historyBuffer.setActiveWindow(active.index)
+                    }
+                }
+            }
+        }, delayMs)
+    }
+
+    /**
+     * If we're inside the post-"tmux a" watch window, check the incoming
+     * raw text for tmux's "no session" failure messages. If found, undo
+     * the optimistic switch to window 0 and restore the pre-tmux shell
+     * history (window -1) into the terminal view.
+     */
+    private fun checkTmuxAttachFailure(text: String) {
+        if (tmuxAttachPendingUntil == 0L) return
+        if (System.currentTimeMillis() > tmuxAttachPendingUntil) {
+            tmuxAttachPendingUntil = 0L
+            return
+        }
+        val lower = text.lowercase()
+        if (tmuxFailurePatterns.none { lower.contains(it) }) return
+        tmuxAttachPendingUntil = 0L
+        runOnUiThread {
+            historyBuffer.setActiveWindow(-1)
+            lastActiveWindowIndex = -1
+            outputProcessor.resetDiffState()
+            binding.terminalView.clear()
+            replayActiveWindow()
+            binding.terminalView.scrollToBottom()
+            // Re-show the "tmux a" attach button so the user can try again.
+            if (!tmuxDetected) showTmuxAttachButton()
+        }
     }
 
     /**
@@ -417,6 +666,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             outputProcessor.rawPlainTextFlow.collectLatest { plainText ->
                 historyBuffer.appendDirtyPlain(plainText)
+                checkTmuxAttachFailure(plainText)
             }
         }
 
@@ -510,6 +760,17 @@ class MainActivity : AppCompatActivity() {
             cornerRadius = 12
             strokeWidth = 0
             setOnClickListener {
+                // Switching from non-tmux shell into tmux: route history
+                // immediately to a tmux-side file. Trust the user's button
+                // press over the server's status-bar parse — the parse may
+                // arrive late or be wrong, but the click is ground truth
+                // that we are now in tmux. Default to window 0; the bar
+                // parse will correct to the real active index shortly.
+                historyBuffer.setActiveWindow(0)
+                lastActiveWindowIndex = 0
+                tmuxAttachPendingUntil = System.currentTimeMillis() + 3000
+                outputProcessor.resetDiffState()
+                binding.terminalView.clear()
                 sshManager.sendInput("tmux a\r")
             }
         }
@@ -531,6 +792,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         tmuxDetected = true
+        // Real tmux bar arrived — attach succeeded, no rollback needed.
+        tmuxAttachPendingUntil = 0L
 
         // Route history writes to the active tmux window's file. If the index
         // changed, commit any pending switch (flushes buffered output to the
@@ -776,6 +1039,30 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         wasConnectedOnPause = sshManager.isConnected()
+        saveInputState()
+    }
+
+    private fun restoreInputState() {
+        val prefs = getSharedPreferences(INPUT_PREFS, MODE_PRIVATE)
+        val pending = prefs.getString(KEY_PENDING_INPUT, "") ?: ""
+        if (pending.isNotEmpty()) {
+            binding.inputEditText.setText(pending)
+            binding.inputEditText.setSelection(pending.length)
+        }
+        val historyStr = prefs.getString(KEY_COMMAND_HISTORY, "") ?: ""
+        if (historyStr.isNotEmpty()) {
+            commandHistory.clear()
+            commandHistory.addAll(historyStr.split(HISTORY_SEP).filter { it.isNotEmpty() })
+            while (commandHistory.size > MAX_HISTORY) commandHistory.removeAt(0)
+        }
+    }
+
+    private fun saveInputState() {
+        val prefs = getSharedPreferences(INPUT_PREFS, MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_PENDING_INPUT, binding.inputEditText.text?.toString().orEmpty())
+            .putString(KEY_COMMAND_HISTORY, commandHistory.joinToString(HISTORY_SEP))
+            .apply()
     }
 
     /**
@@ -824,6 +1111,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         try { unregisterReceiver(disconnectReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(quitReceiver) } catch (_: Exception) {}
         stopSshService()
         releaseWakeLock()
         outputProcessor.destroy()

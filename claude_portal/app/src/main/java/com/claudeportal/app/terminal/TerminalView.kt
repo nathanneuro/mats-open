@@ -60,6 +60,26 @@ class TerminalView @JvmOverloads constructor(
     /** Called when history mode changes: true = viewing history, false = live. */
     var onHistoryModeChanged: ((Boolean) -> Unit)? = null
 
+    /**
+     * Asks the host for the next older chunk to prepend in history mode.
+     * Receives the byte size of the text currently in the view (which is the
+     * tail of the disk file); the host should read the chunk preceding that
+     * tail. Returns plain text, or null when there is nothing more.
+     * Called on the main thread; the host may run the read off-thread and
+     * post back via View.post.
+     */
+    var onLoadOlder: ((skipFromEndBytes: Long, callback: (String?) -> Unit) -> Unit)? = null
+
+    /** Called on the main thread when a disk-paging load starts and ends.
+     *  The "end" callback fires even if no older content was found, so the
+     *  host can show a brief spinner that confirms the attempt was made. */
+    var onLoadOlderStateChanged: ((loading: Boolean) -> Unit)? = null
+
+    // Disk-paged scrollback tracking
+    private var loadingOlder = false
+    private var historyDiskBytesLoaded = 0L
+    private var noMoreOlderHistory = false
+
     // Batched display queue
     private val pendingLines = ConcurrentLinkedQueue<SpannableStringBuilder>()
     private val handler = Handler(Looper.getMainLooper())
@@ -70,33 +90,44 @@ class TerminalView @JvmOverloads constructor(
     // Flushed when history mode exits.
     private val historyModeBuffer = mutableListOf<SpannableStringBuilder>()
 
-    // Skeleton of the last displayed line, for update-in-place dedup.
-    // When a new line has the same skeleton as the last line, we replace
-    // instead of appending — so progress bars and counters update in place.
-    private var lastLineSkeleton: String? = null
-
-    // Exact-text dedup: skip lines already displayed recently.
-    // Handles `tail -f` where tmux re-emits the entire screen on each scroll,
-    // producing ~20 duplicate lines per genuinely new line.
-    private val recentLineTexts = LinkedHashSet<String>()
+    // Skeleton-keyed dedup: maps each recently-displayed line's skeleton
+    // (digits replaced by '#') to its exact text. When a new line shares
+    // a skeleton with an existing entry, the older line is removed from the
+    // view and the new one appears at the bottom — so repetitive lines
+    // ("Step 5: loss=0.5" → "Step 6: loss=0.3", or `tail -f` re-emissions)
+    // visually "update in place" while always being current at the bottom.
+    // Disabled in dirty-history mode so the raw fallback shows everything.
+    private val recentTextsBySkeleton = LinkedHashMap<String, String>()
+    private var dedupEnabled = true
 
     companion object {
         // Keep the TextView small to avoid expensive relayout on append/trim.
         // Older content lives on disk via HistoryBuffer.
-        private const val MAX_CHARS = 15_000
-        private const val TRIM_TO = 10_000
+        private const val MAX_CHARS = 6_000
+        private const val TRIM_TO = 4_000
         private const val BATCH_INTERVAL_MS = 500L
         private const val VISIBLE_ROWS_ESTIMATE = 30
         // Max pending lines before we start dropping oldest (backpressure)
-        private const val MAX_PENDING_LINES = 500
-        // Max recent line texts to remember for exact dedup
-        private const val MAX_RECENT_LINES = 100
+        private const val MAX_PENDING_LINES = 300
+        // Max recent line texts to remember for skeleton dedup
+        private const val MAX_RECENT_LINES = 500
+        // Cap on total bytes paged from disk so the TextView doesn't OOM.
+        private const val MAX_HISTORY_DISK_BYTES = 1_500_000L
 
         /** Replace digit sequences (including decimals like 3.14) with # */
         private val SKELETON_NUMBERS = Regex("\\d+\\.?\\d*")
+        /** Collapse runs of whitespace so spacing variations don't split skeletons. */
+        private val SKELETON_WHITESPACE = Regex("\\s+")
+        /** Leading UI markers that vary frame-to-frame (selectors, bullets, arrows). */
+        private val SKELETON_LEADING_MARKERS =
+            Regex("^[❯>●○◑◐◒◓◔◕✶✻✽·✢*⏵▶▸→\\-•◦‣⁃]+\\s*")
 
-        fun skeleton(text: String): String =
-            SKELETON_NUMBERS.replace(text.trim(), "#")
+        fun skeleton(text: String): String {
+            val trimmed = text.trim()
+            val noLeader = SKELETON_LEADING_MARKERS.replace(trimmed, "")
+            val numbersStripped = SKELETON_NUMBERS.replace(noLeader, "#")
+            return SKELETON_WHITESPACE.replace(numbersStripped, " ")
+        }
     }
 
     init {
@@ -105,12 +136,21 @@ class TerminalView @JvmOverloads constructor(
         isFillViewport = true
 
         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-            // Only detect history mode from user-initiated scrolls (touch),
-            // and not when suppressed (during keyboard/bar show/hide transitions)
-            if (!userTouching || suppressScrollDetection) return@setOnScrollChangeListener
-
+            // History-mode entry detection requires an active touch and not
+            // being in a suppressed window; paging-from-disk does not, so it
+            // must run before the early return.
             val maxScroll = textView.height - height
             val atBottom = scrollY >= maxScroll - 50
+
+            // Only page in older content from disk once the user has scrolled
+            // all the way to the top of what's currently loaded. Triggering
+            // earlier kept growing the in-memory buffer while plenty of
+            // already-loaded content was still off-screen above.
+            if (!autoScrollEnabled && scrollY <= 0 && oldScrollY > 0) {
+                tryLoadOlder()
+            }
+
+            if (!userTouching || suppressScrollDetection) return@setOnScrollChangeListener
 
             if (scrollY < oldScrollY && !atBottom) {
                 // User scrolled up — enter history mode
@@ -127,6 +167,56 @@ class TerminalView @JvmOverloads constructor(
             // Scrolling down does NOT exit history mode — only the
             // scroll-to-bottom FAB (via scrollToBottom()) can do that.
         }
+        }
+    }
+
+    /**
+     * Page in the next older history chunk from disk. Triggered when the user
+     * has scrolled near the top of the in-memory buffer in history mode.
+     * Prepends to the TextView and offsets scrollY so the user's view stays
+     * locked on the same content (no jump). Capped at MAX_HISTORY_DISK_BYTES.
+     */
+    private fun tryLoadOlder() {
+        if (loadingOlder || noMoreOlderHistory) return
+        if (historyDiskBytesLoaded >= MAX_HISTORY_DISK_BYTES) return
+        val cb = onLoadOlder ?: return
+        loadingOlder = true
+        onLoadOlderStateChanged?.invoke(true)
+        val loadStartedAt = System.currentTimeMillis()
+        val skipFromEndBytes = currentTextByteSize()
+        cb(skipFromEndBytes) { chunk ->
+            post {
+                try {
+                    if (chunk.isNullOrEmpty()) {
+                        noMoreOlderHistory = true
+                        return@post
+                    }
+                    val priorTextHeight = textView.height
+                    val priorScroll = scrollY
+                    val builder = SpannableStringBuilder(chunk)
+                    if (textView.length() > 0 && !chunk.endsWith('\n')) {
+                        builder.append('\n')
+                    }
+                    builder.append(textView.text)
+                    textView.text = builder
+                    historyDiskBytesLoaded += chunk.toByteArray(Charsets.UTF_8).size.toLong()
+                    // Restore visual position: the user was looking at the same
+                    // content, but it has shifted down by the prepended height.
+                    post {
+                        val delta = textView.height - priorTextHeight
+                        if (delta > 0) scrollTo(0, priorScroll + delta)
+                    }
+                } finally {
+                    loadingOlder = false
+                    // Keep the spinner visible for a minimum window so the
+                    // user actually sees it even when the read was instant
+                    // or returned nothing.
+                    val elapsed = System.currentTimeMillis() - loadStartedAt
+                    val minVisibleMs = 500L
+                    val remaining = (minVisibleMs - elapsed).coerceAtLeast(0L)
+                    postDelayed({ onLoadOlderStateChanged?.invoke(false) }, remaining)
+                }
+            }
         }
     }
 
@@ -311,51 +401,36 @@ class TerminalView @JvmOverloads constructor(
         for (line in displayBatch) {
             val text = line.toString()
 
-            // Skip blank lines for dedup — always append them
+            // Blank lines: always append, never dedup
             if (text.isBlank()) {
                 if (textView.length() > 0) textView.append("\n")
                 textView.append(line)
-                lastLineSkeleton = null
                 continue
             }
 
-            // Exact-text dedup: skip lines we've already displayed recently.
-            // This handles `tail -f` where tmux re-emits the whole screen
-            // on each scroll (~20 duplicates per 1 new line).
-            if (text in recentLineTexts) continue
-
-            val skel = skeleton(text)
-
-            if (skel == lastLineSkeleton && skel.isNotEmpty() && textView.length() > 0) {
-                // Same structure, different numbers → replace last line in-place.
-                // Handles progress bars and counters that update values.
-                val fullText = textView.text
-                val lastNewline = fullText.toString().lastIndexOf('\n')
-                if (lastNewline >= 0) {
-                    val editable = textView.editableText
-                    if (editable != null) {
-                        editable.replace(lastNewline + 1, editable.length, line)
-                    } else {
-                        val before = fullText.subSequence(0, lastNewline + 1)
-                        val rebuilt = SpannableStringBuilder(before).append(line)
-                        textView.text = rebuilt
+            // Skeleton dedup: if a recently-displayed line had the same
+            // skeleton (same structure, possibly different digits), drop
+            // the older occurrence so the fresh copy appears at the bottom.
+            // Newest version always wins. Subsumes exact-text dedup since
+            // skeleton(text) == text for digit-free lines.
+            if (dedupEnabled) {
+                val skel = skeleton(text)
+                if (skel.isNotEmpty()) {
+                    val oldText = recentTextsBySkeleton.remove(skel)
+                    if (oldText != null) {
+                        removeLineFromTextView(oldText)
                     }
-                } else {
-                    textView.text = line
+                    recentTextsBySkeleton[skel] = text
+                    while (recentTextsBySkeleton.size > MAX_RECENT_LINES) {
+                        val it = recentTextsBySkeleton.entries.iterator()
+                        it.next()
+                        it.remove()
+                    }
                 }
-                // Update the dedup set: remove old version, add new
-                recentLineTexts.removeIf { skeleton(it) == skel }
-            } else {
-                // Normal append
-                if (textView.length() > 0) textView.append("\n")
-                textView.append(line)
             }
 
-            recentLineTexts.add(text)
-            while (recentLineTexts.size > MAX_RECENT_LINES) {
-                recentLineTexts.iterator().next().also { recentLineTexts.remove(it) }
-            }
-            lastLineSkeleton = skel
+            if (textView.length() > 0) textView.append("\n")
+            textView.append(line)
         }
 
         trimIfNeeded()
@@ -378,7 +453,43 @@ class TerminalView @JvmOverloads constructor(
             val keepFrom = len - TRIM_TO
             val tail = textView.text.subSequence(keepFrom, len)
             textView.text = tail
+            // Lines that were trimmed off the top no longer occupy the view,
+            // so they must not block re-emission via the dedup map. Forget
+            // it entirely; lines still on screen will be re-tracked on the
+            // next append.
+            recentTextsBySkeleton.clear()
         }
+    }
+
+    /**
+     * Find and remove an exact-match line from the TextView text. Used by
+     * the move-to-bottom dedup so the freshest copy of a re-emitted line
+     * always appears at the bottom rather than being stranded mid-buffer.
+     * Span colors are preserved by copying through SpannableStringBuilder.
+     */
+    private fun removeLineFromTextView(text: String): Boolean {
+        if (text.isEmpty()) return false
+        val current = textView.text ?: return false
+        val s = current.toString()
+        var idx = s.indexOf(text)
+        while (idx >= 0) {
+            val lineStart = idx
+            val lineEnd = idx + text.length
+            val precededByNewline = lineStart == 0 || s[lineStart - 1] == '\n'
+            val followedByNewline = lineEnd == s.length || s[lineEnd] == '\n'
+            if (precededByNewline && followedByNewline) {
+                val builder = SpannableStringBuilder(current)
+                when {
+                    lineEnd < s.length -> builder.delete(lineStart, lineEnd + 1)
+                    lineStart > 0 -> builder.delete(lineStart - 1, lineEnd)
+                    else -> builder.delete(lineStart, lineEnd)
+                }
+                textView.text = builder
+                return true
+            }
+            idx = s.indexOf(text, idx + 1)
+        }
+        return false
     }
 
     private fun smoothScrollToBottom() {
@@ -405,8 +516,8 @@ class TerminalView @JvmOverloads constructor(
      */
     fun setContent(styled: SpannableStringBuilder) {
         textView.text = styled
-        lastLineSkeleton = null
-        recentLineTexts.clear()
+        recentTextsBySkeleton.clear()
+        resetDiskPaging()
         post { fullScroll(FOCUS_DOWN) }
     }
 
@@ -416,8 +527,25 @@ class TerminalView @JvmOverloads constructor(
         historyModeBuffer.clear()
         textView.text = ""
         autoScrollEnabled = true
-        lastLineSkeleton = null
-        recentLineTexts.clear()
+        recentTextsBySkeleton.clear()
+        resetDiskPaging()
+    }
+
+    private fun resetDiskPaging() {
+        loadingOlder = false
+        historyDiskBytesLoaded = 0L
+        noMoreOlderHistory = false
+    }
+
+    /**
+     * Toggle whether `appendLines` collapses semi-duplicate lines via the
+     * skeleton dedup. Off = raw view (every line shown); on = clean view.
+     * Wired to MainActivity's broom toggle so the dirty-history fallback
+     * stays a true superset.
+     */
+    fun setDedupEnabled(enabled: Boolean) {
+        dedupEnabled = enabled
+        if (!enabled) recentTextsBySkeleton.clear()
     }
 
     fun scrollToBottom() {
@@ -425,6 +553,16 @@ class TerminalView @JvmOverloads constructor(
         autoScrollEnabled = true
         suppressScrollDetection = true
         onHistoryModeChanged?.invoke(false)
+
+        // If history mode paged in older content from disk, drop it now so
+        // we don't carry MB of text into live mode (slow trim, slow scroll).
+        if (historyDiskBytesLoaded > 0L && textView.length() > MAX_CHARS) {
+            val len = textView.length()
+            val keepFrom = len - TRIM_TO
+            textView.text = textView.text.subSequence(keepFrom, len)
+            recentTextsBySkeleton.clear()
+        }
+        resetDiskPaging()
 
         // Flush lines that arrived during history mode
         if (historyModeBuffer.isNotEmpty()) {
@@ -440,6 +578,11 @@ class TerminalView @JvmOverloads constructor(
     }
 
     fun isViewingHistory(): Boolean = !autoScrollEnabled
+
+    /** UTF-8 byte size of the text currently in the view. Used by disk-paging
+     *  to know how far from the end of the source file the view starts. */
+    fun currentTextByteSize(): Long =
+        textView.text.toString().toByteArray(Charsets.UTF_8).size.toLong()
 
     fun calculateColumns(): Int {
         val paint = textView.paint

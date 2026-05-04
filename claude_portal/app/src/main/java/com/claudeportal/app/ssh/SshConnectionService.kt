@@ -31,6 +31,10 @@ class SshConnectionService : Service() {
         const val ACTION_STOP = "com.claudeportal.app.STOP_SSH"
         /** Broadcast sent when the user taps "Disconnect" in the notification. */
         const val ACTION_DISCONNECT = "com.claudeportal.app.DISCONNECT_SSH"
+        /** Service action: user tapped "Quit" — disconnect + close activity + kill process. */
+        const val ACTION_QUIT = "com.claudeportal.app.QUIT_APP"
+        /** Broadcast sent when the user taps "Quit" in the notification. */
+        const val ACTION_QUIT_BROADCAST = "com.claudeportal.app.QUIT_APP_BROADCAST"
     }
 
     override fun onCreate() {
@@ -46,6 +50,15 @@ class SshConnectionService : Service() {
             if (intent.getBooleanExtra("from_notification", false)) {
                 sendBroadcast(Intent(ACTION_DISCONNECT).setPackage(packageName))
             }
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_QUIT) {
+            // User asked to fully exit. Broadcast to MainActivity (which
+            // disconnects, finishes the task, and kills the process), then
+            // tear down the service.
+            sendBroadcast(Intent(ACTION_QUIT_BROADCAST).setPackage(packageName))
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -97,6 +110,15 @@ class SshConnectionService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // "Quit" action button — fully exits the app
+        val quitIntent = Intent(this, SshConnectionService::class.java).apply {
+            action = ACTION_QUIT
+        }
+        val quitPending = PendingIntent.getService(
+            this, 1, quitIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("SSH Connected")
@@ -105,6 +127,7 @@ class SshConnectionService : Service() {
             .setSilent(true)
             .setContentIntent(openPending)
             .addAction(0, "Disconnect", stopPending)
+            .addAction(0, "Quit", quitPending)
             .build()
     }
 

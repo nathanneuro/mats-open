@@ -77,6 +77,7 @@
     <string name="tmux_new_window">+W</string>
     <string name="tmux_next_window">W></string>
     <string name="tmux_close_window">XW</string>
+    <string name="tmux_sync_window">W?</string>
 
     <!-- Menu -->
     <string name="action_connections">Connections</string>
