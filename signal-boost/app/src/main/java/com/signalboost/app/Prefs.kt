@@ -23,13 +23,32 @@ data class AlarmProfile(
     val escalationSeconds: Int = 20,
     val maxVolumePercent: Int = 100,
     val forceMaxVolume: Boolean = true,
+    val silenceOnShake: Boolean = true,
+    val silenceOnFlip: Boolean = true,
+    val silenceSeconds: Int = 30,
+    /** Notification accent colour as ARGB (0 = system default tint). Lets
+     *  different triggers have visually distinguishable notifications when
+     *  several can fire from the same app. */
+    val notificationColorArgb: Int = 0,
+    /** Seconds of vibration-only lead before any sound plays. 0 disables
+     *  the lead — the alarm starts ramping audio immediately. Useful for
+     *  catching attention without waking everyone in the room first. */
+    val silentVibrationLeadSeconds: Int = 0,
 ) {
+    val silenceGesturesEnabled: Boolean
+        get() = silenceOnShake || silenceOnFlip
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("ringtoneUri", ringtoneUri ?: JSONObject.NULL)
         put("vibration", vibration.name)
         put("escalationSeconds", escalationSeconds)
         put("maxVolumePercent", maxVolumePercent)
         put("forceMaxVolume", forceMaxVolume)
+        put("silenceOnShake", silenceOnShake)
+        put("silenceOnFlip", silenceOnFlip)
+        put("silenceSeconds", silenceSeconds)
+        put("notificationColorArgb", notificationColorArgb)
+        put("silentVibrationLeadSeconds", silentVibrationLeadSeconds)
     }
 
     companion object {
@@ -40,6 +59,12 @@ data class AlarmProfile(
             escalationSeconds = obj.optInt("escalationSeconds", 20).coerceIn(1, 600),
             maxVolumePercent = obj.optInt("maxVolumePercent", 100).coerceIn(0, 100),
             forceMaxVolume = obj.optBoolean("forceMaxVolume", true),
+            silenceOnShake = obj.optBoolean("silenceOnShake", true),
+            silenceOnFlip = obj.optBoolean("silenceOnFlip", true),
+            silenceSeconds = obj.optInt("silenceSeconds", 30).coerceIn(5, 600),
+            notificationColorArgb = obj.optInt("notificationColorArgb", 0),
+            silentVibrationLeadSeconds = obj.optInt("silentVibrationLeadSeconds", 0)
+                .coerceIn(0, 300),
         )
     }
 }
@@ -50,8 +75,25 @@ data class Trigger(
     val phrase: String,
     val caseSensitive: Boolean,
     val alarm: AlarmProfile,
+    /** Epoch-ms wall-clock time at which the trigger un-pauses. 0 = not
+     *  paused. Wall-clock (not elapsedRealtime) so pause survives device
+     *  reboots — a 1 h pause set at 14:00 is still valid at 14:30 even
+     *  if the phone restarted in between. */
+    val pausedUntil: Long = 0L,
+    /** Package names of apps whose notifications are scanned for this
+     *  trigger. Empty = all apps. The check happens in
+     *  NotificationProbeService before `matches` is consulted. */
+    val apps: Set<String> = emptySet(),
 ) {
+    fun isPaused(now: Long = System.currentTimeMillis()): Boolean = pausedUntil > now
+
+    /** True if this trigger watches notifications from the given package
+     *  (or watches every app, when apps is empty). */
+    fun appliesToPackage(packageName: String?): Boolean =
+        apps.isEmpty() || (packageName != null && packageName in apps)
+
     fun matches(text: CharSequence?): Boolean {
+        if (isPaused()) return false
         if (text.isNullOrEmpty() || phrase.isEmpty()) return false
         return if (caseSensitive) text.contains(phrase)
         else text.toString().contains(phrase, ignoreCase = true)
@@ -63,6 +105,8 @@ data class Trigger(
         put("phrase", phrase)
         put("caseSensitive", caseSensitive)
         put("alarm", alarm.toJson())
+        put("pausedUntil", pausedUntil)
+        put("apps", JSONArray().apply { apps.sorted().forEach { put(it) } })
     }
 
     companion object {
@@ -72,6 +116,12 @@ data class Trigger(
             phrase = obj.optString("phrase", ""),
             caseSensitive = obj.optBoolean("caseSensitive", false),
             alarm = obj.optJSONObject("alarm")?.let(AlarmProfile::fromJson) ?: AlarmProfile(),
+            pausedUntil = obj.optLong("pausedUntil", 0L),
+            apps = obj.optJSONArray("apps")?.let { arr ->
+                (0 until arr.length()).mapNotNull {
+                    arr.optString(it).takeIf { s -> s.isNotEmpty() }
+                }.toSet()
+            } ?: emptySet(),
         )
 
         fun new(phrase: String = "", label: String = ""): Trigger = Trigger(
@@ -86,14 +136,15 @@ data class Trigger(
 
 data class Settings(
     val triggers: List<Trigger>,
-    val signalOnly: Boolean,
 )
 
 object Prefs {
     private val KEY_TRIGGERS = stringPreferencesKey("triggers_json")
-    private val KEY_SIGNAL_ONLY = booleanPreferencesKey("signal_only")
+    // Legacy global key — read once during migration so existing users with
+    // signalOnly=true don't suddenly start matching every app.
+    private val KEY_SIGNAL_ONLY_LEGACY = booleanPreferencesKey("signal_only")
 
-    val DEFAULT = Settings(triggers = emptyList(), signalOnly = true)
+    val DEFAULT = Settings(triggers = emptyList())
 
     fun flow(context: Context): Flow<Settings> =
         context.dataStore.data.map { it.toSettings() }
@@ -118,8 +169,29 @@ object Prefs {
         setTriggers(context, current)
     }
 
-    suspend fun setSignalOnly(context: Context, value: Boolean) {
-        context.dataStore.edit { it[KEY_SIGNAL_ONLY] = value }
+    /** Pause a trigger until `untilEpochMs`. Pass 0 to resume immediately. */
+    suspend fun setTriggerPaused(context: Context, id: String, untilEpochMs: Long) {
+        val current = snapshot(context).triggers.toMutableList()
+        val idx = current.indexOfFirst { it.id == id }
+        if (idx < 0) return
+        current[idx] = current[idx].copy(pausedUntil = untilEpochMs.coerceAtLeast(0L))
+        setTriggers(context, current)
+    }
+
+    /** One-time migration of the old global `signal_only` switch into each
+     *  trigger's `apps` filter. Runs whenever the legacy key is still
+     *  present; clears it after promoting the value into the triggers. */
+    suspend fun migrateLegacySignalOnly(context: Context) {
+        val prefs = context.dataStore.data.first()
+        val legacy = prefs[KEY_SIGNAL_ONLY_LEGACY] ?: return
+        val current = snapshot(context).triggers
+        if (legacy && current.isNotEmpty()) {
+            val migrated = current.map { t ->
+                if (t.apps.isEmpty()) t.copy(apps = SignalPackages.ALL) else t
+            }
+            setTriggers(context, migrated)
+        }
+        context.dataStore.edit { it.remove(KEY_SIGNAL_ONLY_LEGACY) }
     }
 
     private fun Preferences.toSettings(): Settings {
@@ -128,10 +200,7 @@ object Prefs {
             val arr = JSONArray(raw)
             (0 until arr.length()).map { Trigger.fromJson(arr.getJSONObject(it)) }
         }.getOrDefault(emptyList())
-        return Settings(
-            triggers = triggers,
-            signalOnly = this[KEY_SIGNAL_ONLY] ?: true,
-        )
+        return Settings(triggers = triggers)
     }
 }
 

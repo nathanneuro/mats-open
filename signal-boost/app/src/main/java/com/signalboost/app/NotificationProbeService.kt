@@ -44,12 +44,16 @@ class NotificationProbeService : NotificationListenerService() {
         if (sbn == null) return
         val s = settings
         if (s.triggers.isEmpty()) return
-        if (s.signalOnly && sbn.packageName !in SignalPackages.ALL) return
 
         val haystack = extractText(sbn)
         if (haystack.isBlank()) return
 
-        val match = s.triggers.firstOrNull { it.matches(haystack) } ?: return
+        // App-filter check happens before phrase match so a trigger that
+        // doesn't apply to this package can never fire — and so paused
+        // triggers (their `matches` returns false) cleanly skip too.
+        val match = s.triggers.firstOrNull {
+            it.appliesToPackage(sbn.packageName) && it.matches(haystack)
+        } ?: return
         Log.i(TAG, "Match: trigger='${match.phrase}' from ${sbn.packageName}")
         AlarmService.start(applicationContext, match)
     }

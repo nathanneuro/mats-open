@@ -5,7 +5,9 @@
 
     <string name="alarm_active_title">Signal Boost alarm</string>
     <string name="alarm_active_body">Triggered: %1$s</string>
+    <string name="alarm_silenced_body">Silenced %1$s · resumes in %2$ds</string>
     <string name="alarm_channel_name">Trigger alarms</string>
     <string name="alarm_channel_desc">Plays an escalating alarm when a configured trigger phrase is detected.</string>
     <string name="stop_alarm">Stop</string>
+    <string name="silence_alarm">Silence</string>
 </resources>
