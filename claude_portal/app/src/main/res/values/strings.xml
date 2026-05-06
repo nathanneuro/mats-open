@@ -61,8 +61,8 @@
     <string name="display">Display</string>
     <string name="font_size">Font size</string>
     <string name="keep_screen_on">Keep screen on</string>
-    <string name="show_extra_keys">Show extra keys bar (Tab, Esc, Ctrl...)</string>
-    <string name="vibrate_on_press">Vibrate on key press</string>
+    <string name="graph_shrink_percent">Graph shrink %</string>
+    <string name="emulated_terminal_width">Emulated terminal width</string>
     <string name="history">History</string>
     <string name="save_history_between_sessions">Save session history to disk</string>
     <string name="clear_all_history">Clear All History</string>

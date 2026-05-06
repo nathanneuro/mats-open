@@ -23,6 +23,8 @@ class SettingsActivity : AppCompatActivity() {
     private var currentFontSize = 14
     private var currentThinkingFontSize = 13
     private var currentTmuxFontSize = 12
+    private var currentGraphShrinkPercent = 38
+    private var currentEmulatedTerminalWidth = 100
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,14 +54,17 @@ class SettingsActivity : AppCompatActivity() {
         currentFontSize = settings.fontSize
         currentThinkingFontSize = settings.thinkingFontSize
         currentTmuxFontSize = settings.tmuxFontSize
+        currentGraphShrinkPercent = settings.graphShrinkPercent
+        currentEmulatedTerminalWidth = settings.emulatedTerminalWidth
+
         updateFontSizeDisplay(binding.textFontSizeValue, currentFontSize)
         updateFontSizeDisplay(binding.textThinkingFontSizeValue, currentThinkingFontSize)
         updateFontSizeDisplay(binding.textTmuxFontSizeValue, currentTmuxFontSize)
+        binding.textGraphShrinkValue.text = "${currentGraphShrinkPercent}%"
+        binding.textEmulatedWidthValue.text = "${currentEmulatedTerminalWidth} cols"
 
         binding.switchKeepScreenOn.isChecked = settings.keepScreenOn
         binding.switchSaveHistory.isChecked = settings.saveHistoryBetweenSessions
-        binding.switchShowExtraKeys.isChecked = settings.showExtraKeys
-        binding.switchVibrate.isChecked = settings.vibrateOnKeyPress
     }
 
     private fun updateFontSizeDisplay(view: TextView, size: Int) {
@@ -75,7 +80,6 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar) {}
         })
 
-        // Terminal font size +/-
         binding.btnFontMinus.setOnClickListener {
             if (currentFontSize > 4) {
                 currentFontSize--
@@ -89,7 +93,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // Thinking bar font size +/-
         binding.btnThinkingFontMinus.setOnClickListener {
             if (currentThinkingFontSize > 4) {
                 currentThinkingFontSize--
@@ -103,7 +106,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // Tmux bar font size +/-
         binding.btnTmuxFontMinus.setOnClickListener {
             if (currentTmuxFontSize > 4) {
                 currentTmuxFontSize--
@@ -117,7 +119,37 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        binding.buttonSave.setOnClickListener { saveSettings() }
+        // Graph shrink %: 10–100 in 5-point steps. 100% disables compression.
+        binding.btnGraphShrinkMinus.setOnClickListener {
+            if (currentGraphShrinkPercent > 10) {
+                currentGraphShrinkPercent =
+                    (currentGraphShrinkPercent - 5).coerceAtLeast(10)
+                binding.textGraphShrinkValue.text = "${currentGraphShrinkPercent}%"
+            }
+        }
+        binding.btnGraphShrinkPlus.setOnClickListener {
+            if (currentGraphShrinkPercent < 100) {
+                currentGraphShrinkPercent =
+                    (currentGraphShrinkPercent + 5).coerceAtMost(100)
+                binding.textGraphShrinkValue.text = "${currentGraphShrinkPercent}%"
+            }
+        }
+
+        // Emulated terminal width: 40–300 in 10-col steps.
+        binding.btnEmulatedWidthMinus.setOnClickListener {
+            if (currentEmulatedTerminalWidth > 40) {
+                currentEmulatedTerminalWidth =
+                    (currentEmulatedTerminalWidth - 10).coerceAtLeast(40)
+                binding.textEmulatedWidthValue.text = "${currentEmulatedTerminalWidth} cols"
+            }
+        }
+        binding.btnEmulatedWidthPlus.setOnClickListener {
+            if (currentEmulatedTerminalWidth < 300) {
+                currentEmulatedTerminalWidth =
+                    (currentEmulatedTerminalWidth + 10).coerceAtMost(300)
+                binding.textEmulatedWidthValue.text = "${currentEmulatedTerminalWidth} cols"
+            }
+        }
 
         binding.buttonClearHistory.setOnClickListener {
             lifecycleScope.launch {
@@ -127,6 +159,12 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    /** Persist the current UI state. Called from any exit path (toolbar
+     *  back arrow, system back gesture, finish-on-pause). Save runs off
+     *  the main thread; exit isn't blocked on it. The success path is
+     *  silent — saving is the assumed default. A toast surfaces only
+     *  when the DataStore write throws, which is rare enough that
+     *  silence would otherwise mask data loss. */
     private fun saveSettings() {
         val settings = AppSettings(
             arrowPosition = if (binding.radioArrowRight.isChecked) ArrowPosition.RIGHT else ArrowPosition.LEFT,
@@ -136,19 +174,33 @@ class SettingsActivity : AppCompatActivity() {
             tmuxFontSize = currentTmuxFontSize,
             keepScreenOn = binding.switchKeepScreenOn.isChecked,
             saveHistoryBetweenSessions = binding.switchSaveHistory.isChecked,
-            showExtraKeys = binding.switchShowExtraKeys.isChecked,
-            vibrateOnKeyPress = binding.switchVibrate.isChecked
+            graphShrinkPercent = currentGraphShrinkPercent,
+            emulatedTerminalWidth = currentEmulatedTerminalWidth
         )
-
+        val ctx = applicationContext
         lifecycleScope.launch {
-            settingsRepo.updateSettings(settings)
-            Toast.makeText(this@SettingsActivity, R.string.settings_saved, Toast.LENGTH_SHORT).show()
-            finish()
+            try {
+                settingsRepo.updateSettings(settings)
+            } catch (e: Exception) {
+                Toast.makeText(
+                    ctx,
+                    "Settings save failed: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
     override fun onSupportNavigateUp(): Boolean {
+        saveSettings()
         finish()
         return true
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        saveSettings()
+        @Suppress("DEPRECATION")
+        super.onBackPressed()
     }
 }

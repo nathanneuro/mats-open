@@ -10,8 +10,13 @@ data class AppSettings(
     val maxHistoryLines: Int = 50000,
     val saveHistoryBetweenSessions: Boolean = true,
     val defaultConnectionId: String? = null,
-    val showExtraKeys: Boolean = true,
-    val vibrateOnKeyPress: Boolean = false
+    /** Percentage (10-100) used to horizontally compress detected table rows
+     *  so wide ASCII tables / graphs fit on a phone screen. */
+    val graphShrinkPercent: Int = 38,
+    /** Number of columns the virtual screen interpreter renders into. The
+     *  remote pty resize is independent (calculated from view width) — this
+     *  controls how much horizontal real estate the diff/parse layer assumes. */
+    val emulatedTerminalWidth: Int = 100
 )
 
 enum class ArrowPosition {

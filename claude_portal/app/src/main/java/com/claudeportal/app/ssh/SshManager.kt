@@ -81,7 +81,7 @@ class SshManager {
             client = ssh
 
             val sess = ssh.startSession()
-            sess.allocatePTY("xterm-256color", 120, 24, 0, 0, emptyMap())
+            sess.allocatePTY("xterm-256color", 100, 24, 0, 0, emptyMap())
             val sh = sess.startShell()
             session = sess
             shell = sh
@@ -166,6 +166,7 @@ class SshManager {
             KeyCode.SHIFT_TAB -> "\u001b[Z" // reverse tab (CSI Z)
             KeyCode.ESCAPE -> "\u001b"
             KeyCode.ENTER -> "\r"
+            KeyCode.CTRL_B -> "\u0002"
             KeyCode.CTRL_C -> "\u0003"
             KeyCode.CTRL_D -> "\u0004"
             KeyCode.CTRL_Z -> "\u001a"
@@ -347,5 +348,5 @@ sealed class ConnectionState {
 enum class KeyCode {
     ARROW_UP, ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT,
     TAB, SHIFT_TAB, ESCAPE, ENTER,
-    CTRL_C, CTRL_D, CTRL_Z, CTRL_L, CTRL_A, CTRL_E
+    CTRL_B, CTRL_C, CTRL_D, CTRL_Z, CTRL_L, CTRL_A, CTRL_E
 }
