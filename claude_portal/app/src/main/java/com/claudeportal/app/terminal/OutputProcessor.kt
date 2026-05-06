@@ -1067,6 +1067,9 @@ class OutputProcessor(
         val currentIdx = cached.indexOfFirst { it.isActive }
         if (currentIdx < 0) return
         val nextIdx = (currentIdx + 1) % cached.size
+        // Window switch — clear the thinking indicator immediately so a
+        // stale animation can't bleed across into the new window.
+        resetThinkingState()
         // Save current window's full status (base + mode flags) first
         saveCurrentWindowStatus()
 
@@ -1095,6 +1098,9 @@ class OutputProcessor(
      */
     fun forceSetWindows(windows: List<TmuxWindow>) {
         if (windows.isEmpty()) return
+        // Authoritative resync — drop any in-flight thinking animation so
+        // a stale frame doesn't survive into whichever window we land on.
+        resetThinkingState()
         // Persist current state before any switch happens
         saveCurrentWindowStatus()
         val keepIndices = windows.map { it.index }.toSet()
@@ -1298,11 +1304,17 @@ class OutputProcessor(
         }
     }
 
-    /** Reset diff state (e.g. after tmux window switch). */
+    /** Reset diff state (e.g. after tmux window switch). Also clears the
+     *  thinking state machine — without this, lastStatusText from the
+     *  previous window's session leaks into the new one. The new window's
+     *  initial redraw can incidentally include a thinking glyph (`·` and
+     *  `*` are common), and handleThinking would re-fire the animation
+     *  with the stale status text until the 2 s timeout cleared it. */
     fun resetDiffState() {
         previousSnapshot = null
         claudeContentHits = 0
         claudeContentChecks = 0
+        resetThinkingState()
     }
 
     /** Hard reset of the screen state itself. Use this when transitioning
@@ -1316,6 +1328,19 @@ class OutputProcessor(
         claudeContentChecks = 0
         screen.eraseEntireScreen()
         interpreter.reset()
+        resetThinkingState()
+    }
+
+    /** Drop any in-flight thinking animation + timeout + cached status
+     *  text. Called on every context transition so the indicator never
+     *  carries forward state from a window the user is no longer on. */
+    private fun resetThinkingState() {
+        thinkingTimeoutJob?.cancel()
+        thinkingTimeoutJob = null
+        thinkingState = ThinkingState.IDLE
+        lastStatusText = null
+        thinkingRow = -1
+        _thinkingFlow.value = ThinkingUpdate(false, null, null)
     }
 
     /** Full reset on reconnect — clear all cached state. */
