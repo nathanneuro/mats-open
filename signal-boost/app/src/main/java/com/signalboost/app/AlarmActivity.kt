@@ -40,7 +40,7 @@ class AlarmActivity : ComponentActivity() {
         setShowWhenLocked(true)
         setTurnScreenOn(true)
         val initialLabel = intent?.getTrigger()?.let { it.label.ifEmpty { it.phrase } }
-        setContent { AlarmScreen(initialLabel) }
+        setContent { SignalBoostTheme { AlarmScreen(initialLabel) } }
     }
 }
 
