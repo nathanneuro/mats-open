@@ -87,6 +87,8 @@
                 android:layout_height="wrap_content"
                 android:background="#FF252530"
                 android:fontFamily="monospace"
+                android:gravity="center_vertical"
+                android:includeFontPadding="false"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="2dp"
                 android:textColor="#FF8888AA"
@@ -103,13 +105,16 @@
                 android:paddingVertical="4dp"
                 android:visibility="gone">
 
-                <!-- Symbol in fixed-width box, centered, so size changes don't shift text -->
+                <!-- Symbol in fixed-width box, centered, so size changes don't shift text.
+                     includeFontPadding=false drops the per-font ascender/descender
+                     padding that otherwise varies between cycling glyph fallbacks. -->
                 <TextView
                     android:id="@+id/thinkingSymbol"
                     android:layout_width="20dp"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical|start"
                     android:gravity="center"
+                    android:includeFontPadding="false"
                     android:textColor="#FFFFCC00"
                     android:textSize="13sp"
                     android:fontFamily="monospace"
@@ -122,6 +127,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical|start"
                     android:layout_marginStart="22dp"
+                    android:includeFontPadding="false"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
                     android:fontFamily="monospace"
@@ -199,11 +205,6 @@
             android:padding="4dp">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/keyTab"
-                style="@style/ExtraKeyButton"
-                android:text="TAB" />
-
-            <com.google.android.material.button.MaterialButton
                 android:id="@+id/keyEsc"
                 style="@style/ExtraKeyButton"
                 android:text="ESC" />
@@ -224,6 +225,11 @@
                 android:text="@string/tmux_next_window" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyCtrlB"
+                style="@style/ExtraKeyButton"
+                android:text="^B" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/keyTmuxSync"
                 style="@style/ExtraKeyButton"
                 android:text="@string/tmux_sync_window" />
@@ -237,6 +243,11 @@
                 android:id="@+id/keyTmuxClose"
                 style="@style/ExtraKeyButton"
                 android:text="@string/tmux_close_window" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyTab"
+                style="@style/ExtraKeyButton"
+                android:text="TAB" />
 
         </LinearLayout>
     </HorizontalScrollView>

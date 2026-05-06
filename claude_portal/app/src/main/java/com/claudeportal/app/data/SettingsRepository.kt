@@ -23,8 +23,8 @@ class SettingsRepository(private val context: Context) {
         val DEFAULT_CONNECTION_ID = stringPreferencesKey("default_connection_id")
         val THINKING_FONT_SIZE = intPreferencesKey("thinking_font_size")
         val TMUX_FONT_SIZE = intPreferencesKey("tmux_font_size")
-        val SHOW_EXTRA_KEYS = booleanPreferencesKey("show_extra_keys")
-        val VIBRATE_ON_KEY = booleanPreferencesKey("vibrate_on_key")
+        val GRAPH_SHRINK_PERCENT = intPreferencesKey("graph_shrink_percent")
+        val EMULATED_TERMINAL_WIDTH = intPreferencesKey("emulated_terminal_width")
     }
 
     val settingsFlow: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -40,8 +40,8 @@ class SettingsRepository(private val context: Context) {
             maxHistoryLines = prefs[Keys.MAX_HISTORY_LINES] ?: 50000,
             saveHistoryBetweenSessions = prefs[Keys.SAVE_HISTORY] ?: true,
             defaultConnectionId = prefs[Keys.DEFAULT_CONNECTION_ID],
-            showExtraKeys = prefs[Keys.SHOW_EXTRA_KEYS] ?: true,
-            vibrateOnKeyPress = prefs[Keys.VIBRATE_ON_KEY] ?: false
+            graphShrinkPercent = prefs[Keys.GRAPH_SHRINK_PERCENT] ?: 38,
+            emulatedTerminalWidth = prefs[Keys.EMULATED_TERMINAL_WIDTH] ?: 100
         )
     }
 
@@ -56,8 +56,8 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.MAX_HISTORY_LINES] = settings.maxHistoryLines
             prefs[Keys.SAVE_HISTORY] = settings.saveHistoryBetweenSessions
             prefs[Keys.DEFAULT_CONNECTION_ID] = settings.defaultConnectionId ?: ""
-            prefs[Keys.SHOW_EXTRA_KEYS] = settings.showExtraKeys
-            prefs[Keys.VIBRATE_ON_KEY] = settings.vibrateOnKeyPress
+            prefs[Keys.GRAPH_SHRINK_PERCENT] = settings.graphShrinkPercent
+            prefs[Keys.EMULATED_TERMINAL_WIDTH] = settings.emulatedTerminalWidth
         }
     }
 }

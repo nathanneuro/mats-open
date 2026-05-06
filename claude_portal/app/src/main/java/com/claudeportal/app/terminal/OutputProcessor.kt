@@ -15,15 +15,31 @@ import kotlinx.coroutines.flow.StateFlow
  * Raw SSH data → AnsiScreenInterpreter → VirtualScreen → diff → new lines only.
  */
 class OutputProcessor(
-    private val cols: Int = 120,
-    private val rows: Int = 24,
+    cols: Int = 100,
+    rows: Int = 24,
     private val displayCols: Int = 40,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 ) {
-    // Virtual screens for diffing
-    private val screen = VirtualScreen(cols, rows)
-    private val interpreter = AnsiScreenInterpreter(screen)
+    // Virtual screens for diffing. cols/rows are mutable via resize() so the
+    // user-tunable "emulated terminal width" setting can take effect on a live
+    // session without reconnecting.
+    private var cols: Int = cols
+    private var rows: Int = rows
+    private var screen = VirtualScreen(this.cols, this.rows)
+    private var interpreter = AnsiScreenInterpreter(screen)
     private var previousSnapshot: Array<Array<VirtualScreen.Cell>>? = null
+
+    /** Reallocate the virtual screen at a new size. The previous snapshot is
+     *  invalidated so the next chunk re-emits its non-blank rows rather than
+     *  diffing against a mismatched-shape grid. */
+    fun resize(newCols: Int, newRows: Int = rows) {
+        if (newCols == cols && newRows == rows) return
+        cols = newCols
+        rows = newRows
+        screen = VirtualScreen(cols, rows)
+        interpreter = AnsiScreenInterpreter(screen)
+        previousSnapshot = null
+    }
 
     // Thinking state machine
     enum class ThinkingState { IDLE, ANIMATING, STATUS_TEXT }
@@ -93,16 +109,23 @@ class OutputProcessor(
         private val STATUS_TEXT_PATTERN = Regex("[$THINKING_SYMBOLS_STR]\\s*([A-Z][a-z].{1,38}?)(?:[.…\u2024\u2025]+|\\s*$)")
         // Tool progress: "⎿  Running… (2s · timeout 10m)" — transient timer updates
         private val TOOL_PROGRESS_PATTERN = Regex("^⎿\\s+\\S+…\\s*\\(\\d+s.*\\)$")
-        // Claude Code session-feedback prompt — appears as two lines:
+        // Claude Code session-feedback prompt — two lines, specific:
         //   "how is claude doing this session? (optional)"
         //   "1:bad   2:fine   3:good   0:dismiss"
-        // Both should be silently dropped from rendered output.
+        // Number→label mapping is fixed; only whitespace/case/intervening
+        // ANSI artifacts vary, so allow any junk between the four pairs.
         private val FEEDBACK_PROMPT_PATTERN = Regex(
-            "how\\s+is\\s+claude\\s+doing\\s+this\\s+session\\??.*",
+            "how.{0,20}claude.{0,20}doing.{0,20}session",
             RegexOption.IGNORE_CASE
         )
         private val FEEDBACK_OPTIONS_PATTERN = Regex(
-            "1\\s*:\\s*bad\\s+2\\s*:\\s*fine\\s+3\\s*:\\s*good\\s+0\\s*:\\s*dismiss.*",
+            "1\\s*:\\s*bad\\b.*?2\\s*:\\s*fine\\b.*?3\\s*:\\s*good\\b.*?0\\s*:\\s*dismiss",
+            RegexOption.IGNORE_CASE
+        )
+        // Backup: digit may be chopped by overdraw. If line has ≥2 of the
+        // four labels in "<digit?>: <label>" form, treat as the options row.
+        private val FEEDBACK_OPTION_PAIR = Regex(
+            "\\d?\\s*:\\s*(bad|fine|good|dismiss)\\b",
             RegexOption.IGNORE_CASE
         )
         // Shell prompt patterns: ➜, $, %, # at line start (with optional leading whitespace)
@@ -319,7 +342,9 @@ class OutputProcessor(
 
                 // Drop standalone fence lines — these are status area UI, not content.
                 // Content fences (e.g. in code blocks) are shorter and mixed with text.
-                if (isFenceLine(text) && text.trim().length > 20) {
+                // Table borders (with joint glyphs ├ ┼ ┤ ┴ etc.) are kept so
+                // tables render fully — only pure ─/═/━ runs get filtered.
+                if (isFenceLine(text) && text.trim().length > 20 && !isTableFence(text)) {
                     Log.v(TAG, "filter FENCE: '$text'")
                     continue
                 }
@@ -379,10 +404,20 @@ class OutputProcessor(
                 }
 
                 // Drop the session-feedback prompt (both the question line
-                // and the "1:bad 2:fine 3:good 0:dismiss" options line).
+                // and the options line, regardless of which digit maps to
+                // which label or what spacing/case is used).
                 if (FEEDBACK_PROMPT_PATTERN.containsMatchIn(trimmed) ||
-                    FEEDBACK_OPTIONS_PATTERN.containsMatchIn(trimmed)) {
+                    FEEDBACK_OPTIONS_PATTERN.containsMatchIn(trimmed) ||
+                    FEEDBACK_OPTION_PAIR.findAll(trimmed).count() >= 2) {
                     Log.v(TAG, "filter FEEDBACK_PROMPT: '$text'")
+                    continue
+                }
+                // "thinking with <effort> effort" is a transient status
+                // Claude Code spams when extended-thinking is active. Drop
+                // any line containing "thinking with" + "effort".
+                if (trimmed.contains("thinking with", ignoreCase = true) &&
+                    trimmed.contains("effort", ignoreCase = true)) {
+                    Log.v(TAG, "filter THINKING_EFFORT: '$text'")
                     continue
                 }
 
@@ -494,19 +529,21 @@ class OutputProcessor(
         return false
     }
 
-    /** A line looks like Claude Code status info only when BOTH signals match:
-     *  the user's ƕ sentinel AND ≥2 of the named status components
-     *  (GPU0, GPU1, CPU, RAM, ctx). Both-required avoids false positives
-     *  from command lines that happen to contain ƕ or one keyword alone. */
+    /** A line looks like Claude Code status info if any of:
+     *   - has ƕ sentinel + ≥2 component keywords (clean parse)
+     *   - contains the "%~" end terminator (the ƕ got chopped by a
+     *     partial overwrite, but the terminator survived)
+     *   - has ≥3 component keywords (strong content signal alone)
+     *  False-positive risk is low since these signals don't appear in
+     *  normal Claude Code output. */
     private fun isStatusInfoLine(text: String): Boolean {
-        if (!text.contains(STATUS_SENTINEL)) return false
         var hits = 0
         for (kw in STATUS_COMPONENT_KEYWORDS) {
-            if (text.contains(kw)) {
-                hits++
-                if (hits >= 2) return true
-            }
+            if (text.contains(kw)) hits++
         }
+        if (hits >= 3) return true
+        if (text.contains("%~")) return true
+        if (text.contains(STATUS_SENTINEL) && hits >= 2) return true
         return false
     }
 
@@ -567,6 +604,23 @@ class OutputProcessor(
         return fenceCount.toFloat() / nonSpace >= 0.6f
     }
 
+    /** Heuristic: this fence line is actually the top/middle/bottom border of
+     *  an ASCII/Unicode table, not a Claude-Code status-area divider. Tables
+     *  have joint/corner glyphs (├ ┤ ┬ ┴ ┼ ┌ ┐ └ ┘ ╔ ╗ ╚ ╝ ╠ ╣ ╦ ╩ ╬ +)
+     *  which never appear in status fences (those are pure runs of ─/═/━).
+     *  Keep table borders so the user sees the full table. */
+    private fun isTableFence(text: String): Boolean {
+        for (ch in text) {
+            when (ch) {
+                '├', '┤', '┬', '┴', '┼',
+                '┌', '┐', '└', '┘',
+                '╔', '╗', '╚', '╝', '╠', '╣', '╦', '╩', '╬',
+                '+' -> return true
+            }
+        }
+        return false
+    }
+
     /**
      * Detect Claude Code's status area at the bottom of the screen.
      * Pattern: fence, "> " prompt, fence, status line(s) — above the tmux bar row.
@@ -589,7 +643,7 @@ class OutputProcessor(
 
     private fun isStatusAreaLine(text: String): Boolean {
         val trimmed = text.trimStart()
-        return (isFenceLine(text) && text.length > 20) ||
+        return (isFenceLine(text) && text.length > 20 && !isTableFence(text)) ||
             trimmed.startsWith("⏵") || // accept/reject hints
             (trimmed.isNotEmpty() && trimmed[0] in CIRCLE_SYMBOLS) // context indicator (◑ medium)
     }

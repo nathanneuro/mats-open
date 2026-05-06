@@ -294,6 +294,7 @@ class MainActivity : AppCompatActivity() {
         }
         binding.keyEsc.setOnClickListener { sshManager.sendKeyPress(KeyCode.ESCAPE) }
         binding.keyCtrlC.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_C) }
+        binding.keyCtrlB.setOnClickListener { sshManager.sendKeyPress(KeyCode.CTRL_B) }
         binding.keyEnter.setOnClickListener { sshManager.sendKeyPress(KeyCode.ENTER) }
 
         binding.keyTmuxNew.setOnClickListener {
@@ -326,10 +327,19 @@ class MainActivity : AppCompatActivity() {
         updateBroomIcon()
         binding.terminalView.setDedupEnabled(!showDirtyHistory)
         binding.broomToggle.setOnClickListener {
+            val enteringCleanMode = showDirtyHistory  // (about to flip to false)
             showDirtyHistory = !showDirtyHistory
             updateBroomIcon()
             binding.terminalView.setDedupEnabled(!showDirtyHistory)
             replayActiveWindow()
+            // Going raw → clean: scrub already-rendered duplicate lines
+            // out of the loaded history (newest occurrence wins). The
+            // per-emit dedup can't catch cross-session repeats persisted
+            // on disk; this pass does.
+            if (enteringCleanMode) {
+                binding.terminalView.cleanupHistory()
+                binding.terminalView.scrollToBottom()
+            }
         }
     }
 
@@ -558,15 +568,33 @@ class MainActivity : AppCompatActivity() {
 
     private fun applySettings(settings: AppSettings) {
         binding.terminalView.setFontSize(settings.fontSize.toFloat())
+        binding.terminalView.setTableShrinkRatio(settings.graphShrinkPercent / 100f)
         binding.thinkingSymbol.textSize = settings.thinkingFontSize.toFloat()
         binding.thinkingStatus.textSize = settings.thinkingFontSize.toFloat()
         binding.statusBar.textSize = settings.thinkingFontSize.toFloat()
+        // Lock the thinking indicator's vertical extent so the cycling
+        // animation glyphs (✶ ✻ ✽ · ✢ *), each pulling a different font
+        // fallback with its own metrics, can't drag the bar's height up
+        // and down between frames. Height = font px * 1.5 + a little
+        // padding, computed from the user's thinkingFontSize so the lock
+        // tracks any font-size adjustment.
+        val thinkingFontPx = settings.thinkingFontSize *
+            resources.displayMetrics.scaledDensity
+        val thinkingBarHeightPx = (thinkingFontPx * 1.5f).toInt() +
+            (8 * resources.displayMetrics.density).toInt()
+        binding.thinkingIndicator.layoutParams =
+            binding.thinkingIndicator.layoutParams.apply { height = thinkingBarHeightPx }
+        // Same lock for the status bar above — it shares the thinking font
+        // size and renders glyphs that aren't always in monospace.
+        binding.statusBar.layoutParams =
+            binding.statusBar.layoutParams.apply { height = thinkingBarHeightPx }
         currentTmuxFontSize = settings.tmuxFontSize.toFloat()
         binding.arrowOverlay.position = settings.arrowPosition
         binding.arrowOverlay.buttonOpacity = settings.arrowOpacity
-        binding.arrowOverlay.vibrateOnPress = settings.vibrateOnKeyPress
-        binding.arrowOverlay.visibility = if (settings.showExtraKeys) View.VISIBLE else View.GONE
-        binding.extraKeysBar.visibility = if (settings.showExtraKeys) View.VISIBLE else View.GONE
+
+        // Push the user's emulated terminal width into the screen interpreter.
+        // Resize is a no-op when unchanged.
+        outputProcessor.resize(settings.emulatedTerminalWidth)
 
         if (settings.keepScreenOn) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

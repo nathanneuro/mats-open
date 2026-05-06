@@ -6,7 +6,6 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.util.AttributeSet
-import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import com.claudeportal.app.models.ArrowPosition
@@ -40,8 +39,6 @@ class ArrowOverlayView @JvmOverloads constructor(
             arrowPaint.alpha = (minOf(value + 0.3f, 1.0f) * 255).toInt()
             invalidate()
         }
-    var vibrateOnPress: Boolean = false
-
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF333333.toInt()
         alpha = (0.4f * 255).toInt()
@@ -147,15 +144,9 @@ class ArrowOverlayView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 if (event.y >= upTop && event.y <= upBottom) {
                     upPressed = true
-                    if (vibrateOnPress) {
-                        performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                    }
                     onArrowUp?.invoke()
                 } else if (event.y >= downTop && event.y <= downBottom) {
                     downPressed = true
-                    if (vibrateOnPress) {
-                        performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                    }
                     onArrowDown?.invoke()
                 } else {
                     return false
