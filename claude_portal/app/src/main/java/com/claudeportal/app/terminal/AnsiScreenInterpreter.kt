@@ -12,6 +12,12 @@ import android.graphics.Color
  */
 class AnsiScreenInterpreter(private val screen: VirtualScreen) {
 
+    /** Fired when the host application emits ESC[3J — "erase saved lines"
+     *  (the scrollback). Bash's `clear` includes this code; tmux pane
+     *  redraws and window switches do not. Callers in non-Claude windows
+     *  use this as a reliable "user invoked clear" signal. */
+    var onScrollbackErase: (() -> Unit)? = null
+
     // Current SGR state
     private var fg: Int? = null
     private var bg: Int? = null
@@ -188,11 +194,13 @@ class AnsiScreenInterpreter(private val screen: VirtualScreen) {
             }
             'J' -> {
                 // Erase display
-                when (params.toIntOrNull() ?: 0) {
+                val mode = params.toIntOrNull() ?: 0
+                when (mode) {
                     0 -> screen.eraseToEndOfScreen()
                     1 -> screen.eraseToStartOfScreen()
                     2, 3 -> screen.eraseEntireScreen()
                 }
+                if (mode == 3) onScrollbackErase?.invoke()
             }
             'K' -> {
                 // Erase line
@@ -214,6 +222,14 @@ class AnsiScreenInterpreter(private val screen: VirtualScreen) {
                 // SU: Scroll Up — scroll content up n lines
                 val n = params.toIntOrNull() ?: 1
                 repeat(n) { screen.scrollUp() }
+                // Modern zsh/tmux `clear` doesn't emit ESC[3J; it blanks the
+                // viewport with a single scroll-up of (almost) the whole
+                // screen height, preserving tmux's scrollback. Treat any
+                // scroll-up that covers half-or-more of the screen as a
+                // user-initiated clear so non-Claude windows wipe history
+                // the same way they would for ESC[3J. Normal in-region
+                // scrolling (1–3 lines) is well under the threshold.
+                if (n >= screen.rows / 2) onScrollbackErase?.invoke()
             }
             'T' -> {
                 // Scroll down - ignore
