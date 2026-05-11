@@ -323,14 +323,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Line dedup (skeleton-key collapse + generous overlap-merge) is enabled
+     *  only when the broom is in clean mode AND the active window is running
+     *  Claude Code. Other tmux windows and plain shells render every line.
+     *  Pushed to both the live view and the persisted-history ring. */
+    private fun applyDedupMode() {
+        val on = !showDirtyHistory && outputProcessor.isClaudeWindow
+        binding.terminalView.setDedupEnabled(on)
+        historyBuffer.dedupEnabled = on
+    }
+
     private fun setupBroomToggle() {
         updateBroomIcon()
-        binding.terminalView.setDedupEnabled(!showDirtyHistory)
+        applyDedupMode()
         binding.broomToggle.setOnClickListener {
             val enteringCleanMode = showDirtyHistory  // (about to flip to false)
             showDirtyHistory = !showDirtyHistory
             updateBroomIcon()
-            binding.terminalView.setDedupEnabled(!showDirtyHistory)
+            applyDedupMode()
             replayActiveWindow()
             // Going raw → clean: scrub already-rendered duplicate lines
             // out of the loaded history (newest occurrence wins). The
@@ -548,6 +558,10 @@ class MainActivity : AppCompatActivity() {
      * clean and dirty histories.
      */
     private fun replayActiveWindow() {
+        // Set the dedup mode for the window we're about to replay first, so the
+        // disk-tail seed in readWindowClean() (which re-runs the dedup ring) is
+        // consistent with what the live stream will do.
+        applyDedupMode()
         val text = if (showDirtyHistory) {
             historyBuffer.readWindowDirty()
         } else {
@@ -584,10 +598,14 @@ class MainActivity : AppCompatActivity() {
             (8 * resources.displayMetrics.density).toInt()
         binding.thinkingIndicator.layoutParams =
             binding.thinkingIndicator.layoutParams.apply { height = thinkingBarHeightPx }
-        // Same lock for the status bar above — it shares the thinking font
-        // size and renders glyphs that aren't always in monospace.
+        // Status bar uses wrap_content so its text always has room. It has
+        // no cycling animation, so it doesn't need the wiggle-anchor lock.
+        // Locking it to the same height as the thinking bar was clipping
+        // the bottom half of its text on some devices.
         binding.statusBar.layoutParams =
-            binding.statusBar.layoutParams.apply { height = thinkingBarHeightPx }
+            binding.statusBar.layoutParams.apply {
+                height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            }
         currentTmuxFontSize = settings.tmuxFontSize.toFloat()
         binding.arrowOverlay.position = settings.arrowPosition
         binding.arrowOverlay.buttonOpacity = settings.arrowOpacity
@@ -718,6 +736,27 @@ class MainActivity : AppCompatActivity() {
                 updateStatusBar(status)
             }
         }
+
+        // Line dedup runs only for Claude-Code windows — flip it whenever the
+        // active window's Claude-ness changes (e.g. claude launched/exited
+        // inside a generically-named window, detected from screen content).
+        lifecycleScope.launch {
+            outputProcessor.claudeWindowFlow.collectLatest {
+                applyDedupMode()
+            }
+        }
+
+        // Consume `clear` invocations from non-Claude windows. ESC[3J in
+        // those windows is a reliable user-typed-`clear` signal (tmux
+        // pane redraws don't emit it) — wipe both the on-screen text and
+        // the per-window history file so scrolling up shows nothing,
+        // matching bash's `clear` semantics.
+        lifecycleScope.launch {
+            outputProcessor.clearScrollbackFlow.collect {
+                binding.terminalView.clear()
+                historyBuffer.resetActiveWindow()
+            }
+        }
     }
 
     private fun updateThinkingIndicator(update: ThinkingUpdate) {
@@ -841,6 +880,9 @@ class MainActivity : AppCompatActivity() {
         val activeWindow = update.windows.getOrNull(update.activeIndex)
         if (activeWindow != null) {
             val switched = activeWindow.index != lastActiveWindowIndex
+            // Match dedup to the (possibly newly-active) window's Claude-ness
+            // before setActiveWindow flushes any pending-switch output into it.
+            applyDedupMode()
             historyBuffer.setActiveWindow(activeWindow.index)
             if (switched) {
                 lastActiveWindowIndex = activeWindow.index

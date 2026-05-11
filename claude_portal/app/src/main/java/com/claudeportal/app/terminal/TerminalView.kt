@@ -220,8 +220,12 @@ class TerminalView @JvmOverloads constructor(
                     val chunkBytes = chunk.toByteArray(Charsets.UTF_8).size.toLong()
                     historyDiskOffsetFromEnd += chunkBytes
                     historyDiskBytesLoaded += chunkBytes
-                    val knownKeys = LineDedup.keysIn(textView.text.toString())
-                    val deduped = LineDedup.dedupChunkAgainstKnown(chunk, knownKeys)
+                    val deduped = if (dedupEnabled) {
+                        val knownKeys = LineDedup.keysIn(textView.text.toString())
+                        LineDedup.dedupChunkAgainstKnown(chunk, knownKeys)
+                    } else {
+                        chunk
+                    }
                     if (deduped.isEmpty()) {
                         // All duplicates / decoration — silently roll forward
                         // to the next older chunk without disturbing the view.
@@ -452,6 +456,13 @@ class TerminalView @JvmOverloads constructor(
             applyLineStyling(line, text)
 
             if (dedupEnabled) {
+                // Generous overlap-merge: if this line is a partial render of
+                // (or an extension of) a recently-shown line — judged on ASCII
+                // letters only — splice them into the information-maximising
+                // union and rewrite that line in place rather than emitting a
+                // near-duplicate.
+                if (tryOverlapMerge(text)) continue
+
                 val key = LineDedup.keyFor(text)
                 if (key == null && !LineDedup.isTableRow(text)) {
                     // Non-table line with no skeleton (single bullet / lone
@@ -462,19 +473,37 @@ class TerminalView @JvmOverloads constructor(
                 if (key != null) {
                     val oldText = recentTextsByKey[key]
                     if (oldText == text) {
-                        // Identical line already on screen — skip but refresh recency.
+                        // Identical line already known — skip but refresh recency.
                         recentTextsByKey.remove(key)
                         recentTextsByKey[key] = text
                         continue
                     }
+                    var replacedInPlace = false
                     if (oldText != null) {
-                        if (replaceLineInTextView(oldText, line)) {
-                            recentTextsByKey.remove(key)
-                            recentTextsByKey[key] = text
-                            evictOldRecents()
-                            continue
+                        val range = findLineCharRange(oldText)
+                        if (range != null) {
+                            if (isCharOffsetOnScreen(range.first)) {
+                                // Old copy is currently visible — edit in
+                                // place so the user sees the value tick over
+                                // without the viewport jumping.
+                                textView.editableText.replace(range.first, range.last, line)
+                                replacedInPlace = true
+                            } else {
+                                // Old copy is off-screen above the viewport.
+                                // Editing in place would silently swallow
+                                // the new content (it'd land somewhere the
+                                // user can't see). Delete the old line
+                                // entirely and let the append below place
+                                // the new one at the bottom.
+                                deleteLineRange(range)
+                            }
                         }
                         recentTextsByKey.remove(key)
+                    }
+                    if (replacedInPlace) {
+                        recentTextsByKey[key] = text
+                        evictOldRecents()
+                        continue
                     }
                     recentTextsByKey[key] = text
                     evictOldRecents()
@@ -494,6 +523,55 @@ class TerminalView @JvmOverloads constructor(
                 smoothScrollToBottom()
             }
         }
+    }
+
+    /**
+     * Try to overlap-merge [incomingText] (the newest line) with one of the
+     * last [LineDedup.MERGE_SCAN_WINDOW] displayed lines. On a hit, rewrite
+     * that line on screen with the merged union (in place when it's visible,
+     * else delete-and-reappend at the bottom — newest wins position) and
+     * re-key the runtime dedup map. Returns true iff something was merged, in
+     * which case the caller must not also append [incomingText].
+     */
+    private fun tryOverlapMerge(incomingText: String): Boolean {
+        if (LineDedup.isTableRow(incomingText) || LineDedup.isPureTableDecoration(incomingText)) return false
+        var hitKey: String? = null
+        var hitOld: String? = null
+        var merged: String? = null
+        var scanned = 0
+        val entries = ArrayList(recentTextsByKey.entries)
+        var i = entries.size - 1
+        while (i >= 0 && scanned < LineDedup.MERGE_SCAN_WINDOW) {
+            val e = entries[i]
+            val cand = e.value
+            if (cand.isNotBlank() && !LineDedup.isTableRow(cand) && !LineDedup.isPureTableDecoration(cand)) {
+                scanned++
+                val m = LineDedup.mergeOverlap(cand, incomingText, yIsNewer = true)
+                if (m != null) { hitKey = e.key; hitOld = cand; merged = m; break }
+            }
+            i--
+        }
+        val old = hitOld ?: return false
+        val mergedText = merged ?: return false
+        if (mergedText == old) {
+            // Incoming added nothing — keep the existing line, just refresh recency.
+            hitKey?.let { recentTextsByKey.remove(it); recentTextsByKey[it] = old }
+            return true
+        }
+        val mergedLine = SpannableStringBuilder(mergedText)
+        applyLineStyling(mergedLine, mergedText)
+        val range = findLineCharRange(old)
+        if (range != null && isCharOffsetOnScreen(range.first)) {
+            textView.editableText.replace(range.first, range.last, mergedLine)
+        } else {
+            if (range != null) deleteLineRange(range)
+            if (textView.length() > 0) textView.append("\n")
+            textView.append(mergedLine)
+        }
+        hitKey?.let { recentTextsByKey.remove(it) }
+        LineDedup.keyFor(mergedText)?.let { recentTextsByKey.remove(it); recentTextsByKey[it] = mergedText }
+        evictOldRecents()
+        return true
     }
 
     /** Apply line-height / table-shrink spans to a single line's builder. */
@@ -543,6 +621,7 @@ class TerminalView @JvmOverloads constructor(
      * for me" on already-rendered content.
      */
     fun cleanupHistory() {
+        if (!dedupEnabled) return  // non-Claude window: keep every line as-is
         val source = textView.text as? android.text.Spannable ?: return
         val str = source.toString()
         if (str.isEmpty()) return
@@ -679,9 +758,12 @@ class TerminalView @JvmOverloads constructor(
         }
     }
 
-    private fun replaceLineInTextView(oldText: String, newText: CharSequence): Boolean {
-        if (oldText.isEmpty()) return false
-        val editable = textView.editableText ?: return false
+    /** Locate `oldText` as a complete line in the textView (must be bracketed
+     *  by newlines / start / end of buffer). Returns the [start, end) char
+     *  range, or null if no full-line match exists. */
+    private fun findLineCharRange(oldText: String): IntRange? {
+        if (oldText.isEmpty()) return null
+        val editable = textView.editableText ?: return null
         val s = editable.toString()
         var idx = s.indexOf(oldText)
         while (idx >= 0) {
@@ -690,12 +772,50 @@ class TerminalView @JvmOverloads constructor(
             val precededByNewline = lineStart == 0 || s[lineStart - 1] == '\n'
             val followedByNewline = lineEnd == s.length || s[lineEnd] == '\n'
             if (precededByNewline && followedByNewline) {
-                editable.replace(lineStart, lineEnd, newText)
-                return true
+                return lineStart..lineEnd
             }
             idx = s.indexOf(oldText, idx + 1)
         }
-        return false
+        return null
+    }
+
+    /** Whether the line containing the given char offset is currently
+     *  inside the visible scroll viewport. Conservative default of `true`
+     *  (treat as on-screen) when the textView hasn't been laid out yet,
+     *  so first-paint append doesn't accidentally take the off-screen path. */
+    private fun isCharOffsetOnScreen(offset: Int): Boolean {
+        val layout = textView.layout ?: return true
+        val lineNum = layout.getLineForOffset(offset)
+        val lineTop = layout.getLineTop(lineNum)
+        val lineBottom = layout.getLineBottom(lineNum)
+        val viewportTop = scrollY
+        val viewportBottom = scrollY + height
+        return lineBottom > viewportTop && lineTop < viewportBottom
+    }
+
+    /** Delete a full-line range, also consuming the surrounding newline so
+     *  no blank gap is left where the line used to live. Prefer the
+     *  preceding newline; fall back to the trailing one when the line is
+     *  at the very top of the buffer. */
+    private fun deleteLineRange(range: IntRange) {
+        val editable = textView.editableText ?: return
+        val delStart: Int
+        val delEnd: Int
+        when {
+            range.first > 0 -> {
+                delStart = range.first - 1
+                delEnd = range.last
+            }
+            range.last < editable.length -> {
+                delStart = range.first
+                delEnd = range.last + 1
+            }
+            else -> {
+                delStart = range.first
+                delEnd = range.last
+            }
+        }
+        editable.delete(delStart, delEnd)
     }
 
     private fun smoothScrollToBottom() {

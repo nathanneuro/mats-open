@@ -58,6 +58,13 @@ class HistoryBuffer(private val maxLines: Int = 1000) {
     private var connectionName: String? = null
     private var activeWindowIndex: Int = -1
 
+    // When false, the clean ring is built without skeleton-key dedup or
+    // overlap-merge — every line is kept verbatim (symbol-only lines and
+    // consecutive-blank runs are still dropped). Set by the host to match the
+    // active window: dedup runs only for Claude-Code windows.
+    @Volatile
+    var dedupEnabled: Boolean = true
+
     // Per-window in-memory deduped ring + key index for O(1) lookup.
     private val windowLines = mutableMapOf<Int, MutableList<String>>()
     private val windowKeyIndex = mutableMapOf<Int, HashMap<String, Int>>()
@@ -188,47 +195,85 @@ class HistoryBuffer(private val maxLines: Int = 1000) {
         }
     }
 
-    /** Insert a single line into the in-memory ring with newest-wins dedup.
-     *  Returns true iff this line was *not* already present under the same
-     *  key — i.e. the caller should write it to the disk log. Caller holds
+    /** Drop the ring entry at [oldIdx] (fixing up the key index for the shift),
+     *  then append [newLine] under [newKey] at the tail and trim. Caller holds
      *  the write lock. */
+    private fun replaceRingEntryUnlocked(
+        lines: MutableList<String>,
+        keyIdx: HashMap<String, Int>,
+        oldIdx: Int,
+        newLine: String,
+        newKey: String?
+    ) {
+        lines.removeAt(oldIdx)
+        val it = keyIdx.entries.iterator()
+        while (it.hasNext()) {
+            val e = it.next()
+            if (e.value == oldIdx) it.remove()
+            else if (e.value > oldIdx) e.setValue(e.value - 1)
+        }
+        lines.add(newLine)
+        if (newKey != null) keyIdx[newKey] = lines.size - 1
+        trimRingHead(lines, keyIdx)
+    }
+
+    /** Insert a single line into the in-memory ring with newest-wins dedup +
+     *  generous overlap-merge. Returns the text that should be appended to the
+     *  disk log (the line itself, or — when it overlap-merged with a recent
+     *  ring line — the merged union), or null when nothing new should be
+     *  persisted (exact-key duplicate, collapsed blank, or symbol-only).
+     *  Caller holds the write lock. */
     private fun appendDedupLineUnlocked(
         lines: MutableList<String>,
         keyIdx: HashMap<String, Int>,
         line: String
-    ): Boolean {
+    ): String? {
         if (line.isBlank()) {
             // Collapse runs of consecutive blank/whitespace-only lines to one.
-            if (lines.isNotEmpty() && lines.last().isBlank()) return false
+            if (lines.isNotEmpty() && lines.last().isBlank()) return null
             lines.add(line)
-            return true
+            return line
         }
         // Symbol-only lines (no letters/digits) carry no content — drop.
-        if (LineDedup.isSymbolOnly(line)) return false
+        if (LineDedup.isSymbolOnly(line)) return null
         val key = LineDedup.keyFor(line)
-        if (key != null) {
-            val oldIdx = keyIdx[key]
-            if (oldIdx != null && oldIdx in lines.indices) {
-                // Already present — newest wins, but no disk write needed
-                // since the disk log already has a copy. Move to end of
-                // ring so it's recognised as recent.
-                lines.removeAt(oldIdx)
-                val it = keyIdx.entries.iterator()
-                while (it.hasNext()) {
-                    val e = it.next()
-                    if (e.value == oldIdx) it.remove()
-                    else if (e.value > oldIdx) e.setValue(e.value - 1)
+        if (dedupEnabled) {
+            if (key != null) {
+                val oldIdx = keyIdx[key]
+                if (oldIdx != null && oldIdx in lines.indices) {
+                    // Already present — newest wins, but no disk write needed
+                    // since the disk log already has a copy. Move to end of
+                    // ring so it's recognised as recent.
+                    replaceRingEntryUnlocked(lines, keyIdx, oldIdx, line, key)
+                    return null
                 }
-                lines.add(line)
-                keyIdx[key] = lines.size - 1
-                trimRingHead(lines, keyIdx)
-                return false
+            }
+            // Generous overlap-merge against the most recent ring lines: if
+            // this line is a partial render of (or extension of) one of them —
+            // judged on ASCII letters only — splice them into the information-
+            // maximising union. The merged text goes to disk so a later replay
+            // reproduces it.
+            if (!LineDedup.isTableRow(line)) {
+                var scanned = 0
+                var i = lines.size - 1
+                while (i >= 0 && scanned < LineDedup.MERGE_SCAN_WINDOW) {
+                    val cand = lines[i]
+                    if (cand.isNotBlank() && !LineDedup.isTableRow(cand) && !LineDedup.isSymbolOnly(cand)) {
+                        scanned++
+                        val merged = LineDedup.mergeOverlap(cand, line, yIsNewer = true)
+                        if (merged != null) {
+                            replaceRingEntryUnlocked(lines, keyIdx, i, merged, LineDedup.keyFor(merged))
+                            return if (merged == cand) null else merged
+                        }
+                    }
+                    i--
+                }
             }
         }
         lines.add(line)
         if (key != null) keyIdx[key] = lines.size - 1
         trimRingHead(lines, keyIdx)
-        return true
+        return line
     }
 
     private fun trimRingHead(lines: MutableList<String>, keyIdx: HashMap<String, Int>) {
@@ -259,9 +304,7 @@ class HistoryBuffer(private val maxLines: Int = 1000) {
             val end = if (parts.isNotEmpty() && parts.last().isEmpty()) parts.size - 1 else parts.size
             for (i in 0 until end) {
                 val line = parts[i]
-                if (appendDedupLineUnlocked(lines, keyIdx, line)) {
-                    toWrite.append(line).append('\n')
-                }
+                appendDedupLineUnlocked(lines, keyIdx, line)?.let { toWrite.append(it).append('\n') }
             }
         }
         if (toWrite.isNotEmpty()) {

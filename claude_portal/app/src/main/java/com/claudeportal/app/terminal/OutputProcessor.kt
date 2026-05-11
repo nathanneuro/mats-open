@@ -29,6 +29,10 @@ class OutputProcessor(
     private var interpreter = AnsiScreenInterpreter(screen)
     private var previousSnapshot: Array<Array<VirtualScreen.Cell>>? = null
 
+    init {
+        installInterpreterCallbacks()
+    }
+
     /** Reallocate the virtual screen at a new size. The previous snapshot is
      *  invalidated so the next chunk re-emits its non-blank rows rather than
      *  diffing against a mismatched-shape grid. */
@@ -38,7 +42,19 @@ class OutputProcessor(
         rows = newRows
         screen = VirtualScreen(cols, rows)
         interpreter = AnsiScreenInterpreter(screen)
+        installInterpreterCallbacks()
         previousSnapshot = null
+    }
+
+    /** Re-attach interpreter-level callbacks after the interpreter is
+     *  (re)constructed. Currently: forward ESC[3J in non-Claude windows
+     *  to the clearScrollback flow so the host can wipe terminal + history. */
+    private fun installInterpreterCallbacks() {
+        interpreter.onScrollbackErase = {
+            if (!isClaudeWindow) {
+                _clearScrollbackFlow.tryEmit(Unit)
+            }
+        }
     }
 
     // Thinking state machine
@@ -63,6 +79,13 @@ class OutputProcessor(
     private val _statusBarFlow = MutableStateFlow<String?>(null)
     val statusBarFlow: StateFlow<String?> = _statusBarFlow
 
+    // Fired when the user invokes `clear` (ESC[3J) in a non-Claude window.
+    // The host should wipe both the on-screen text and the per-window
+    // disk history so scrolling up after `clear` shows nothing — matching
+    // bash's semantics.
+    private val _clearScrollbackFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
+    val clearScrollbackFlow: SharedFlow<Unit> = _clearScrollbackFlow
+
     // Plain text flow for history persistence — larger buffer since disk writes
     // are fast and we don't want to lose history.
     private val _plainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 128)
@@ -76,6 +99,11 @@ class OutputProcessor(
 
     private val _rawPlainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
     val rawPlainTextFlow: SharedFlow<String> = _rawPlainTextFlow
+
+    // Fires whenever the active window's Claude-ness flips. Hosts use this to
+    // turn line dedup on only for Claude-Code windows.
+    private val _claudeWindowFlow = MutableStateFlow(false)
+    val claudeWindowFlow: StateFlow<Boolean> = _claudeWindowFlow
 
     companion object {
         private val THINKING_SYMBOLS = setOf('✶', '✻', '✽', '·', '✢', '*')
@@ -153,6 +181,11 @@ class OutputProcessor(
     // fallback = content-based heuristic (seeing Claude UI elements on screen).
     @Volatile
     var isClaudeWindow: Boolean = false
+        internal set(value) {
+            if (field == value) return
+            field = value
+            _claudeWindowFlow.value = value
+        }
 
     // Content-based Claude detection: count of recent screen frames that had
     // Claude Code UI elements (thinking symbols in left columns + fence/prompt pattern).
@@ -934,6 +967,19 @@ class OutputProcessor(
                 }
                 newLines.add(screen.getRowStyled(r))
             }
+        }
+
+        // Safety net: if any sentinel-bearing line is about to leak through
+        // to the dedup pipeline (where it will be dropped from scrollback),
+        // make sure we've captured the status bar UI from this screen first.
+        // The normal path is detectStatusArea above, but it's gated by
+        // FULL_REDRAW + 2s throttle to avoid chimera rows; on the off chance
+        // a clean status line slips past that gate AND past the status-area
+        // structural detection, we don't want LineDedup's drop to swallow
+        // the only copy of the data without ever updating the user's bar.
+        if (isClaudeWindow &&
+            newLines.any { sb -> sb.toString().contains(STATUS_SENTINEL) }) {
+            detectStatusArea(maxRow, updateStatusBar = true)
         }
 
         return newLines
