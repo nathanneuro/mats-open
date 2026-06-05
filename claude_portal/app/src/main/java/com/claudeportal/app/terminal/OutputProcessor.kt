@@ -926,7 +926,10 @@ class OutputProcessor(
                 }
             }
 
-            if (changedRows.size > 0 && selectorChangedRows.size == changedRows.size) {
+            // Menu-nav collapse, bullet-blink suppression and chimera skipping
+            // are Claude-Code UI heuristics. Non-Claude windows render every
+            // changed row verbatim — no content-dropping.
+            if (isClaudeWindow && changedRows.size > 0 && selectorChangedRows.size == changedRows.size) {
                 // Pure menu navigation — emit only the currently selected line
                 for (r in selectorChangedRows) {
                     val text = currLines[r].trimStart()
@@ -938,7 +941,7 @@ class OutputProcessor(
                 return newLines
             }
 
-            if (changedRows.size > 0 && bulletChangedRows.size == changedRows.size) {
+            if (isClaudeWindow && changedRows.size > 0 && bulletChangedRows.size == changedRows.size) {
                 // Pure bullet blink — suppress entirely
                 return newLines
             }
@@ -948,7 +951,7 @@ class OutputProcessor(
             // A partial overwrite is when the new row shares a long common
             // prefix or suffix with the old row but has a spliced middle.
             for (r in changedRows) {
-                if (r < prevLines.size && isPartialOverwrite(prevLines[r], currLines[r])) {
+                if (isClaudeWindow && r < prevLines.size && isPartialOverwrite(prevLines[r], currLines[r])) {
                     Log.v(TAG, "skip partial overwrite row $r: '${currLines[r]}'")
                     continue
                 }
@@ -961,7 +964,7 @@ class OutputProcessor(
                 // In the scrolling path, rows below the overlap are "new" but may
                 // still be chimeras from partial cursor overwrites. Compare against
                 // the row that previously occupied this screen position.
-                if (r < prevLines.size && isPartialOverwrite(prevLines[r], currLines[r], threshold = 0.4f)) {
+                if (isClaudeWindow && r < prevLines.size && isPartialOverwrite(prevLines[r], currLines[r], threshold = 0.4f)) {
                     Log.v(TAG, "skip partial overwrite (scroll) row $r: '${currLines[r]}'")
                     continue
                 }
