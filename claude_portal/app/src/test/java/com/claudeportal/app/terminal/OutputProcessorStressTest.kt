@@ -104,7 +104,7 @@ class OutputProcessorStressTest {
     @Test(timeout = 10_000)
     fun `stress - rapid small chunks are throttled`() = runBlocking {
         val processor = OutputProcessor(cols = 80, rows = 24)
-        processor.isClaudeWindow = true
+        processor.agentKind = AgentKind.CLAUDE
         val emittedBatches = AtomicInteger(0)
 
         val contentJob = launch(Dispatchers.Default) {

@@ -1,23 +1,24 @@
 # claude_portal
 
-An Android app specifically designed for using Claude Code via SSH into a remote server. Connects to tmux sessions and provides a mobile-optimized interface for the Claude Code workflow.
+An Android app specifically designed for using terminal coding agents — Claude Code and OpenAI Codex — via SSH into a remote server. Connects to tmux sessions and provides a mobile-optimized interface for the agent workflow.
 
 ## Why This Exists
 
 Using Claude Code over SSH on a phone has two major pain points:
 
-1. **No arrow keys on mobile keyboards** - You need up/down arrows constantly (command history, navigating Claude Code menus). This app adds transparent overlay arrow buttons on either side of the screen.
+1. **No arrow keys on mobile keyboards** - You need up/down arrows constantly (command history, navigating agent menus). This app adds transparent overlay arrow buttons on either side of the screen.
 
-2. **Can't scroll back through output** - Claude Code streams text fast. In a normal terminal (including VSCode's), scrolling sends arrow key commands instead of letting you read the output. This app caches all terminal output locally and renders it as a scrollable document, so you can scroll back through everything without sending keystrokes to the server.
+2. **Can't scroll back through output** - Agents stream text fast. In a normal terminal (including VSCode's), scrolling sends arrow key commands instead of letting you read the output. This app caches all terminal output locally and renders it as a scrollable document, so you can scroll back through everything without sending keystrokes to the server.
 
 ## Features
 
 - **SSH connection management** - Save connection profiles with SSH key or password auth
-- **Tmux integration** - Auto-attach to tmux sessions, create new sessions with Claude Code
+- **Tmux integration** - Auto-attach to tmux sessions; create a new session (or window — long-press the `+W` button) running Claude Code or Codex
+- **Per-agent UI** - The portal detects which agent is in the active window and adapts: coloured border (Claude clay orange, Codex OpenAI green), a thinking indicator fed by each agent's own progress signal, and a status bar (Claude's status line, Codex's `model · cwd` footer). Plain shell windows render verbatim with no filtering.
 - **Scrollable history** - All output is cached locally. Scroll up to read, scroll back down to resume live view. History persists across sessions.
 - **Arrow key overlay** - Transparent up/down buttons on left or right edge (configurable). Sends actual escape sequences for arrow key presses.
 - **Extra keys bar** - Tab, Esc, Ctrl+C, Ctrl+D, Ctrl+Z, Ctrl+L, Ctrl+A, Ctrl+E
-- **ANSI color support** - Full 256-color and truecolor rendering of Claude Code's styled output
+- **ANSI color support** - Full 256-color and truecolor rendering of the agent's styled output
 - **"Scroll to bottom" FAB** - When viewing history, tap to jump back to the live terminal
 - **Dark theme** - Designed for terminal use
 
@@ -42,5 +43,5 @@ Using Claude Code over SSH on a phone has two major pain points:
 
 - **Min SDK**: 26 (Android 8.0)
 - **SSH**: JSch (maintained mwiede fork)
-- **Terminal rendering**: ANSI escape code parser with SpannableStringBuilder output, rendered in a scrollable NestedScrollView
+- **Terminal rendering**: ANSI escape code parser with SpannableStringBuilder output, rendered in a scrollable NestedScrollView. The screen model implements DECSTBM scroll regions and reverse index — Codex pins its composer and footer below a scroll region and pushes the transcript through it, so ignoring regions renders the UI block on top of the conversation.
 - **Architecture**: MVVM with Repository pattern, Kotlin Coroutines + Flow

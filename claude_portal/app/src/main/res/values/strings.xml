@@ -50,6 +50,8 @@
     <string name="not_connected_tmux">Connect to a server first to manage tmux sessions</string>
     <string name="new_tmux_session">New Tmux Session</string>
     <string name="create_with_claude">Create with Claude</string>
+    <string name="create_with_codex">Create with Codex</string>
+    <string name="new_window_with_agent">New window running…</string>
     <string name="refresh">Refresh</string>
 
     <!-- Settings -->

@@ -39,6 +39,13 @@ android {
     buildFeatures {
         viewBinding = true
     }
+
+    testOptions {
+        // OutputProcessor's unit tests construct the real interpreter, which
+        // touches android.graphics.Color and android.util.Log. Stubbed
+        // defaults are fine — the tests assert on text, never on colour.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {

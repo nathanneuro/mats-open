@@ -52,6 +52,32 @@ class VirtualScreen(val cols: Int = 80, val rows: Int = 24) {
     var cursorCol: Int = 0
         private set
 
+    // Scrolling region (DECSTBM), inclusive, defaults to the whole screen.
+    // Codex CLI parks its composer/footer below a region and pushes the
+    // transcript through it, so scrolling that ignores the region writes
+    // new lines straight over the UI block instead of scrolling.
+    var scrollTop: Int = 0
+        private set
+    var scrollBottom: Int = rows - 1
+        private set
+
+    /** Set the scrolling region to [top]..[bottom] (inclusive, 0-based).
+     *  An invalid or inverted range resets to the full screen. */
+    fun setScrollRegion(top: Int, bottom: Int) {
+        if (top < 0 || bottom >= rows || top >= bottom) {
+            scrollTop = 0
+            scrollBottom = rows - 1
+        } else {
+            scrollTop = top
+            scrollBottom = bottom
+        }
+    }
+
+    fun resetScrollRegion() {
+        scrollTop = 0
+        scrollBottom = rows - 1
+    }
+
     fun moveCursorTo(row: Int, col: Int) {
         cursorRow = row.coerceIn(0, rows - 1)
         cursorCol = col.coerceIn(0, cols - 1)
@@ -78,10 +104,20 @@ class VirtualScreen(val cols: Int = 80, val rows: Int = 24) {
     }
 
     fun lineFeed() {
-        if (cursorRow < rows - 1) {
-            cursorRow++
-        } else {
+        if (cursorRow == scrollBottom) {
             scrollUp()
+        } else if (cursorRow < rows - 1) {
+            cursorRow++
+        }
+    }
+
+    /** Reverse line feed (ESC M): move up one row, scrolling the region
+     *  down when already at its top. */
+    fun reverseLineFeed() {
+        if (cursorRow == scrollTop) {
+            scrollDown()
+        } else if (cursorRow > 0) {
+            cursorRow--
         }
     }
 
@@ -152,15 +188,27 @@ class VirtualScreen(val cols: Int = 80, val rows: Int = 24) {
         }
     }
 
-    /** Scroll all lines up by one, bottom line becomes blank. */
+    /** Scroll the scrolling region up by one; its bottom line becomes blank. */
     fun scrollUp() {
-        val topRow = cells[0]
-        for (r in 0 until rows - 1) {
+        val recycled = cells[scrollTop]
+        for (r in scrollTop until scrollBottom) {
             cells[r] = cells[r + 1]
         }
-        cells[rows - 1] = topRow
+        cells[scrollBottom] = recycled
         for (c in 0 until cols) {
-            cells[rows - 1][c].clear()
+            cells[scrollBottom][c].clear()
+        }
+    }
+
+    /** Scroll the scrolling region down by one; its top line becomes blank. */
+    fun scrollDown() {
+        val recycled = cells[scrollBottom]
+        for (r in scrollBottom downTo scrollTop + 1) {
+            cells[r] = cells[r - 1]
+        }
+        cells[scrollTop] = recycled
+        for (c in 0 until cols) {
+            cells[scrollTop][c].clear()
         }
     }
 

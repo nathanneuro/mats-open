@@ -18,6 +18,11 @@ class AnsiScreenInterpreter(private val screen: VirtualScreen) {
      *  use this as a reliable "user invoked clear" signal. */
     var onScrollbackErase: (() -> Unit)? = null
 
+    /** Fired with the text of every OSC 0/2 title update. Codex CLI writes a
+     *  braille spinner frame into the title while a turn is in flight, which
+     *  is a far cleaner "agent is working" signal than scraping the screen. */
+    var onTitle: ((String) -> Unit)? = null
+
     // Current SGR state
     private var fg: Int? = null
     private var bg: Int? = null
@@ -58,13 +63,15 @@ class AnsiScreenInterpreter(private val screen: VirtualScreen) {
                 escBuffer.append(ch)
                 // OSC ends with BEL or ST (ESC \)
                 if (ch == '\u0007') {
-                    // OSC complete, discard
+                    // OSC complete: BEL terminator
+                    emitTitle(escBuffer.dropLast(1).toString())
                     inOsc = false
                     inEscape = false
                     escBuffer.clear()
                 } else if (ch == '\\' && escBuffer.length >= 2 &&
                     escBuffer[escBuffer.length - 2] == '\u001b') {
                     // ST = ESC \
+                    emitTitle(escBuffer.dropLast(2).toString())
                     inOsc = false
                     inEscape = false
                     escBuffer.clear()
@@ -83,6 +90,27 @@ class AnsiScreenInterpreter(private val screen: VirtualScreen) {
                         '[' -> { /* CSI - continue collecting */ }
                         ']' -> { inOsc = true }
                         '(' , ')' -> { /* charset designation - need one more byte */ }
+                        'M' -> {
+                            // RI: reverse index — scrolls the region down when
+                            // at its top. Codex uses this to insert transcript
+                            // lines above its fixed bottom block.
+                            screen.reverseLineFeed()
+                            inEscape = false
+                            escBuffer.clear()
+                        }
+                        'D' -> {
+                            // IND: index (line feed, no carriage return)
+                            screen.lineFeed()
+                            inEscape = false
+                            escBuffer.clear()
+                        }
+                        'E' -> {
+                            // NEL: next line
+                            screen.lineFeed()
+                            screen.carriageReturn()
+                            inEscape = false
+                            escBuffer.clear()
+                        }
                         else -> {
                             // Unknown short escape, discard
                             inEscape = false
@@ -229,10 +257,13 @@ class AnsiScreenInterpreter(private val screen: VirtualScreen) {
                 // user-initiated clear so non-Claude windows wipe history
                 // the same way they would for ESC[3J. Normal in-region
                 // scrolling (1–3 lines) is well under the threshold.
-                if (n >= screen.rows / 2) onScrollbackErase?.invoke()
+                val fullScreenRegion = screen.scrollTop == 0 && screen.scrollBottom == screen.rows - 1
+                if (fullScreenRegion && n >= screen.rows / 2) onScrollbackErase?.invoke()
             }
             'T' -> {
-                // Scroll down - ignore
+                // SD: Scroll Down — scroll the region down n lines
+                val n = params.toIntOrNull() ?: 1
+                repeat(n) { screen.scrollDown() }
             }
             's' -> {
                 // Save cursor position - ignore for now
@@ -252,7 +283,14 @@ class AnsiScreenInterpreter(private val screen: VirtualScreen) {
                 screen.moveCursorTo(row, screen.cursorCol)
             }
             'r' -> {
-                // Set scrolling region - ignore for now
+                // DECSTBM: set scrolling region (1-based, inclusive).
+                // Bare ESC[r resets it to the full screen. Per spec the
+                // cursor homes afterwards.
+                val parts = params.split(";")
+                val top = (parts.getOrNull(0)?.toIntOrNull() ?: 1) - 1
+                val bottom = (parts.getOrNull(1)?.toIntOrNull() ?: screen.rows) - 1
+                screen.setScrollRegion(top, bottom)
+                screen.moveCursorTo(0, 0)
             }
         }
     }
@@ -329,7 +367,18 @@ class AnsiScreenInterpreter(private val screen: VirtualScreen) {
         underline = false
     }
 
+    /** OSC payloads look like "0;title" / "2;title" / "7;file://..." —
+     *  only the window-title ones (0, 1, 2) carry a title. */
+    private fun emitTitle(payload: String) {
+        val cb = onTitle ?: return
+        val sep = payload.indexOf(';')
+        if (sep <= 0) return
+        if (payload.substring(0, sep) !in setOf("0", "1", "2")) return
+        cb(payload.substring(sep + 1))
+    }
+
     fun reset() {
+        screen.resetScrollRegion()
         resetStyle()
         escBuffer.clear()
         inEscape = false
