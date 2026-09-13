@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.claudeportal.app.databinding.ActivitySessionPickerBinding
 import com.claudeportal.app.models.TmuxSession
+import com.claudeportal.app.ssh.AgentCommand
 import com.claudeportal.app.ssh.SshManager
 import kotlinx.coroutines.launch
 
@@ -97,16 +98,26 @@ class SessionPickerActivity : AppCompatActivity() {
             setText("claude")
         }
 
+        // The session name defaults to whichever agent the user picks, so
+        // typing a name is optional. The tmux window is named after the agent
+        // either way — that's what drives the portal's per-agent UI.
         AlertDialog.Builder(this, R.style.Theme_ClaudePortal_Dialog)
             .setTitle(R.string.new_tmux_session)
             .setView(editText)
             .setPositiveButton(R.string.create_with_claude) { _, _ ->
-                val name = editText.text.toString().ifBlank { "claude" }
-                sshManager?.createTmuxSessionWithClaude(name)
-                finish()
+                createSession(editText.text.toString(), AgentCommand.CLAUDE)
+            }
+            .setNeutralButton(R.string.create_with_codex) { _, _ ->
+                createSession(editText.text.toString(), AgentCommand.CODEX)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun createSession(typedName: String, agent: AgentCommand) {
+        val name = typedName.ifBlank { agent.windowName }
+        sshManager?.createTmuxSessionWithAgent(name, agent)
+        finish()
     }
 
     override fun onSupportNavigateUp(): Boolean {

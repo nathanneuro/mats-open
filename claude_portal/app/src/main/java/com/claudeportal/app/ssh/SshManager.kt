@@ -217,6 +217,13 @@ class SshManager {
         execTmuxCommand("tmux new-window")
     }
 
+    /** New tmux window running an agent, named after it so the portal's
+     *  window-name detection picks it up without waiting for the content
+     *  heuristics (codex otherwise shows up as "node"). */
+    fun createTmuxWindowWithAgent(agent: AgentCommand) {
+        execTmuxCommand("tmux new-window -n ${agent.windowName} '${agent.command}'")
+    }
+
     fun nextTmuxWindow() {
         execTmuxCommand("tmux next-window")
     }
@@ -229,8 +236,11 @@ class SshManager {
         execTmuxCommand("tmux select-window -t $index")
     }
 
-    fun createTmuxSessionWithClaude(sessionName: String) {
-        execTmuxCommand("tmux new-session -d -s $sessionName 'claude' && tmux attach-session -t $sessionName")
+    fun createTmuxSessionWithAgent(sessionName: String, agent: AgentCommand) {
+        execTmuxCommand(
+            "tmux new-session -d -s $sessionName -n ${agent.windowName} '${agent.command}' " +
+                "&& tmux attach-session -t $sessionName"
+        )
     }
 
     private fun execTmuxCommand(command: String) {

@@ -24,10 +24,12 @@ import com.claudeportal.app.data.SettingsRepository
 import com.claudeportal.app.databinding.ActivityMainBinding
 import com.claudeportal.app.models.AppSettings
 import com.claudeportal.app.models.ConnectionProfile
+import com.claudeportal.app.ssh.AgentCommand
 import com.claudeportal.app.ssh.ConnectionState
 import com.claudeportal.app.ssh.KeyCode
 import com.claudeportal.app.ssh.SshConnectionService
 import com.claudeportal.app.ssh.SshManager
+import com.claudeportal.app.terminal.AgentKind
 import com.claudeportal.app.terminal.HistoryBuffer
 import com.claudeportal.app.terminal.OutputProcessor
 import com.claudeportal.app.terminal.ThinkingUpdate
@@ -181,8 +183,8 @@ class MainActivity : AppCompatActivity() {
                 hideKeyboard()
             } else {
                 binding.scrollBottomFab.visibility = View.GONE
-                // Show info bars and keyboard in live mode (only on Claude windows)
-                if (outputProcessor.isClaudeWindow) {
+                // Show info bars and keyboard in live mode (only on agent windows)
+                if (outputProcessor.isAgentWindow) {
                     binding.statusBar.visibility = View.VISIBLE
                     binding.thinkingIndicator.visibility = View.VISIBLE
                 }
@@ -302,6 +304,12 @@ class MainActivity : AppCompatActivity() {
             sshManager.createTmuxWindow()
             scheduleTmuxStateQuery()
         }
+        // Long-press opens the same window pre-running an agent, named after
+        // it so the per-agent UI lights up immediately.
+        binding.keyTmuxNew.setOnLongClickListener {
+            showNewAgentWindowDialog()
+            true
+        }
         binding.keyTmuxNext.setOnClickListener {
             historyBuffer.beginPendingSwitch()
             sshManager.nextTmuxWindow()
@@ -323,11 +331,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showNewAgentWindowDialog() {
+        val agents = AgentCommand.entries.toTypedArray()
+        androidx.appcompat.app.AlertDialog.Builder(this, R.style.Theme_ClaudePortal_Dialog)
+            .setTitle(R.string.new_window_with_agent)
+            .setItems(agents.map { it.label }.toTypedArray()) { _, which ->
+                historyBuffer.beginPendingSwitch()
+                sshManager.createTmuxWindowWithAgent(agents[which])
+                scheduleTmuxStateQuery()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     /** Line dedup (skeleton-key collapse + generous overlap-merge) is enabled
      *  only when the broom is in clean mode AND the active window is running
      *  Claude Code. Other tmux windows and plain shells render every line.
      *  Pushed to both the live view and the persisted-history ring. */
     private fun applyDedupMode() {
+        // Claude only: it repaints whole screens, so the same text arrives
+        // many times in mangled forms. Codex writes each transcript line once
+        // into a scroll region — running the collapse over it would delete
+        // real content, not duplicates.
         val on = !showDirtyHistory && outputProcessor.isClaudeWindow
         binding.terminalView.setDedupEnabled(on)
         historyBuffer.dedupEnabled = on
@@ -737,12 +762,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Line dedup runs only for Claude-Code windows — flip it whenever the
-        // active window's Claude-ness changes (e.g. claude launched/exited
-        // inside a generically-named window, detected from screen content).
+        // Dedup + per-agent chrome follow the active window's agent — flip
+        // them whenever it changes (e.g. an agent launched/exited inside a
+        // generically-named window, detected from screen content).
         lifecycleScope.launch {
-            outputProcessor.claudeWindowFlow.collectLatest {
+            outputProcessor.agentWindowFlow.collectLatest { kind ->
                 applyDedupMode()
+                updateAgentChrome(kind)
             }
         }
 
@@ -760,7 +786,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateThinkingIndicator(update: ThinkingUpdate) {
-        if (!outputProcessor.isClaudeWindow) {
+        if (!outputProcessor.isAgentWindow) {
             binding.thinkingIndicator.visibility = View.GONE
             stopThinkingAnimation()
             return
@@ -796,7 +822,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateStatusBar(status: String?) {
-        if (!outputProcessor.isClaudeWindow) {
+        if (!outputProcessor.isAgentWindow) {
             binding.statusBar.visibility = View.GONE
             return
         }
@@ -893,8 +919,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Show/hide Claude window border based on active tmux window name
-        updateClaudeBorder(outputProcessor.isClaudeWindow)
+        // Show/hide the agent border based on the active tmux window
+        updateAgentChrome(outputProcessor.agentKind)
 
         binding.tmuxBar.visibility = View.VISIBLE
         val container = binding.tmuxTabs
@@ -935,25 +961,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private var claudeBorderShowing = false
+    private var agentChromeShowing = AgentKind.NONE
 
-    private fun updateClaudeBorder(isClaude: Boolean) {
-        if (isClaude == claudeBorderShowing) return
-        claudeBorderShowing = isClaude
-        if (isClaude) {
+    /** Border colour tells the two agents apart at a glance: Claude's clay
+     *  orange, Codex's OpenAI green. */
+    private fun agentBorderColor(kind: AgentKind): Int = when (kind) {
+        AgentKind.CLAUDE -> 0xFF9E5A28.toInt()
+        AgentKind.CODEX -> 0xFF10A37F.toInt()
+        AgentKind.NONE -> 0
+    }
+
+    private fun updateAgentChrome(kind: AgentKind) {
+        if (kind == agentChromeShowing) return
+        agentChromeShowing = kind
+        if (kind.isAgent) {
             val borderPx = (2 * resources.displayMetrics.density).toInt()
             binding.claudeContainer.foreground = android.graphics.drawable.GradientDrawable().apply {
-                setStroke(borderPx, 0xFF9E5A28.toInt())
+                setStroke(borderPx, agentBorderColor(kind))
                 setColor(0x00000000)
             }
-        } else {
-            binding.claudeContainer.foreground = null
-        }
-        // Hide Claude-specific UI bars when not in a Claude window
-        if (isClaude) {
             binding.statusBar.visibility = View.VISIBLE
             binding.thinkingIndicator.visibility = View.VISIBLE
         } else {
+            // No agent: drop the border and the agent-only bars.
+            binding.claudeContainer.foreground = null
             binding.statusBar.visibility = View.GONE
             binding.thinkingIndicator.visibility = View.GONE
             stopThinkingAnimation()
@@ -1012,7 +1043,7 @@ class MainActivity : AppCompatActivity() {
         binding.tmuxBar.visibility = View.GONE
         binding.terminalView.clear()
         outputProcessor.resetAllState()
-        claudeBorderShowing = false
+        agentChromeShowing = AgentKind.NONE
         binding.claudeContainer.foreground = null
         binding.statusBar.visibility = View.GONE
         binding.thinkingIndicator.visibility = View.GONE

@@ -51,8 +51,16 @@ class OutputProcessor(
      *  to the clearScrollback flow so the host can wipe terminal + history. */
     private fun installInterpreterCallbacks() {
         interpreter.onScrollbackErase = {
-            if (!isClaudeWindow) {
+            if (!isAgentWindow) {
                 _clearScrollbackFlow.tryEmit(Unit)
+            }
+        }
+        interpreter.onTitle = { title ->
+            // Codex spins a braille frame in the terminal title for the whole
+            // duration of a turn — a cheaper and steadier working signal than
+            // the on-screen spinner row, which only repaints once a second.
+            if (isCodexWindow && CodexUi.titleShowsSpinner(title)) {
+                handleThinking(null)
             }
         }
     }
@@ -100,10 +108,11 @@ class OutputProcessor(
     private val _rawPlainTextFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
     val rawPlainTextFlow: SharedFlow<String> = _rawPlainTextFlow
 
-    // Fires whenever the active window's Claude-ness flips. Hosts use this to
-    // turn line dedup on only for Claude-Code windows.
-    private val _claudeWindowFlow = MutableStateFlow(false)
-    val claudeWindowFlow: StateFlow<Boolean> = _claudeWindowFlow
+    // Fires whenever the active window's agent changes (none ⇄ claude ⇄ codex).
+    // Hosts use this to turn line dedup on only for Claude-Code windows and to
+    // swap the per-agent chrome (border colour, status bar, thinking bar).
+    private val _agentWindowFlow = MutableStateFlow(AgentKind.NONE)
+    val agentWindowFlow: StateFlow<AgentKind> = _agentWindowFlow
 
     companion object {
         private val THINKING_SYMBOLS = setOf('✶', '✻', '✽', '·', '✢', '*')
@@ -174,18 +183,24 @@ class OutputProcessor(
         private const val STATUS_SENTINEL = 'ƕ'
     }
 
-    // Whether the active tmux window is running Claude Code.
-    // When false, Claude-specific filters (thinking detection, status area,
-    // fence lines, etc.) are bypassed so non-Claude windows render cleanly.
-    // Detection: primary = tmux window name contains "claude";
-    // fallback = content-based heuristic (seeing Claude UI elements on screen).
+    // Which agent (if any) is running in the active tmux window. When NONE,
+    // all agent-specific filters (thinking detection, status area, fence
+    // lines, etc.) are bypassed so plain shells render verbatim.
+    // Detection: primary = tmux window name ("claude" / "codex");
+    // fallback = content-based heuristic (agent UI elements on screen).
+    // Codex runs under `node`, so its window is rarely named usefully and
+    // content detection carries most of the load.
     @Volatile
-    var isClaudeWindow: Boolean = false
+    var agentKind: AgentKind = AgentKind.NONE
         internal set(value) {
             if (field == value) return
             field = value
-            _claudeWindowFlow.value = value
+            _agentWindowFlow.value = value
         }
+
+    val isClaudeWindow: Boolean get() = agentKind == AgentKind.CLAUDE
+    val isCodexWindow: Boolean get() = agentKind == AgentKind.CODEX
+    val isAgentWindow: Boolean get() = agentKind.isAgent
 
     // Content-based Claude detection: count of recent screen frames that had
     // Claude Code UI elements (thinking symbols in left columns + fence/prompt pattern).
@@ -193,7 +208,7 @@ class OutputProcessor(
     // even if the tmux window isn't named "claude".
     private var claudeContentHits = 0
     private var claudeContentChecks = 0
-    private var claudeDetectedByName = false
+    private var agentDetectedByName = AgentKind.NONE
 
     // Throttle: skip expensive diffs for rapid-fire small chunks (thinking animation)
     private var lastDiffTime = 0L
@@ -271,7 +286,7 @@ class OutputProcessor(
                 // Only throttle small chunks (cursor moves, thinking symbol writes).
                 // Larger chunks (>40 bytes) may contain real content like menu options.
                 if (raw.length < 40) {
-                    if (isClaudeWindow) detectThinkingOnScreen()
+                    detectThinkingForAgent()
                     if (now - lastDiffTime < effectiveDiffInterval) {
                         return
                     }
@@ -279,12 +294,13 @@ class OutputProcessor(
             }
         }
 
-        if (isClaudeWindow) detectThinkingOnScreen()
+        detectThinkingForAgent()
 
-        // On full redraws, run content-based Claude detection for windows
-        // not named "claude" (e.g. running claude inside a "bash" window)
-        if (chunkType == ChunkType.FULL_REDRAW && !claudeDetectedByName) {
-            detectClaudeByContent()
+        // On full redraws, run content-based detection for windows whose name
+        // doesn't identify an agent (claude inside a "bash" window; codex,
+        // which almost always shows up as "node").
+        if (chunkType == ChunkType.FULL_REDRAW && agentDetectedByName == AgentKind.NONE) {
+            detectAgentByContent()
         }
 
         lastDiffTime = System.currentTimeMillis()
@@ -364,6 +380,44 @@ class OutputProcessor(
             }
 
             val trimmed = text.trimStart()
+
+            // Codex-specific filters: its bottom UI block repaints on every
+            // frame, so the composer, footer and spinner row would otherwise
+            // flood the transcript with near-duplicate lines.
+            if (isCodexWindow) {
+                // The spinner row → thinking indicator, never the transcript.
+                val working = CodexUi.workingStatus(text)
+                if (working != null) {
+                    Log.v(TAG, "filter CODEX_WORKING: '$text' → '$working'")
+                    handleThinking(working)
+                    continue
+                }
+
+                // Empty composer ("› Ask Codex to do anything") and the
+                // model·cwd footer are chrome. The footer doubles as Codex's
+                // status line, so it feeds the status bar on its way out.
+                if (CodexUi.COMPOSER_PLACEHOLDER.matches(text)) {
+                    Log.v(TAG, "filter CODEX_COMPOSER: '$text'")
+                    continue
+                }
+                if (CodexUi.FOOTER_LINE.matches(text)) {
+                    Log.v(TAG, "filter CODEX_FOOTER: '$text'")
+                    emitStatusBar(trimmed)
+                    continue
+                }
+
+                // Bare "›" — the composer mid-repaint.
+                if (trimmed.length <= 1 && trimmed.startsWith(CodexUi.USER_MARKER)) {
+                    Log.v(TAG, "filter CODEX_PROMPT: '$text'")
+                    continue
+                }
+
+                // Full-width rules Codex draws around each turn.
+                if (isFenceLine(text) && text.trim().length > 20 && !isTableFence(text)) {
+                    Log.v(TAG, "filter CODEX_RULE: '$text'")
+                    continue
+                }
+            }
 
             // Claude Code-specific filters: only apply when active window is Claude
             if (isClaudeWindow) {
@@ -504,8 +558,13 @@ class OutputProcessor(
 
     /** Strip selector/cursor characters for fuzzy line comparison. */
     private fun stripSelector(text: String): String {
-        return text.replace("❯", " ").replace(">", " ").trimStart()
+        return text.replace("❯", " ").replace(">", " ")
+            .replace(CodexUi.USER_MARKER, ' ').trimStart()
     }
+
+    /** True if a row is the active agent's transient spinner line. */
+    private fun isAgentSpinnerText(text: String): Boolean =
+        isCodexWindow && CodexUi.WORKING_LINE.containsMatchIn(text)
 
     /**
      * Detect partial cursor overwrites: the cursor moved to a position on a row
@@ -756,9 +815,12 @@ class OutputProcessor(
     private fun emitStatusBar(base: String) {
         lastBaseStatus = base
         val sb = StringBuilder(base)
-        if (acceptEditsVisible) sb.append(" a")
-        if (autoModeVisible) sb.append(" auto")
-        if (planModeVisible) sb.append(" plan")
+        // Mode suffixes are Claude-Code modes (shift+tab cycles them).
+        if (isClaudeWindow) {
+            if (acceptEditsVisible) sb.append(" a")
+            if (autoModeVisible) sb.append(" auto")
+            if (planModeVisible) sb.append(" plan")
+        }
         val display = sb.toString()
         _statusBarFlow.value = display
         saveCurrentWindowStatus()
@@ -817,6 +879,53 @@ class OutputProcessor(
         }
     }
 
+    /**
+     * Codex's fixed bottom block: composer row, model·cwd footer, and the
+     * spinner row, plus any blank rows woven between them. Everything above
+     * it is transcript that scrolled through the DECSTBM region and should
+     * reach the user verbatim.
+     *
+     * Returns the first row of the block, or [maxRow] when none is found.
+     * Unlike Claude's status area this also emits the status bar — the footer
+     * is cheap to parse and can't produce chimera rows, so there's no reason
+     * to throttle it to full redraws.
+     */
+    private fun detectCodexStatusArea(maxRow: Int): Int {
+        val top = detectCodexBottomBlock(maxRow) { screen.getRowText(it) }
+        // The footer ("<model> · <cwd>") is Codex's status line. It lives
+        // inside the block we just trimmed away, so read it here — nothing
+        // downstream will ever see it.
+        for (r in top until maxRow) {
+            val text = screen.getRowText(r).trim()
+            if (CodexUi.FOOTER_LINE.matches(text)) {
+                if (text != lastBaseStatus) emitStatusBar(text)
+                break
+            }
+        }
+        return top
+    }
+
+    private fun detectCodexStatusAreaInSnapshot(
+        snapshot: Array<Array<VirtualScreen.Cell>>,
+        maxRow: Int
+    ): Int = detectCodexBottomBlock(maxRow) { getRowText(snapshot[it]) }
+
+    private inline fun detectCodexBottomBlock(maxRow: Int, rowText: (Int) -> String): Int {
+        var topRow = -1
+        for (r in (maxRow - 1) downTo maxOf(0, maxRow - 8)) {
+            val text = rowText(r)
+            when {
+                CodexUi.isBottomBlockLine(text) -> topRow = r
+                // Blanks below the block (Codex leaves a couple) don't end the
+                // scan; blanks inside it belong to the block.
+                text.isBlank() -> if (topRow >= 0) topRow = r
+                // First real transcript row — stop.
+                else -> return if (topRow >= 0) topRow else maxRow
+            }
+        }
+        return if (topRow >= 0) topRow else maxRow
+    }
+
     /** Same detection but on a raw snapshot array (for previous screen). */
     private fun detectStatusAreaInSnapshot(snapshot: Array<Array<VirtualScreen.Cell>>, maxRow: Int): Int {
         var topStatusRow = -1
@@ -855,7 +964,9 @@ class OutputProcessor(
 
         // Exclude last row (tmux bar). Detect Claude's status area only on Claude windows.
         val maxRow = rows - 1
-        val contentRows = if (isClaudeWindow) {
+        val contentRows = if (isCodexWindow) {
+            detectCodexStatusArea(maxRow)
+        } else if (isClaudeWindow) {
             // Update status bar on full redraws (reliable) and periodically
             // on incremental diffs (every ~2s) to keep it fresh without
             // flooding the main thread.
@@ -870,16 +981,21 @@ class OutputProcessor(
             maxRow
         }
 
-        val prevContentRows = if (isClaudeWindow) {
-            detectStatusAreaInSnapshot(prev, maxRow)
-        } else maxRow
+        val prevContentRows = when {
+            isCodexWindow -> detectCodexStatusAreaInSnapshot(prev, maxRow)
+            isClaudeWindow -> detectStatusAreaInSnapshot(prev, maxRow)
+            else -> maxRow
+        }
 
-        // Build line lists; blank thinking rows only on Claude windows
+        // Build line lists; blank the agent's spinner row so its per-second
+        // repaint doesn't read as new content. Plain shells keep every row.
         val prevLines = (0 until prevContentRows).map {
-            if (isClaudeWindow && isThinkingRowInSnapshot(prev[it])) "" else getRowText(prev[it])
+            val text = getRowText(prev[it])
+            if (isAgentSpinnerText(text) || (isClaudeWindow && isThinkingRowInSnapshot(prev[it]))) "" else text
         }
         val currLines = (0 until contentRows).map {
-            if (isClaudeWindow && isThinkingRow(it)) "" else screen.getRowText(it)
+            val text = screen.getRowText(it)
+            if (isAgentSpinnerText(text) || (isClaudeWindow && isThinkingRow(it))) "" else text
         }
 
         // Find the longest suffix of prevLines that matches a prefix of currLines
@@ -929,11 +1045,14 @@ class OutputProcessor(
             // Menu-nav collapse, bullet-blink suppression and chimera skipping
             // are Claude-Code UI heuristics. Non-Claude windows render every
             // changed row verbatim — no content-dropping.
-            if (isClaudeWindow && changedRows.size > 0 && selectorChangedRows.size == changedRows.size) {
-                // Pure menu navigation — emit only the currently selected line
+            if (isAgentWindow && changedRows.size > 0 && selectorChangedRows.size == changedRows.size) {
+                // Pure menu navigation — emit only the currently selected line.
+                // Both agents render menus this way; only the marker differs
+                // (Claude ❯, Codex ›).
                 for (r in selectorChangedRows) {
                     val text = currLines[r].trimStart()
-                    if (text.startsWith("❯") || text.startsWith(">")) {
+                    if (text.startsWith("❯") || text.startsWith(">") ||
+                        text.startsWith(CodexUi.USER_MARKER)) {
                         newLines.add(screen.getRowStyled(r))
                         break
                     }
@@ -993,6 +1112,7 @@ class OutputProcessor(
         for (r in 0 until rows - 1) { // Skip last row (potential tmux bar)
             if (isClaudeWindow && isThinkingRow(r)) continue // Skip thinking animation row
             val text = screen.getRowText(r)
+            if (isAgentSpinnerText(text)) continue
             if (text.isNotBlank()) {
                 lines.add(screen.getRowStyled(r))
             }
@@ -1037,6 +1157,31 @@ class OutputProcessor(
             lastStatusText = null
             _thinkingFlow.value = ThinkingUpdate(false, null, null)
         }
+    }
+
+    /** Route thinking detection to the active agent's screen heuristic. */
+    private fun detectThinkingForAgent() {
+        when (agentKind) {
+            AgentKind.CLAUDE -> detectThinkingOnScreen()
+            AgentKind.CODEX -> detectCodexThinkingOnScreen()
+            AgentKind.NONE -> {}
+        }
+    }
+
+    /**
+     * Codex prints its spinner as a text row — "• Working (12s • esc to
+     * interrupt)" — rather than animating a glyph column. Find it anywhere
+     * on screen and surface the verb phrase ("Working", "Reviewing approval
+     * request") in the thinking indicator.
+     */
+    private fun detectCodexThinkingOnScreen() {
+        for (r in (rows - 2) downTo 0) {
+            val status = CodexUi.workingStatus(screen.getRowText(r)) ?: continue
+            handleThinking(status)
+            return
+        }
+        // No spinner row this frame — let the 2 s timeout decide, same as
+        // Claude. A single frame can land mid-repaint.
     }
 
     /**
@@ -1132,8 +1277,8 @@ class OutputProcessor(
         val activeIndex = updated.indexOfFirst { it.isActive }
         val activeWindow = updated.getOrNull(activeIndex)
         if (activeWindow != null) {
-            claudeDetectedByName = activeWindow.name.contains("claude", ignoreCase = true)
-            isClaudeWindow = claudeDetectedByName
+            agentDetectedByName = AgentKind.fromWindowName(activeWindow.name)
+            agentKind = agentDetectedByName
         }
         _tmuxBarFlow.value = TmuxBarUpdate(updated, activeIndex)
     }
@@ -1159,8 +1304,8 @@ class OutputProcessor(
         userSwitchUntil = 0L
         val activeIndex = windows.indexOfFirst { it.isActive }.takeIf { it >= 0 } ?: 0
         val activeWindow = windows[activeIndex]
-        claudeDetectedByName = activeWindow.name.contains("claude", ignoreCase = true)
-        isClaudeWindow = claudeDetectedByName
+        agentDetectedByName = AgentKind.fromWindowName(activeWindow.name)
+        agentKind = agentDetectedByName
         claudeContentHits = 0
         claudeContentChecks = 0
         restoreWindowStatus(activeWindow.index)
@@ -1281,21 +1426,25 @@ class OutputProcessor(
                 saveCurrentWindowStatus()
                 restoreWindowStatus(activeWindow.index)
             }
-            claudeDetectedByName = activeWindow.name.contains("claude", ignoreCase = true)
-            if (claudeDetectedByName) {
-                isClaudeWindow = true
+            agentDetectedByName = AgentKind.fromWindowName(activeWindow.name)
+            if (agentDetectedByName != AgentKind.NONE) {
+                agentKind = agentDetectedByName
                 claudeContentHits = 0
                 claudeContentChecks = 0
-            } else {
-                // Not named "claude" — immediately turn off Claude mode.
-                // Content-based detection is too prone to false positives
-                // (thinking symbols appear in other programs, ❯ is a common prompt).
-                isClaudeWindow = false
+            } else if (!isCodexWindow) {
+                // Name says nothing and we're not already in a detected codex
+                // window — drop back to NONE. Claude's content heuristics are
+                // too prone to false positives (thinking symbols appear in
+                // other programs, ❯ is a common prompt) to keep a guess alive
+                // across a bar parse. Codex is exempt: its window is named
+                // "node", so a NONE verdict here would fight the (unambiguous)
+                // content detection on every single bar update.
+                agentKind = AgentKind.NONE
                 claudeContentHits = 0
                 claudeContentChecks = 0
             }
         }
-        Log.d(TAG, "tmuxBar parsed: windows=${finalWindows.map { "${it.index}:${it.name}${if (it.isActive) "*" else ""}" }} isClaudeWindow=$isClaudeWindow (byName=$claudeDetectedByName)")
+        Log.d(TAG, "tmuxBar parsed: windows=${finalWindows.map { "${it.index}:${it.name}${if (it.isActive) "*" else ""}" }} agentKind=$agentKind (byName=$agentDetectedByName)")
         _tmuxBarFlow.value = TmuxBarUpdate(finalWindows, activeIndex)
     }
 
@@ -1306,12 +1455,35 @@ class OutputProcessor(
     }
 
     /**
-     * Content-based Claude detection: scan the screen for Claude Code UI patterns.
-     * Called on FULL_REDRAW when window isn't named "claude" to detect Claude
-     * running inside a generically-named window (bash, zsh, etc.).
+     * Content-based agent detection. Called on FULL_REDRAW when the window
+     * name doesn't identify an agent (claude launched inside a "bash" window,
+     * or codex, which tmux almost always names "node").
+     *
+     * Codex is checked first and needs only one sighting: its markers ("Ask
+     * Codex to do anything", the ">_ OpenAI Codex" banner, the "esc to
+     * interrupt" spinner row) are strings no other program prints. Claude's
+     * markers are generic glyphs, so they need the rolling-window vote below.
      */
-    private fun detectClaudeByContent() {
-        if (claudeDetectedByName) return // Already detected by name, skip
+    private fun detectAgentByContent() {
+        if (agentDetectedByName != AgentKind.NONE) return // Already known by name
+
+        val lines = (0 until rows - 1).map { screen.getRowText(it) }
+        if (CodexUi.looksLikeCodex(lines)) {
+            if (agentKind != AgentKind.CODEX) {
+                Log.d(TAG, "Codex content detection: $agentKind → CODEX")
+                agentKind = AgentKind.CODEX
+                claudeContentHits = 0
+                claudeContentChecks = 0
+            }
+            return
+        }
+        if (isCodexWindow) {
+            // Codex markers are persistent chrome: the composer placeholder or
+            // footer is on screen in every idle frame, and the spinner row in
+            // every busy one. Losing all of them means codex exited.
+            Log.d(TAG, "Codex content detection: CODEX → NONE")
+            agentKind = AgentKind.NONE
+        }
 
         var hits = 0
         // Check for thinking symbol in left columns
@@ -1348,7 +1520,7 @@ class OutputProcessor(
             val detected = claudeContentHits >= 2
             if (detected != isClaudeWindow) {
                 Log.d(TAG, "Claude content detection: $isClaudeWindow → $detected (hits=$claudeContentHits/$claudeContentChecks)")
-                isClaudeWindow = detected
+                agentKind = if (detected) AgentKind.CLAUDE else AgentKind.NONE
             }
         }
     }
@@ -1376,6 +1548,7 @@ class OutputProcessor(
         claudeContentHits = 0
         claudeContentChecks = 0
         screen.eraseEntireScreen()
+        screen.resetScrollRegion()
         interpreter.reset()
         resetThinkingState()
     }
@@ -1399,8 +1572,8 @@ class OutputProcessor(
         currentWindowIndex = -1
         userSwitchUntil = 0L
         statusByWindow.clear()
-        isClaudeWindow = false
-        claudeDetectedByName = false
+        agentKind = AgentKind.NONE
+        agentDetectedByName = AgentKind.NONE
         acceptEditsVisible = false
         autoModeVisible = false
         planModeVisible = false
