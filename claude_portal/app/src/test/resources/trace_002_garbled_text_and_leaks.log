@@ -130,7 +130,7 @@
 02-15 18:55:14.135 16462 16542 D OutputProcessor: chunk len=8 type=INCREMENTAL: ⎋[?2004h
 02-15 18:55:24.067 16462 16536 D SshManager: Reader thread exiting
 02-15 18:55:27.383 16658 16698 D SshManager: Full BouncyCastle provider registered at position 1
-02-15 18:55:27.725 16658 16698 D SshManager: Connecting to nathan-lambda:2222
+02-15 18:55:27.725 16658 16698 D SshManager: Connecting to devbox:2222
 02-15 18:55:28.910 16658 16698 D SshManager: TCP connected, authenticating as nathan
 02-15 18:55:29.717 16658 16698 D SshManager: Authenticated
 02-15 18:55:30.736 16658 16698 D SshManager: Shell started, connected
@@ -150,13 +150,13 @@
 02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: 'see /var/log/unattended-upgrades/unattended-upgrades.log'
 02-15 18:55:30.763 16658 16698 D OutputProcessor: emit: 'Last login: Mon Feb 16 02:53:35 2026 from 100.83.20.1'
 02-15 18:55:31.160 16658 16706 D SshManager: Received 104 bytes: [1m[7m%[27m[1m[0m                                                          
-02-15 18:55:31.162 16658 16706 D SshManager: Received 33 bytes: ]2;nathan@nathan-lambda:~]1;~
+02-15 18:55:31.162 16658 16706 D SshManager: Received 33 bytes: ]2;nathan@devbox:~]1;~
 02-15 18:55:31.162 16658 16706 D SshManager: Received 46 bytes: \r[0m[27m[24m[J[01;32m➜  [36m~[00m [K
 02-15 18:55:31.163 16658 16706 D SshManager: Received 7 bytes: [?1h=
 02-15 18:55:31.163 16658 16679 D OutputProcessor: chunk len=104 type=INCREMENTAL: ⎋[1m⎋[7m%⎋[27m⎋[1m⎋[0m                                                                               ⏎ ⏎
 02-15 18:55:31.164 16658 16679 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
 02-15 18:55:31.165 16658 16706 D SshManager: Received 8 bytes: [?2004h
-02-15 18:55:31.174 16658 16679 D OutputProcessor: chunk len=33 type=INCREMENTAL: ⎋]2;nathan@nathan-lambda:~⎋]1;~
+02-15 18:55:31.174 16658 16679 D OutputProcessor: chunk len=33 type=INCREMENTAL: ⎋]2;nathan@devbox:~⎋]1;~
 02-15 18:55:31.174 16658 16679 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
 02-15 18:55:31.175 16658 16679 D OutputProcessor: chunk len=44 type=INCREMENTAL: ⏎⎋[0m⎋[27m⎋[24m⎋[J⎋[01;32m➜  ⎋[36m~⎋[00m ⎋[K
 02-15 18:55:31.175 16658 16679 D OutputProcessor: thinking row=19 rowText='*** System restart required ***' status='System restart required ***'
