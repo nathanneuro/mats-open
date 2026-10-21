@@ -123,19 +123,34 @@ test('whiskers span value -minus..+plus, stretch the axis, and are bars only', a
   expect(parseFigure({ kind: 'bar', series: [{ label: 'a', y: [1, 2], err: [1, -1] }] })).toMatch(/>= 0/)
 })
 
-test('a whisker leaves the bar end cell as drawn: no bump up or down', async () => {
-  // 3.3 on an axis stretched to 5.3 by the whisker ends mid-cell, so the bar has a partial top row.
-  const withErr: Figure = { kind: 'bar', series: [{ label: 'a', y: [3.3], err: [[2, 2]] }], style: 'braille', aggregate: 'none' }
-  const b = glyphs(renderChart(withErr, 60, 30))
-  const partial = /[▁▂▃▄▅▆▇]/
-  const endRow = (rows: string[]) => rows.findIndex(r => partial.test(r))
-  const rowB = endRow(b)
-  expect(rowB).toBeGreaterThanOrEqual(0)
-  // Every bar column on that row still holds the partial block (none replaced by the whisker).
-  const blocks = (row: string) => [...row].filter(ch => partial.test(ch)).length
-  // The bar's width, from the full row below: its blocks plus the whisker's column.
-  const barCols = [...b[rowB + 1]!].filter(ch => ch === '█' || ch === '│').length
-  expect(blocks(b[rowB]!)).toBe(barCols)
+test('with whiskers, bars are whole cells and each whisker is unbroken', async () => {
+  const fig: Figure = {
+    kind: 'bar',
+    series: [
+      { label: 'a', y: [3.3, -1.7], err: [[2, 2], [0.4, 1.1]] },
+      { label: 'b', y: [2.2, 1.45], err: [1, 0.6] },
+    ],
+    style: 'braille',
+    aggregate: 'none',
+  }
+  const plot = glyphs(renderChart(fig, 60, 30)).slice(0, -2)
+  // No partial blocks anywhere: nothing for a whisker to break around.
+  expect(plot.join('\n')).not.toMatch(/[▁▂▃▄▅▆▇▀]/)
+  // Each whisker column runs from its cap to its foot with no gap.
+  const cols = new Set<number>()
+  for (const row of plot) [...row].forEach((ch, c) => ch === '┬' && cols.add(c))
+  expect(cols.size).toBe(4)
+  for (const c of cols) {
+    // From the cap down to the foot (the bar may continue below the foot to zero).
+    const column = plot.map(row => [...row][c]!).join('')
+    expect(column).toMatch(/┬│*┴|┼/)
+    expect(column.slice(column.indexOf('┬'), column.indexOf('┴') + 1)).toMatch(/^┬│*┴$/)
+  }
+})
+
+test('without whiskers, bars keep eighths', async () => {
+  const fig: Figure = { kind: 'bar', series: [{ label: 'a', y: [3.3, 5.3] }], style: 'braille', aggregate: 'none' }
+  expect(glyphs(renderChart(fig, 60, 30)).join('\n')).toMatch(/[▁▂▃▄▅▆▇]/)
 })
 
 test('too narrow a pane, or too many bars, says why', async () => {

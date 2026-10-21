@@ -446,9 +446,10 @@ function barRange(pts: Points[], plotRows: number): [number, number] {
 /**
  * Grouped bars, one group per category, centred in the plot. Bars above
  * zero rise in eighths of a cell (▁..█); below zero they hang in halves (▀).
- * A whisker runs down each bar's middle column, its ends in whole cells,
- * on the bar's colour inside the bar. The bar's partly filled end cell keeps
- * its block, so the whisker passes behind it and the bar keeps its height.
+ * A chart with whiskers draws every bar in whole cells instead: a cell holds
+ * one glyph in one colour, so a partly filled cell cannot also carry the
+ * whisker. Each whisker runs down its bar's middle column, its ends in whole
+ * cells, on the bar's colour inside the bar.
  * Returns why the bars do not fit, or undefined once drawn.
  */
 function drawBars({ grid, gutter, pw, plotRows, lo, hi }: Plot, pts: Points[], categories: string[]): string | undefined {
@@ -460,24 +461,33 @@ function drawBars({ grid, gutter, pw, plotRows, lo, hi }: Plot, pts: Points[], c
 
   const perRow = (hi - lo) / plotRows
   const zeroRow = Math.round(hi / perRow) // boundary above this row index is zero
+  const isWhole = pts.some(p => p.err)
+  // A bar's signed height in rows, as drawn.
+  const rowsOf = (v: number) => {
+    const steps = isWhole ? 1 : v >= 0 ? 8 : 2
+    return (Math.sign(v) * Math.round((Math.abs(v) / perRow) * steps)) / steps
+  }
   const group = m * bw
   const offset = Math.floor((pw - (n * group + (n - 1) * gap)) / 2)
   for (let i = 0; i < n; i++) {
     const start = gutter + offset + i * (group + gap)
     for (const [j, p] of pts.entries()) {
-      const v = p.ys[i]!
+      const q = rowsOf(p.ys[i]!)
+      const full = Math.floor(Math.abs(q))
+      const part = Math.abs(q) - full
       for (let c = start + j * bw; c < start + (j + 1) * bw; c++) {
-        if (v >= 0) {
-          const eighths = Math.round((v / perRow) * 8)
-          for (let k = 0; k < Math.floor(eighths / 8); k++) grid.put(zeroRow - 1 - k, c, glyph('█'), p.color)
-          if (eighths % 8) grid.put(zeroRow - 1 - Math.floor(eighths / 8), c, 0x2580 + (eighths % 8), p.color)
-        } else {
-          const halves = Math.round((-v / perRow) * 2)
-          for (let k = 0; k < Math.floor(halves / 2); k++) grid.put(zeroRow + k, c, glyph('█'), p.color)
-          if (halves % 2) grid.put(zeroRow + Math.floor(halves / 2), c, glyph('▀'), p.color)
-        }
+        for (let k = 0; k < full; k++) grid.put(q >= 0 ? zeroRow - 1 - k : zeroRow + k, c, glyph('█'), p.color)
+        if (part && q > 0) grid.put(zeroRow - 1 - full, c, 0x2580 + Math.round(part * 8), p.color)
+        if (part && q < 0) grid.put(zeroRow + full, c, glyph('▀'), p.color)
       }
-      if (p.err) drawWhisker(grid, start + j * bw + Math.floor(bw / 2), v, p.err[i]!, p.color, { plotRows, perRow, zeroRow, hi })
+      if (p.err) {
+        const [barTop, barBottom] = [Math.min(zeroRow, zeroRow - q), Math.max(zeroRow, zeroRow - q)]
+        drawWhisker(grid, start + j * bw + Math.floor(bw / 2), p.ys[i]!, p.err[i]!, p.color, barTop, barBottom, {
+          plotRows,
+          perRow,
+          hi,
+        })
+      }
     }
     const label = [...categories[i]!].slice(0, group).join('')
     grid.text(plotRows + 1, start + Math.floor((group - [...label].length) / 2), label, AXIS)
@@ -486,24 +496,21 @@ function drawBars({ grid, gutter, pw, plotRows, lo, hi }: Plot, pts: Points[], c
   return undefined
 }
 
+/** A whisker from v - minus to v + plus; rows barTop..barBottom-1 are the bar's, whole cells. */
 function drawWhisker(
   grid: Grid,
   col: number,
   v: number,
   [minus, plus]: [number, number],
   barColor: number,
-  { plotRows, perRow, zeroRow, hi }: { plotRows: number; perRow: number; zeroRow: number; hi: number },
+  barTop: number,
+  barBottom: number,
+  { plotRows, perRow, hi }: { plotRows: number; perRow: number; hi: number },
 ) {
-  // The bar's extent in rows, quantized as drawn: eighths above zero, halves below.
-  const q = v >= 0 ? Math.round((v / perRow) * 8) / 8 : -Math.round((-v / perRow) * 2) / 2
-  const [barTop, barBottom] = [Math.min(zeroRow, zeroRow - q), Math.max(zeroRow, zeroRow - q)]
-  const filled = (r: number) => Math.max(0, Math.min(barBottom, r + 1) - Math.max(barTop, r))
   const rowOf = (u: number) => Math.min(plotRows - 1, Math.max(0, Math.floor((hi - u) / perRow)))
   const [top, bottom] = [rowOf(v + plus), rowOf(v - minus)]
   for (let r = top; r <= bottom; r++) {
-    const f = filled(r)
-    if (f > 0 && f < 1) continue // the bar's partial end cell: keep its block
     const code = top === bottom ? '┼' : r === top ? '┬' : r === bottom ? '┴' : '│'
-    grid.put(r, col, glyph(code), WHISKER, f === 1 ? barColor : DEFAULT)
+    grid.put(r, col, glyph(code), WHISKER, r >= barTop && r < barBottom ? barColor : DEFAULT)
   }
 }

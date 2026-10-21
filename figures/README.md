@@ -36,8 +36,9 @@ The pane docks beside the conversation in Claude Code's fullscreen layout at
 - `kind: "scatter"`: one dot per point, unjoined (`•` per point in text style).
 - `kind: "bar"`: grouped bars, one group per `categories` label. Bars rise
   from zero in eighths of a cell and hang below it in halves. Optional
-  whiskers per value via `err`: a number (symmetric) or `[minus, plus]`;
-  whisker ends land on whole cells.
+  whiskers per value via `err`: a number (symmetric) or `[minus, plus]`.
+  Whisker ends land on whole cells, and a chart with whiskers draws its bars
+  in whole cells too, since a cell cannot hold part of a bar and a whisker.
 - `refLines` (line and scatter): dashed straight lines under the data, e.g.
   y = x or a fitted trend, clipped to the plot so they never widen the axes.
 - Numbered y and x axes, a colour key, optional `title`, `xLabel`, `yLabel`.
