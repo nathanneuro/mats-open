@@ -1,0 +1,9 @@
+{
+  "name": "figures",
+  "version": "0.1.0",
+  "description": "A side pane where Claude draws line charts (braille or text) from data, hidden until a figure arrives; /fig shows or hides it",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Nathan Helm-Burger"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "mats-open",
+  "owner": { "name": "Nathan Helm-Burger" },
+  "plugins": [{ "name": "figures", "source": "./figures" }]
+}
