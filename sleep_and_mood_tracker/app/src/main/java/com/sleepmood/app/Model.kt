@@ -75,17 +75,20 @@ data class Entry(
 data class EmotionFamily(val name: String, val color: Long, val emotions: List<String>)
 
 val EMOTION_FAMILIES = listOf(
-    EmotionFamily("Joy", 0xFFE8C547, listOf("happy", "content", "joyful", "cheerful", "delighted", "elated", "blissful", "giddy", "light-hearted", "grateful", "hopeful", "optimistic", "proud", "triumphant", "fulfilled", "satisfied", "amused", "playful")),
-    EmotionFamily("Peace", 0xFF94C47D, listOf("calm", "peaceful", "serene", "relaxed", "at ease", "grounded", "centered", "settled", "safe", "relieved", "restored", "unhurried")),
-    EmotionFamily("Connection", 0xFFE88AA8, listOf("loving", "affectionate", "tender", "warm", "close", "intimate", "connected", "belonging", "accepted", "understood", "seen", "supported", "cared for", "appreciated", "trusting", "admiring", "compassionate", "protective", "nostalgic")),
-    EmotionFamily("Interest", 0xFF6CC3B5, listOf("curious", "intrigued", "fascinated", "absorbed", "in flow", "focused", "engaged", "eager", "excited", "inspired", "creative", "determined", "amazed", "in awe")),
-    EmotionFamily("Surprise", 0xFFB9D46A, listOf("surprised", "startled", "shocked", "confused", "bewildered", "disoriented", "perplexed", "torn", "ambivalent", "unsettled")),
-    EmotionFamily("Sadness", 0xFF6F95D8, listOf("sad", "sorrowful", "melancholy", "wistful", "homesick", "lonely", "isolated", "left out", "abandoned", "disappointed", "discouraged", "dejected", "defeated", "despondent", "despairing", "hopeless", "grieving", "heartbroken", "empty", "forlorn")),
-    EmotionFamily("Fear", 0xFF9E86D8, listOf("worried", "nervous", "uneasy", "apprehensive", "tense", "on edge", "anxious", "rattled", "insecure", "vulnerable", "threatened", "scared", "panicky", "frantic", "dread", "overwhelmed", "helpless", "out of control", "paranoid")),
-    EmotionFamily("Anger", 0xFFE0725A, listOf("annoyed", "irritable", "cranky", "impatient", "short-tempered", "frustrated", "exasperated", "aggravated", "resentful", "bitter", "envious", "jealous", "betrayed", "indignant", "defensive", "hostile", "spiteful", "angry", "furious")),
-    EmotionFamily("Disgust", 0xFFA9A65A, listOf("disgusted", "repulsed", "revolted", "sickened", "appalled", "contemptuous", "judgmental", "averse")),
-    EmotionFamily("Shame", 0xFFC98A5B, listOf("embarrassed", "foolish", "exposed", "self-conscious", "small", "inadequate", "inferior", "like a fraud", "self-critical", "guilty", "remorseful", "regretful", "ashamed", "humiliated", "like a burden", "unworthy", "undeserving", "worthless", "self-loathing")),
-    EmotionFamily("Withdrawal", 0xFF8E96A3, listOf("bored", "listless", "flat", "unmotivated", "stuck", "foggy", "wanting to hide", "avoidant", "withdrawn", "disengaged", "checked out", "detached", "indifferent", "apathetic", "numb", "dissociated", "depleted", "burnt out", "jaded", "cynical", "going through the motions")),
+    EmotionFamily("Joy", 0xFFE8C547, listOf("happy", "delighted", "amused", "playful", "silly", "mischievous", "carefree", "celebratory", "proud", "triumphant", "satisfied", "grateful", "hopeful")),
+    EmotionFamily("Peace", 0xFF94C47D, listOf("calm", "relaxed", "relieved", "grounded", "safe", "cozy", "rested", "at home", "patient", "unhurried", "accepting", "forgiving", "content")),
+    EmotionFamily("Connection", 0xFFE88AA8, listOf("loving", "affectionate", "tender", "close", "connected", "belonging", "welcomed", "understood", "supported", "cared for", "appreciated", "trusting", "admiring", "compassionate", "protective", "generous", "devoted")),
+    EmotionFamily("Wonder", 0xFF6CC3B5, listOf("curious", "fascinated", "absorbed", "in flow", "inspired", "creative", "eager", "adventurous", "open-minded", "in awe", "moved", "enchanted", "reverent")),
+    EmotionFamily("Strength", 0xFFF0A050, listOf("confident", "capable", "determined", "motivated", "focused", "productive", "brave", "assertive", "decisive", "empowered", "resilient", "steady", "independent", "ambitious", "defiant")),
+    EmotionFamily("Mixed", 0xFFB9D46A, listOf("bittersweet", "nostalgic", "wistful", "conflicted", "ambivalent", "humbled", "vindicated", "impressed", "anticipating", "in suspense", "tempted", "surprised", "confused", "disoriented")),
+    EmotionFamily("Sadness", 0xFF6F95D8, listOf("sad", "lonely", "homesick", "grieving", "heartbroken", "melancholy", "disappointed", "disillusioned", "discouraged", "defeated", "hopeless", "empty", "abandoned", "regretful")),
+    EmotionFamily("Fear", 0xFF9E86D8, listOf("worried", "nervous", "anxious", "on edge", "dread", "scared", "panicky", "insecure", "vulnerable", "overwhelmed", "helpless", "out of control", "suspicious")),
+    EmotionFamily("Restlessness", 0xFFD47FD0, listOf("restless", "agitated", "jittery", "wired", "scattered", "distracted", "overstimulated", "pressured", "rushed", "trapped")),
+    EmotionFamily("Anger", 0xFFE0725A, listOf("irritable", "annoyed", "frustrated", "impatient", "resentful", "bitter", "jealous", "envious", "betrayed", "indignant", "provoked", "defensive", "hostile", "spiteful", "furious")),
+    EmotionFamily("Disgust", 0xFFA9A65A, listOf("disgusted", "repulsed", "appalled", "contemptuous", "judgmental", "cynical", "fed up")),
+    EmotionFamily("Social pain", 0xFF5FB0E8, listOf("misunderstood", "unappreciated", "invisible", "rejected", "left out", "out of place", "criticized", "disrespected", "used", "smothered", "obligated")),
+    EmotionFamily("Shame", 0xFFC98A5B, listOf("embarrassed", "self-conscious", "foolish", "exposed", "inadequate", "like a fraud", "self-critical", "guilty", "ashamed", "humiliated", "like a burden", "worthless", "self-loathing")),
+    EmotionFamily("Withdrawal", 0xFF8E96A3, listOf("bored", "flat", "unmotivated", "stuck", "foggy", "wanting to hide", "avoidant", "isolating", "escapist", "checked out", "numb", "dissociated", "burnt out", "going through the motions")),
 )
 val ALL_EMOTIONS: Set<String> = EMOTION_FAMILIES.flatMap { it.emotions }.toSet()
 
@@ -205,3 +208,50 @@ fun emotionCounts(emotions: List<String>): String =
         .joinToString("; ") { if (it.value > 1) "${it.key} x${it.value}" else it.key }
 
 fun formatMinutes(m: Long): String = "%dh%02d".format(m / 60, m % 60)
+
+/** The family an emotion belongs to, or null for a name no longer in the list (old entries keep their names). */
+fun familyOf(emotion: String): EmotionFamily? = EMOTION_FAMILIES.firstOrNull { emotion in it.emotions }
+
+/** Every day from [from] to [to] inclusive, oldest first. */
+fun dayRange(from: LocalDate, to: LocalDate): List<LocalDate> =
+    generateSequence(from) { it.plusDays(1) }.takeWhile { it <= to }.toList()
+
+/** How often each emotion was logged over [days], most frequent first. */
+fun emotionTotals(byDate: Map<LocalDate, DaySummary>, days: List<LocalDate>): List<Pair<String, Int>> =
+    days.flatMap { byDate[it]?.emotions.orEmpty() }.groupingBy { it }.eachCount()
+        .entries.sortedByDescending { it.value }.map { it.key to it.value }
+
+/** A piece of a night, nap or meditation inside one row of the sleep chart, as fractions 0..1 of the row. */
+data class Segment(val type: Entry.Type, val from: Float, val to: Float)
+
+/**
+ * One row per day for a sleep-diary chart. The row for day D runs from 18:00 on D-1 to 18:00 on D, so a
+ * night and the next day's naps sit on one row. Anything crossing a row edge is split between the rows.
+ */
+fun actogramRows(entries: List<Entry>, zone: ZoneId, days: List<LocalDate>): List<List<Segment>> {
+    val timed = entries.filter {
+        (it.type == Entry.Type.SLEEP || it.type == Entry.Type.NAP || it.type == Entry.Type.MEDITATION) && it.end != null
+    }
+    val six = LocalTime.of(18, 0)
+    return days.map { d ->
+        val ws = LocalDateTime.of(d.minusDays(1), six).atZone(zone).toInstant().toEpochMilli()
+        val we = LocalDateTime.of(d, six).atZone(zone).toInstant().toEpochMilli()
+        val len = (we - ws).toFloat()
+        timed.mapNotNull { e ->
+            val s = maxOf(e.start, ws)
+            val t = minOf(e.end!!, we)
+            if (t > s) Segment(e.type, (s - ws) / len, (t - ws) / len) else null
+        }
+    }
+}
+
+/** "today 14:02", "yesterday 21:30", or "Mon 16 Nov 21:30". */
+fun whenText(ms: Long, zone: ZoneId, today: LocalDate): String {
+    val t = ms.toLocal(zone)
+    val hm = t.format(HM)
+    return when (t.toLocalDate()) {
+        today -> "today $hm"
+        today.minusDays(1) -> "yesterday $hm"
+        else -> t.format(DateTimeFormatter.ofPattern("EEE d MMM HH:mm"))
+    }
+}

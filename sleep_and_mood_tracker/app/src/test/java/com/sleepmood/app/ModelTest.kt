@@ -100,6 +100,42 @@ class ModelTest {
         assertEquals("2026-11-17,,,,,1,30,2,30,,0,,0,,", sleepDiaryCsv(entries, zone).trimEnd().lines()[1])
     }
 
+    @Test fun sleepChartRowRunsSixPmToSixPm() {
+        val entries = listOf(
+            Entry.new(Entry.Type.SLEEP, at(nov17.minusDays(1), 23, 0), end = at(nov17, 7, 0), value = 3),
+            Entry.new(Entry.Type.NAP, at(nov17, 14, 0), end = at(nov17, 15, 0)),
+            Entry.new(Entry.Type.MEDITATION, at(nov17, 17, 30), end = at(nov17, 18, 30)), // crosses the row edge
+        )
+        val rows = actogramRows(entries, zone, listOf(nov17, nov17.plusDays(1)))
+        val h = 1f / 24
+        assertEquals(3, rows[0].size)
+        assertEquals(5 * h, rows[0][0].from, 1e-4f); assertEquals(13 * h, rows[0][0].to, 1e-4f)
+        assertEquals(20 * h, rows[0][1].from, 1e-4f); assertEquals(21 * h, rows[0][1].to, 1e-4f)
+        assertEquals(23.5f * h, rows[0][2].from, 1e-4f); assertEquals(1f, rows[0][2].to, 1e-4f)
+        assertEquals(1, rows[1].size)
+        assertEquals(Entry.Type.MEDITATION, rows[1][0].type)
+        assertEquals(0f, rows[1][0].from, 1e-4f); assertEquals(0.5f * h, rows[1][0].to, 1e-4f)
+    }
+
+    @Test fun emotionTotalsAndFamilies() {
+        val entries = listOf(
+            Entry.new(Entry.Type.EMOTIONS, at(nov17, 9, 0), text = "irritable, burnt out"),
+            Entry.new(Entry.Type.EMOTIONS, at(nov17.minusDays(3), 9, 0), text = "irritable, some old word"),
+        )
+        val byDate = daySummaries(entries, zone).associateBy { it.date }
+        // Ties keep the order first logged, oldest day first.
+        assertEquals(listOf("irritable" to 2, "some old word" to 1, "burnt out" to 1), emotionTotals(byDate, dayRange(nov17.minusDays(6), nov17)))
+        assertEquals(listOf("irritable" to 1, "burnt out" to 1), emotionTotals(byDate, dayRange(nov17.minusDays(1), nov17)))
+        assertEquals("Anger", familyOf("irritable")!!.name)
+        assertNull(familyOf("some old word"))
+    }
+
+    @Test fun whenTextIsRelativeToToday() {
+        assertEquals("today 14:02", whenText(at(nov17, 14, 2), zone, nov17))
+        assertEquals("yesterday 21:30", whenText(at(nov17.minusDays(1), 21, 30), zone, nov17))
+        assertEquals("Sun 15 Nov 08:00", whenText(at(nov17.minusDays(2), 8, 0), zone, nov17))
+    }
+
     @Test fun emotionNamesAreUniqueAndCommaFree() {
         val all = EMOTION_FAMILIES.flatMap { it.emotions }
         assertEquals(all.size, all.toSet().size)

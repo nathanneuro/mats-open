@@ -145,7 +145,7 @@ private fun App(store: Store, onExport: (List<Entry>) -> Unit) {
         snackbarHost = { SnackbarHost(snackbar) },
     ) { pad ->
         if (tab == 0) TodayScreen(pad, today, entries, zone, ::add, ::replace)
-        else HistoryScreen(pad, entries, zone, ::delete)
+        else HistoryScreen(pad, today, entries, zone, ::delete)
     }
 }
 
@@ -160,7 +160,7 @@ private fun TodayScreen(
     add: (Entry, String) -> Unit,
     replace: (Entry) -> Unit,
 ) {
-    val todays = entries.filter { it.start.toLocal(zone).toLocalDate() == today }
+    fun latest(type: Entry.Type) = entries.filter { it.type == type && (it.end != null || type !in TIMED_TYPES) }.maxByOrNull { it.end ?: it.start }
     val night = daySummaries(entries, zone).firstOrNull { it.date == today }?.night
     var nightDialog by remember { mutableStateOf(false) }
     var pastDialog by remember { mutableStateOf<Timed?>(null) }
@@ -173,17 +173,14 @@ private fun TodayScreen(
     ) {
         Text(today.format(DAY), style = MaterialTheme.typography.titleMedium)
 
-        RatingCard("Mood", MOOD_WORDS, todays.filter { it.type == Entry.Type.MOOD }, zone) { v ->
+        RatingCard("Mood", MOOD_WORDS, latest(Entry.Type.MOOD), zone, today) { v ->
             add(Entry.new(Entry.Type.MOOD, System.currentTimeMillis(), value = v), "Mood ${MOOD_WORDS[v - 1]} logged")
         }
-        RatingCard("Energy", ENERGY_WORDS, todays.filter { it.type == Entry.Type.ENERGY }, zone) { v ->
+        RatingCard("Energy", ENERGY_WORDS, latest(Entry.Type.ENERGY), zone, today) { v ->
             add(Entry.new(Entry.Type.ENERGY, System.currentTimeMillis(), value = v), "Energy ${ENERGY_WORDS[v - 1]} logged")
         }
 
         Section("Strong emotions") {
-            todays.filter { it.type == Entry.Type.EMOTIONS }.sortedBy { it.start }.forEach {
-                Text("${it.start.toLocal(zone).format(HM)}  ${it.text}", style = MaterialTheme.typography.bodySmall)
-            }
             OutlinedButton(onClick = { emotionDialog = true }) { Text("Log emotions") }
         }
 
@@ -197,14 +194,12 @@ private fun TodayScreen(
                 OutlinedButton(onClick = { nightDialog = true }) { Text("Edit") }
             } else {
                 Button(onClick = { nightDialog = true }) { Text("Log last night") }
+                latest(Entry.Type.SLEEP)?.let { LastLine("${describeSpan(it, zone, today)}, ${QUALITY_WORDS[it.value!! - 1]}") }
             }
         }
 
         Timed.entries.forEach { kind ->
             Section(kind.title) {
-                todays.filter { it.type == kind.type && it.end != null }.sortedBy { it.start }.forEach {
-                    Text("${it.start.toLocal(zone).format(HM)} to ${it.end!!.toLocal(zone).format(HM)} (${(it.end - it.start) / 60_000} min)")
-                }
                 val ongoing = entries.firstOrNull { it.type == kind.type && it.end == null }
                 if (ongoing != null) {
                     Text("${kind.ongoing} since ${ongoing.start.toLocal(zone).format(HM)}", fontWeight = FontWeight.Bold)
@@ -218,14 +213,13 @@ private fun TodayScreen(
                         }
                         OutlinedButton(onClick = { pastDialog = kind }) { Text("Add a past ${kind.noun}") }
                     }
+                    latest(kind.type)?.let { LastLine(describeSpan(it, zone, today)) }
                 }
             }
         }
 
         Section("Note") {
-            todays.filter { it.type == Entry.Type.NOTE }.forEach {
-                Text("${it.start.toLocal(zone).format(HM)}  ${it.text}", style = MaterialTheme.typography.bodySmall)
-            }
+            latest(Entry.Type.NOTE)?.let { LastLine("${whenText(it.start, zone, today)}: ${it.text}") }
             OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), placeholder = { Text("Anything worth remembering") })
             Button(onClick = {
                 add(Entry.new(Entry.Type.NOTE, System.currentTimeMillis(), text = note.trim()), "Note saved")
@@ -284,26 +278,32 @@ private fun RatingRow(words: List<String>, selected: Int?, onPick: (Int) -> Unit
         }
     }
     Text(
-        words.mapIndexed { i, w -> "${i + 1} $w" }.joinToString("  ·  "),
+        words.mapIndexed { i, w -> "${i + 1}\u00A0$w" }.joinToString("  ·  "), // no-break space keeps number and word together
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
 @Composable
-private fun RatingCard(title: String, words: List<String>, todays: List<Entry>, zone: ZoneId, onPick: (Int) -> Unit) {
+private fun RatingCard(title: String, words: List<String>, last: Entry?, zone: ZoneId, today: LocalDate, onPick: (Int) -> Unit) {
     Section(title) {
         RatingRow(words, null, onPick)
-        if (todays.isNotEmpty()) {
-            Text(
-                "Today: " + todays.sortedBy { it.start }.joinToString(", ") {
-                    "${words[it.value!! - 1]} at ${it.start.toLocal(zone).format(HM)}"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        last?.let { LastLine("${it.value} ${words[it.value!! - 1]}, ${whenText(it.start, zone, today)}") }
     }
+}
+
+/** The most recent entry of a kind, in small grey text. */
+@Composable
+private fun LastLine(text: String) {
+    Text("Last: $text", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+}
+
+private val TIMED_TYPES = setOf(Entry.Type.NAP, Entry.Type.MEDITATION)
+
+/** "today 13:00 to 13:25 (25 min)", for nights, naps and meditation. */
+private fun describeSpan(e: Entry, zone: ZoneId, today: LocalDate): String {
+    val mins = (e.end!! - e.start) / 60_000
+    return "${whenText(e.start, zone, today)} to ${e.end.toLocal(zone).format(HM)} (${if (mins >= 60) formatMinutes(mins) else "$mins min"})"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -414,12 +414,16 @@ private fun EmotionDialog(onDismiss: () -> Unit, onSave: (List<String>) -> Unit)
 // ---------------------------------------------------------------- History
 
 @Composable
-private fun HistoryScreen(pad: PaddingValues, entries: List<Entry>, zone: ZoneId, delete: (Entry) -> Unit) {
-    val days = daySummaries(entries, zone)
+private fun HistoryScreen(pad: PaddingValues, today: LocalDate, entries: List<Entry>, zone: ZoneId, delete: (Entry) -> Unit) {
+    var span by remember { mutableIntStateOf(14) }
+    val range = dayRange(today.minusDays(span - 1L), today)
+    val all = daySummaries(entries, zone)
+    val byDate = all.associateBy { it.date }
+    val days = all.filter { it.date >= range.first() }
     var expanded by remember { mutableStateOf<LocalDate?>(null) }
     var confirm by remember { mutableStateOf<Entry?>(null) }
 
-    if (days.isEmpty()) {
+    if (all.isEmpty()) {
         Text("Nothing logged yet.", Modifier.padding(pad).padding(16.dp))
         return
     }
@@ -428,6 +432,41 @@ private fun HistoryScreen(pad: PaddingValues, entries: List<Entry>, zone: ZoneId
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(7, 14, 30, 90).forEach { n ->
+                    FilterChip(selected = span == n, onClick = { span = n }, label = { Text("$n days") })
+                }
+            }
+        }
+        item {
+            Section("Sleep") {
+                SleepHoursChart(range, byDate)
+                Legend("terrible" to Color(0xFFE0725A), "okay" to Color(0xFFE8C547), "great" to Color(0xFF6FBF7A), "naps" to NAP_COLOR)
+            }
+        }
+        item {
+            Section("When you slept") {
+                SleepTimingChart(range, entries, zone)
+                Legend("night" to NIGHT_COLOR, "nap" to NAP_COLOR, "meditation" to MEDITATION_COLOR)
+            }
+        }
+        item {
+            Section("Mood and energy") {
+                MoodEnergyChart(range, byDate)
+                Legend("mood (1 awful, 5 great)" to MOOD_COLOR, "energy" to ENERGY_COLOR)
+            }
+        }
+        item {
+            Section("Naps and meditation, minutes") {
+                NapMeditationChart(range, byDate)
+                Legend("naps" to NAP_COLOR, "meditation" to MEDITATION_COLOR)
+            }
+        }
+        item {
+            Section("Strong emotions") { EmotionChart(emotionTotals(byDate, range)) }
+        }
+        item { Text("Day by day", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp)) }
         items(days, key = { it.date.toString() }) { d ->
             Card(Modifier.fillMaxWidth().clickable { expanded = if (expanded == d.date) null else d.date }) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
