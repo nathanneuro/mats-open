@@ -34,7 +34,7 @@ data class Entry(
             Type.SLEEP -> require(value in 1..5 && end != null && end > start) { "bad SLEEP entry: $this" }
             Type.NAP -> require(value == null && (end == null || end > start)) { "bad NAP entry: $this" }
             Type.NOTE -> require(!text.isNullOrBlank() && end == null) { "bad NOTE entry: $this" }
-            Type.EMOTIONS -> require(end == null && value == null && emotions.isNotEmpty() && emotions.all { it in ALL_EMOTIONS }) {
+            Type.EMOTIONS -> require(end == null && value == null && !text.isNullOrBlank()) {
                 "bad EMOTIONS entry: $this"
             }
         }
@@ -69,19 +69,23 @@ data class Entry(
 
 /**
  * Emotions to pick from, grouped by family the way an emotion wheel groups them, with the family's colour.
- * Chosen for this app's purpose: the families a tired, burnt-out week tends to bring up, and the good ones.
+ * Within a family, roughly mild to intense. Names must stay unique and comma-free (entries store them joined by ", ").
+ * Entries are not checked against this list on load, so renaming or dropping a name never breaks old data.
  */
 data class EmotionFamily(val name: String, val color: Long, val emotions: List<String>)
 
 val EMOTION_FAMILIES = listOf(
-    EmotionFamily("Joy", 0xFFE8C547, listOf("content", "grateful", "hopeful", "proud", "playful", "happy", "calm", "relieved", "peaceful", "amused", "satisfied")),
-    EmotionFamily("Connection", 0xFFE88AA8, listOf("loving", "connected", "cared for", "trusting", "appreciated", "accepted", "close", "safe", "compassionate", "belonging")),
-    EmotionFamily("Interest", 0xFF6CC3B5, listOf("curious", "inspired", "amazed", "focused", "excited", "engaged", "creative", "determined", "eager")),
-    EmotionFamily("Sadness", 0xFF6F95D8, listOf("sad", "lonely", "grieving", "disappointed", "hopeless", "discouraged", "heartbroken", "melancholy", "left out", "empty")),
-    EmotionFamily("Fear", 0xFF9E86D8, listOf("anxious", "overwhelmed", "insecure", "scared", "dread", "worried", "nervous", "panicky", "vulnerable", "helpless")),
-    EmotionFamily("Anger", 0xFFE0725A, listOf("irritable", "frustrated", "resentful", "angry", "annoyed", "impatient", "bitter", "jealous", "betrayed", "defensive")),
-    EmotionFamily("Shame", 0xFFC98A5B, listOf("guilty", "ashamed", "worthless", "embarrassed", "inadequate", "like a burden", "regretful", "self-critical", "exposed")),
-    EmotionFamily("Withdrawal", 0xFF8E96A3, listOf("burnt out", "wanting to hide", "numb", "apathetic", "bored", "detached", "stuck", "unmotivated", "foggy", "avoidant")),
+    EmotionFamily("Joy", 0xFFE8C547, listOf("happy", "content", "joyful", "cheerful", "delighted", "elated", "blissful", "giddy", "light-hearted", "grateful", "hopeful", "optimistic", "proud", "triumphant", "fulfilled", "satisfied", "amused", "playful")),
+    EmotionFamily("Peace", 0xFF94C47D, listOf("calm", "peaceful", "serene", "relaxed", "at ease", "grounded", "centered", "settled", "safe", "relieved", "restored", "unhurried")),
+    EmotionFamily("Connection", 0xFFE88AA8, listOf("loving", "affectionate", "tender", "warm", "close", "intimate", "connected", "belonging", "accepted", "understood", "seen", "supported", "cared for", "appreciated", "trusting", "admiring", "compassionate", "protective", "nostalgic")),
+    EmotionFamily("Interest", 0xFF6CC3B5, listOf("curious", "intrigued", "fascinated", "absorbed", "in flow", "focused", "engaged", "eager", "excited", "inspired", "creative", "determined", "amazed", "in awe")),
+    EmotionFamily("Surprise", 0xFFB9D46A, listOf("surprised", "startled", "shocked", "confused", "bewildered", "disoriented", "perplexed", "torn", "ambivalent", "unsettled")),
+    EmotionFamily("Sadness", 0xFF6F95D8, listOf("sad", "sorrowful", "melancholy", "wistful", "homesick", "lonely", "isolated", "left out", "abandoned", "disappointed", "discouraged", "dejected", "defeated", "despondent", "despairing", "hopeless", "grieving", "heartbroken", "empty", "forlorn")),
+    EmotionFamily("Fear", 0xFF9E86D8, listOf("worried", "nervous", "uneasy", "apprehensive", "tense", "on edge", "anxious", "rattled", "insecure", "vulnerable", "threatened", "scared", "panicky", "frantic", "dread", "overwhelmed", "helpless", "out of control", "paranoid")),
+    EmotionFamily("Anger", 0xFFE0725A, listOf("annoyed", "irritable", "cranky", "impatient", "short-tempered", "frustrated", "exasperated", "aggravated", "resentful", "bitter", "envious", "jealous", "betrayed", "indignant", "defensive", "hostile", "spiteful", "angry", "furious")),
+    EmotionFamily("Disgust", 0xFFA9A65A, listOf("disgusted", "repulsed", "revolted", "sickened", "appalled", "contemptuous", "judgmental", "averse")),
+    EmotionFamily("Shame", 0xFFC98A5B, listOf("embarrassed", "foolish", "exposed", "self-conscious", "small", "inadequate", "inferior", "like a fraud", "self-critical", "guilty", "remorseful", "regretful", "ashamed", "humiliated", "like a burden", "unworthy", "undeserving", "worthless", "self-loathing")),
+    EmotionFamily("Withdrawal", 0xFF8E96A3, listOf("bored", "listless", "flat", "unmotivated", "stuck", "foggy", "wanting to hide", "avoidant", "withdrawn", "disengaged", "checked out", "detached", "indifferent", "apathetic", "numb", "dissociated", "depleted", "burnt out", "jaded", "cynical", "going through the motions")),
 )
 val ALL_EMOTIONS: Set<String> = EMOTION_FAMILIES.flatMap { it.emotions }.toSet()
 

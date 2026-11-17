@@ -86,9 +86,11 @@ class ModelTest {
         assertEquals("2026-11-17,,,,,0,0,,0,,0,irritable x2; burnt out; hopeful,", sleepDiaryCsv(entries, zone).trimEnd().lines()[1])
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun unknownEmotionsAreRejected() {
-        Entry.new(Entry.Type.EMOTIONS, 0, text = "irritable, grumpy-ish")
+    @Test fun emotionNamesAreUniqueAndCommaFree() {
+        val all = EMOTION_FAMILIES.flatMap { it.emotions }
+        assertEquals(all.size, all.toSet().size)
+        assertEquals(emptyList<String>(), all.filter { ',' in it })
+        assertEquals(all.toSet(), ALL_EMOTIONS)
     }
 
     @Test(expected = IllegalArgumentException::class)
