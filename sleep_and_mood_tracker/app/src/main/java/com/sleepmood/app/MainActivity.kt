@@ -69,6 +69,12 @@ private val DAY = DateTimeFormatter.ofPattern("EEE d MMM yyyy")
 
 private val MOOD_WORDS = listOf("awful", "low", "okay", "good", "great")
 private val ENERGY_WORDS = listOf("dysfunctional", "exhausted", "tired", "okay", "energetic")
+/** Things with a start and an end, logged live with Start/End or afterwards with times. */
+private enum class Timed(val type: Entry.Type, val title: String, val noun: String, val ongoing: String, val fromLabel: String, val toLabel: String) {
+    NAP(Entry.Type.NAP, "Naps", "nap", "Napping", "Fell asleep", "Woke up"),
+    MEDITATION(Entry.Type.MEDITATION, "Meditation", "meditation", "Meditating", "Started", "Finished"),
+}
+
 private val QUALITY_WORDS = listOf("terrible", "poor", "okay", "good", "great")
 
 class MainActivity : ComponentActivity() {
@@ -156,9 +162,8 @@ private fun TodayScreen(
 ) {
     val todays = entries.filter { it.start.toLocal(zone).toLocalDate() == today }
     val night = daySummaries(entries, zone).firstOrNull { it.date == today }?.night
-    val ongoingNap = entries.firstOrNull { it.type == Entry.Type.NAP && it.end == null }
     var nightDialog by remember { mutableStateOf(false) }
-    var napDialog by remember { mutableStateOf(false) }
+    var pastDialog by remember { mutableStateOf<Timed?>(null) }
     var emotionDialog by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
 
@@ -195,21 +200,24 @@ private fun TodayScreen(
             }
         }
 
-        Section("Naps") {
-            todays.filter { it.type == Entry.Type.NAP && it.end != null }.sortedBy { it.start }.forEach {
-                Text("${it.start.toLocal(zone).format(HM)} to ${it.end!!.toLocal(zone).format(HM)} (${(it.end - it.start) / 60_000} min)")
-            }
-            if (ongoingNap != null) {
-                Text("Napping since ${ongoingNap.start.toLocal(zone).format(HM)}", fontWeight = FontWeight.Bold)
-                Button(onClick = {
-                    replace(ongoingNap.copy(end = maxOf(System.currentTimeMillis(), ongoingNap.start + 60_000)))
-                }) { Text("End nap") }
-            } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { add(Entry.new(Entry.Type.NAP, System.currentTimeMillis()), "Nap started") }) {
-                        Text("Start nap now")
+        Timed.entries.forEach { kind ->
+            Section(kind.title) {
+                todays.filter { it.type == kind.type && it.end != null }.sortedBy { it.start }.forEach {
+                    Text("${it.start.toLocal(zone).format(HM)} to ${it.end!!.toLocal(zone).format(HM)} (${(it.end - it.start) / 60_000} min)")
+                }
+                val ongoing = entries.firstOrNull { it.type == kind.type && it.end == null }
+                if (ongoing != null) {
+                    Text("${kind.ongoing} since ${ongoing.start.toLocal(zone).format(HM)}", fontWeight = FontWeight.Bold)
+                    Button(onClick = {
+                        replace(ongoing.copy(end = maxOf(System.currentTimeMillis(), ongoing.start + 60_000)))
+                    }) { Text("End ${kind.noun}") }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { add(Entry.new(kind.type, System.currentTimeMillis()), "${kind.noun.replaceFirstChar { it.uppercase() }} started") }) {
+                            Text("Start now")
+                        }
+                        OutlinedButton(onClick = { pastDialog = kind }) { Text("Add a past ${kind.noun}") }
                     }
-                    OutlinedButton(onClick = { napDialog = true }) { Text("Add a past nap") }
                 }
             }
         }
@@ -246,11 +254,11 @@ private fun TodayScreen(
             emotionDialog = false
         }
     }
-    if (napDialog) {
-        NapDialog(onDismiss = { napDialog = false }) { from, to ->
+    pastDialog?.let { kind ->
+        PastSessionDialog(kind, onDismiss = { pastDialog = null }) { from, to ->
             val (s, e) = napInterval(LocalDate.now(), from, to, zone)
-            add(Entry.new(Entry.Type.NAP, s, end = e), "Nap logged")
-            napDialog = false
+            add(Entry.new(kind.type, s, end = e), "${kind.noun.replaceFirstChar { it.uppercase() }} logged")
+            pastDialog = null
         }
     }
 }
@@ -335,18 +343,18 @@ private fun NightDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NapDialog(onDismiss: () -> Unit, onSave: (LocalTime, LocalTime) -> Unit) {
+private fun PastSessionDialog(kind: Timed, onDismiss: () -> Unit, onSave: (LocalTime, LocalTime) -> Unit) {
     val now = LocalTime.now()
     val fromState = rememberTimePickerState(now.minusMinutes(30).hour, now.minusMinutes(30).minute, is24Hour = true)
     val toState = rememberTimePickerState(now.hour, now.minute, is24Hour = true)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("A nap today") },
+        title = { Text("A ${kind.noun} today") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Fell asleep")
+                Text(kind.fromLabel)
                 TimeInput(fromState)
-                Text("Woke up")
+                Text(kind.toLabel)
                 TimeInput(toState)
             }
         },
@@ -431,6 +439,7 @@ private fun HistoryScreen(pad: PaddingValues, entries: List<Entry>, zone: ZoneId
                         )
                     }
                     if (d.naps.isNotEmpty()) Text("Naps: ${d.naps.size}, ${d.napMinutes} min")
+                    if (d.meditations.isNotEmpty()) Text("Meditation: ${d.meditations.size}, ${d.meditationMinutes} min")
                     val ratings = listOfNotNull(
                         d.moodMean?.let { "Mood %.1f (%d)".format(it, d.moods.size) },
                         d.energyMean?.let { "Energy %.1f (%d)".format(it, d.energies.size) },
@@ -473,6 +482,7 @@ private fun describe(e: Entry, zone: ZoneId): String {
         Entry.Type.ENERGY -> "$t  energy: ${ENERGY_WORDS[e.value!! - 1]}"
         Entry.Type.SLEEP -> "$t to $end  night, ${QUALITY_WORDS[e.value!! - 1]}"
         Entry.Type.NAP -> "$t to ${end ?: "now"}  nap"
+        Entry.Type.MEDITATION -> "$t to ${end ?: "now"}  meditation"
         Entry.Type.NOTE -> "$t  note: ${e.text}"
         Entry.Type.EMOTIONS -> "$t  emotions: ${e.text}"
     }

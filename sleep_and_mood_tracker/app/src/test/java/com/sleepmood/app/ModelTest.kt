@@ -60,7 +60,7 @@ class ModelTest {
         )
         val lines = sleepDiaryCsv(entries, zone).trimEnd().lines()
         assertEquals(2, lines.size)
-        assertEquals("2026-11-17,23:15,06:45,7.5,3,0,0,,0,,0,,\"slept badly, \"\"woke\"\" twice\"", lines[1])
+        assertEquals("2026-11-17,23:15,06:45,7.5,3,0,0,0,0,,0,,0,,\"slept badly, \"\"woke\"\" twice\"", lines[1])
     }
 
     @Test fun jsonRoundTripAndStoreRewrite() {
@@ -83,7 +83,21 @@ class ModelTest {
         )
         assertEquals(listOf("irritable", "burnt out", "hopeful", "irritable"), daySummaries(entries, zone)[0].emotions)
         assertEquals("irritable x2; burnt out; hopeful", emotionCounts(daySummaries(entries, zone)[0].emotions))
-        assertEquals("2026-11-17,,,,,0,0,,0,,0,irritable x2; burnt out; hopeful,", sleepDiaryCsv(entries, zone).trimEnd().lines()[1])
+        assertEquals("2026-11-17,,,,,0,0,0,0,,0,,0,irritable x2; burnt out; hopeful,", sleepDiaryCsv(entries, zone).trimEnd().lines()[1])
+    }
+
+    @Test fun meditationIsSummedSeparatelyFromNaps() {
+        val entries = listOf(
+            Entry.new(Entry.Type.MEDITATION, at(nov17, 7, 30), end = at(nov17, 7, 50)),
+            Entry.new(Entry.Type.MEDITATION, at(nov17, 21, 0), end = at(nov17, 21, 10)),
+            Entry.new(Entry.Type.MEDITATION, at(nov17, 22, 0)), // in progress
+            Entry.new(Entry.Type.NAP, at(nov17, 13, 0), end = at(nov17, 13, 30)),
+        )
+        val d = daySummaries(entries, zone)[0]
+        assertEquals(2, d.meditations.size)
+        assertEquals(30L, d.meditationMinutes)
+        assertEquals(30L, d.napMinutes)
+        assertEquals("2026-11-17,,,,,1,30,2,30,,0,,0,,", sleepDiaryCsv(entries, zone).trimEnd().lines()[1])
     }
 
     @Test fun emotionNamesAreUniqueAndCommaFree() {

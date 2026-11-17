@@ -14,7 +14,7 @@ import java.util.UUID
  * One logged thing. Times are epoch milliseconds.
  * - MOOD, ENERGY: value 1..5 at time [start]; [end] is null.
  * - SLEEP: a night, [start] = bedtime, [end] = wake time, value = quality 1..5.
- * - NAP: [start]..[end]; [end] is null while the nap is in progress. value is null.
+ * - NAP, MEDITATION: [start]..[end]; [end] is null while it is in progress. value is null.
  * - NOTE: free text at time [start].
  * - EMOTIONS: the strong emotions felt at time [start], as names from [EMOTION_FAMILIES] joined by ", ".
  */
@@ -26,13 +26,13 @@ data class Entry(
     val value: Int? = null,
     val text: String? = null,
 ) {
-    enum class Type { MOOD, ENERGY, SLEEP, NAP, NOTE, EMOTIONS }
+    enum class Type { MOOD, ENERGY, SLEEP, NAP, NOTE, EMOTIONS, MEDITATION }
 
     init {
         when (type) {
             Type.MOOD, Type.ENERGY -> require(value in 1..5 && end == null) { "bad $type entry: $this" }
             Type.SLEEP -> require(value in 1..5 && end != null && end > start) { "bad SLEEP entry: $this" }
-            Type.NAP -> require(value == null && (end == null || end > start)) { "bad NAP entry: $this" }
+            Type.NAP, Type.MEDITATION -> require(value == null && (end == null || end > start)) { "bad $type entry: $this" }
             Type.NOTE -> require(!text.isNullOrBlank() && end == null) { "bad NOTE entry: $this" }
             Type.EMOTIONS -> require(end == null && value == null && !text.isNullOrBlank()) {
                 "bad EMOTIONS entry: $this"
@@ -101,7 +101,7 @@ fun nightInterval(wakeDate: LocalDate, bed: LocalTime, wake: LocalTime, zone: Zo
     return bedAt.atZone(zone).toInstant().toEpochMilli() to wakeAt.atZone(zone).toInstant().toEpochMilli()
 }
 
-/** A nap on [date] from [from] to [to]; if [to] is earlier than [from], it ran past midnight into [date]+1. */
+/** A nap or meditation on [date] from [from] to [to]; if [to] is earlier than [from], it ran past midnight into [date]+1. */
 fun napInterval(date: LocalDate, from: LocalTime, to: LocalTime, zone: ZoneId): Pair<Long, Long> {
     val s = LocalDateTime.of(date, from)
     val e = LocalDateTime.of(if (to > from) date else date.plusDays(1), to)
@@ -118,6 +118,7 @@ data class DaySummary(
     val date: LocalDate,
     val night: Entry?,
     val naps: List<Entry>,
+    val meditations: List<Entry>,
     val moods: List<Int>,
     val energies: List<Int>,
     val notes: List<String>,
@@ -125,16 +126,17 @@ data class DaySummary(
 ) {
     val sleepMinutes: Long? get() = night?.let { Duration.ofMillis(it.end!! - it.start).toMinutes() }
     val napMinutes: Long get() = naps.sumOf { Duration.ofMillis(it.end!! - it.start).toMinutes() }
+    val meditationMinutes: Long get() = meditations.sumOf { Duration.ofMillis(it.end!! - it.start).toMinutes() }
     val moodMean: Double? get() = moods.takeIf { it.isNotEmpty() }?.average()
     val energyMean: Double? get() = energies.takeIf { it.isNotEmpty() }?.average()
 }
 
-/** One summary per day that has anything logged, newest first. Naps still in progress are left out. */
+/** One summary per day that has anything logged, newest first. Naps and meditations still in progress are left out. */
 fun daySummaries(entries: List<Entry>, zone: ZoneId): List<DaySummary> {
     fun dayOf(e: Entry): LocalDate =
         (if (e.type == Entry.Type.SLEEP) e.end!! else e.start).toLocal(zone).toLocalDate()
 
-    val byDay = entries.filterNot { it.type == Entry.Type.NAP && it.end == null }.groupBy(::dayOf)
+    val byDay = entries.filterNot { (it.type == Entry.Type.NAP || it.type == Entry.Type.MEDITATION) && it.end == null }.groupBy(::dayOf)
     return byDay.keys.sortedDescending().map { d ->
         val es = byDay.getValue(d).sortedBy { it.start }
         DaySummary(
@@ -142,6 +144,7 @@ fun daySummaries(entries: List<Entry>, zone: ZoneId): List<DaySummary> {
             // Two nights logged for one morning means a correction; the later-logged one wins.
             night = es.lastOrNull { it.type == Entry.Type.SLEEP },
             naps = es.filter { it.type == Entry.Type.NAP },
+            meditations = es.filter { it.type == Entry.Type.MEDITATION },
             moods = es.filter { it.type == Entry.Type.MOOD }.map { it.value!! },
             energies = es.filter { it.type == Entry.Type.ENERGY }.map { it.value!! },
             notes = es.filter { it.type == Entry.Type.NOTE }.map { it.text!! },
@@ -160,7 +163,7 @@ private fun Double?.fmt(): String = this?.let { String.format(java.util.Locale.R
 
 /** A sleep diary, one row per day, oldest first: the shape sleep clinics ask for. */
 fun sleepDiaryCsv(entries: List<Entry>, zone: ZoneId): String {
-    val header = "date,bedtime,wake_time,sleep_hours,sleep_quality_1to5,naps,nap_minutes," +
+    val header = "date,bedtime,wake_time,sleep_hours,sleep_quality_1to5,naps,nap_minutes,meditations,meditation_minutes," +
         "mood_mean_1to5,mood_ratings,energy_mean_1to5,energy_ratings,emotions,notes"
     val rows = daySummaries(entries, zone).reversed().map { d ->
         listOf(
@@ -171,6 +174,8 @@ fun sleepDiaryCsv(entries: List<Entry>, zone: ZoneId): String {
             d.night?.value?.toString() ?: "",
             d.naps.size.toString(),
             d.napMinutes.toString(),
+            d.meditations.size.toString(),
+            d.meditationMinutes.toString(),
             d.moodMean.fmt(), d.moods.size.toString(),
             d.energyMean.fmt(), d.energies.size.toString(),
             emotionCounts(d.emotions),
