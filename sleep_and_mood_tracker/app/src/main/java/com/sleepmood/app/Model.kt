@@ -216,11 +216,6 @@ fun familyOf(emotion: String): EmotionFamily? = EMOTION_FAMILIES.firstOrNull { e
 fun dayRange(from: LocalDate, to: LocalDate): List<LocalDate> =
     generateSequence(from) { it.plusDays(1) }.takeWhile { it <= to }.toList()
 
-/** How often each emotion was logged over [days], most frequent first. */
-fun emotionTotals(byDate: Map<LocalDate, DaySummary>, days: List<LocalDate>): List<Pair<String, Int>> =
-    days.flatMap { byDate[it]?.emotions.orEmpty() }.groupingBy { it }.eachCount()
-        .entries.sortedByDescending { it.value }.map { it.key to it.value }
-
 /** A piece of a night, nap or meditation inside one row of the sleep chart, as fractions 0..1 of the row. */
 data class Segment(val type: Entry.Type, val from: Float, val to: Float)
 

@@ -421,6 +421,7 @@ private fun HistoryScreen(pad: PaddingValues, today: LocalDate, entries: List<En
     val byDate = all.associateBy { it.date }
     val days = all.filter { it.date >= range.first() }
     var expanded by remember { mutableStateOf<LocalDate?>(null) }
+    var showDays by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf<Entry?>(null) }
 
     if (all.isEmpty()) {
@@ -464,10 +465,16 @@ private fun HistoryScreen(pad: PaddingValues, today: LocalDate, entries: List<En
             }
         }
         item {
-            Section("Strong emotions") { EmotionChart(emotionTotals(byDate, range)) }
+            Section("Strong emotions") { EmotionChart(range, byDate) }
         }
-        item { Text("Day by day", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp)) }
-        items(days, key = { it.date.toString() }) { d ->
+        item {
+            Text(
+                (if (showDays) "▾ " else "▸ ") + "Day by day (${days.size} days)",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.fillMaxWidth().clickable { showDays = !showDays }.padding(top = 8.dp, bottom = 8.dp),
+            )
+        }
+        if (showDays) items(days, key = { it.date.toString() }) { d ->
             Card(Modifier.fillMaxWidth().clickable { expanded = if (expanded == d.date) null else d.date }) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(d.date.format(DAY), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)

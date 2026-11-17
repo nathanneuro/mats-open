@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -212,37 +211,48 @@ fun NapMeditationChart(days: List<LocalDate>, byDate: Map<LocalDate, DaySummary>
     }
 }
 
-/** Which families of emotion came up, as one proportional bar, then the most frequent emotions. */
+/** Emotions logged each day, stacked by family; the legend lists the families that came up, with totals. */
 @Composable
-fun EmotionChart(totals: List<Pair<String, Int>>) {
-    if (totals.isEmpty()) {
+fun EmotionChart(days: List<LocalDate>, byDate: Map<LocalDate, DaySummary>) {
+    val other = EmotionFamily("Other", 0xFF555B6B, emptyList())
+    val families = EMOTION_FAMILIES + other
+    // perDay[i][f] = how many emotions of family f were logged on days[i]
+    val perDay = days.map { d ->
+        val counts = IntArray(families.size)
+        byDate[d]?.emotions.orEmpty().forEach { e -> counts[families.indexOf(familyOf(e) ?: other)]++ }
+        counts
+    }
+    val totals = families.indices.map { f -> perDay.sumOf { it[f] } }
+    if (totals.sum() == 0) {
         Text("No emotions logged in this period.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
-    val other = EmotionFamily("Other", 0xFF555B6B, emptyList())
-    val byFamily = totals.groupBy { familyOf(it.first) ?: other }.mapValues { (_, v) -> v.sumOf { it.second } }
-        .entries.sortedByDescending { it.value }
-    val all = byFamily.sumOf { it.value }.toFloat()
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(Modifier.fillMaxWidth().height(16.dp)) {
-            byFamily.forEach { (f, n) -> Box(Modifier.weight(n / all).height(16.dp).background(Color(f.color))) }
+    val tm = rememberTextMeasurer()
+    Canvas(Modifier.fillMaxWidth().height(150.dp)) {
+        val left = AXIS_W.dp.toPx()
+        val top = 6.dp.toPx()
+        val bottom = size.height - 16.dp.toPx()
+        val w = size.width - left
+        val maxN = maxOf(3, perDay.maxOf { it.sum() })
+        fun y(n: Int) = bottom - (bottom - top) * n / maxN.toFloat()
+        val step = if (maxN <= 6) 1 else if (maxN <= 15) 3 else 5
+        for (n in 0..maxN step step) {
+            drawLine(GRID, Offset(left, y(n)), Offset(size.width, y(n)))
+            label(tm, "$n", left - 4.dp.toPx(), y(n), alignRight = true)
         }
-        byFamily.chunked(3).forEach { row ->
-            Legend(*row.map { (f, n) -> "${f.name} $n" to Color(f.color) }.toTypedArray())
-        }
-        val top = totals.take(12)
-        val most = top.first().second.toFloat()
-        top.forEach { (name, n) ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(name, Modifier.width(120.dp), style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                Box(Modifier.weight(1f)) {
-                    Box(
-                        Modifier.fillMaxWidth(n / most).height(12.dp)
-                            .background(Color((familyOf(name) ?: other).color), RoundedCornerShape(2.dp)),
-                    )
-                }
-                Text(" $n", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val slot = w / days.size
+        val bw = slot * 0.7f
+        perDay.forEachIndexed { i, counts ->
+            var acc = 0
+            counts.forEachIndexed { f, n ->
+                if (n == 0) return@forEachIndexed
+                drawRect(Color(families[f].color), Offset(left + slot * i + (slot - bw) / 2, y(acc + n)), Size(bw, y(acc) - y(acc + n)))
+                acc += n
             }
         }
+        dateAxis(tm, days, left, w, size.height - 6.dp.toPx())
+    }
+    families.indices.filter { totals[it] > 0 }.sortedByDescending { totals[it] }.chunked(3).forEach { row ->
+        Legend(*row.map { "${families[it].name} ${totals[it]}" to Color(families[it].color) }.toTypedArray())
     }
 }

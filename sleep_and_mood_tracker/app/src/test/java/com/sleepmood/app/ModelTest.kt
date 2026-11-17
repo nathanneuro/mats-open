@@ -117,17 +117,9 @@ class ModelTest {
         assertEquals(0f, rows[1][0].from, 1e-4f); assertEquals(0.5f * h, rows[1][0].to, 1e-4f)
     }
 
-    @Test fun emotionTotalsAndFamilies() {
-        val entries = listOf(
-            Entry.new(Entry.Type.EMOTIONS, at(nov17, 9, 0), text = "irritable, burnt out"),
-            Entry.new(Entry.Type.EMOTIONS, at(nov17.minusDays(3), 9, 0), text = "irritable, some old word"),
-        )
-        val byDate = daySummaries(entries, zone).associateBy { it.date }
-        // Ties keep the order first logged, oldest day first.
-        assertEquals(listOf("irritable" to 2, "some old word" to 1, "burnt out" to 1), emotionTotals(byDate, dayRange(nov17.minusDays(6), nov17)))
-        assertEquals(listOf("irritable" to 1, "burnt out" to 1), emotionTotals(byDate, dayRange(nov17.minusDays(1), nov17)))
+    @Test fun emotionFamilies() {
         assertEquals("Anger", familyOf("irritable")!!.name)
-        assertNull(familyOf("some old word"))
+        assertNull(familyOf("some old word")) // dropped names stay loadable and chart as "Other"
     }
 
     @Test fun whenTextIsRelativeToToday() {

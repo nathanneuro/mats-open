@@ -9,7 +9,7 @@ A small Android app for logging sleep, naps, mood and energy, made to take a few
 - **Naps** and **meditation**: "Start now" and "End", or add a past session with its times.
 - **Notes**: a line of free text, timestamped.
 - **Today** shows only the most recent entry of each kind; strong emotions show nothing there, only in History.
-- **History**: charts over the last 7, 14, 30 or 90 days (hours slept coloured by quality, a sleep-diary chart of when you slept, napped and meditated from 6 pm to 6 pm, mood and energy, nap and meditation minutes, and which emotions came up), then one card per day. Tap a card to see its entries; tap an entry to delete it.
+- **History**: charts over the last 7, 14, 30 or 90 days (hours slept coloured by quality, a sleep-diary chart of when you slept, napped and meditated from 6 pm to 6 pm, mood and energy, nap and meditation minutes, and emotions per day stacked by family), then the day cards, collapsed until tapped. Tap a card to see its entries; tap an entry to delete it.
 - **Export**: shares two CSV files through the Android share sheet.
   - `sleep_diary_<date>.csv` has one row per day: bedtime, wake time, hours slept, quality, naps, nap minutes, meditation sessions and minutes, mean mood and energy with their counts, and notes. This is the shape of the sleep diary sleep clinics ask for.
   - `all_entries_<date>.csv` has every entry.
