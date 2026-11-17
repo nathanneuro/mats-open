@@ -32,7 +32,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 val NIGHT_COLOR = Color(0xFF7C9CFF)
-val NAP_COLOR = Color(0xFFE8C547)
+val NAP_COLOR = Color(0xFFC792EA) // purple: must not be on the red-to-green sleep-quality scale
 val MEDITATION_COLOR = Color(0xFF94C47D)
 val MOOD_COLOR = Color(0xFFE88AA8)
 val ENERGY_COLOR = Color(0xFF6CC3B5)
