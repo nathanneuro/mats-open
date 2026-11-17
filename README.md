@@ -15,3 +15,7 @@ Automated Google Calendar analysis for Research Managers. Fetches calendar data,
 ### [CrossCheck](./CrossCheck/)
 
 Android app for cross-verified AI answers. Queries multiple AI models (OpenRouter, Anthropic, Gemini) in a three-stage verification process: initial answer → cross-check → final synthesis. Built for unreliable connections with aggressive local saving and smart retry.
+
+### [sleep_and_mood_tracker](./sleep_and_mood_tracker/)
+
+Android app for logging sleep, naps, mood and energy in a few taps. Offline only: it has no network permission, and the data leaves the phone only through Export, which produces a day-by-day sleep diary CSV and a full log.
