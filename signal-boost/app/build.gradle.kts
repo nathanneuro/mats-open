@@ -32,7 +32,15 @@ android {
     }
 
     kotlin {
-        jvmToolchain(17)
+        compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
+    }
+
+    // DataStore's multi-process counter library has a RELRO segment that isn't 16 KB-aligned, which
+    // makes Android show a page-size compatibility warning. Only multi-process DataStore uses it.
+    packaging {
+        jniLibs {
+            excludes += "**/libdatastore_shared_counter.so"
+        }
     }
 
     buildFeatures {
