@@ -54,6 +54,10 @@ class NotificationProbeService : NotificationListenerService() {
         val match = s.triggers.firstOrNull {
             it.appliesToPackage(sbn.packageName) && it.matches(haystack)
         } ?: return
+        Suppression.reason(applicationContext, sbn)?.let { why ->
+            Log.i(TAG, "Suppressed ($why): trigger='${match.phrase}' from ${sbn.packageName}")
+            return
+        }
         Log.i(TAG, "Match: trigger='${match.phrase}' from ${sbn.packageName}")
         AlarmService.start(applicationContext, match)
     }

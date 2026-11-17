@@ -120,6 +120,13 @@ private fun SignalBoostApp() {
         listenerEnabled = isNotificationListenerEnabled(context)
     }
 
+    var usageAccess by remember { mutableStateOf(Suppression.hasUsageAccess(context)) }
+    val usageAccessLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        usageAccess = Suppression.hasUsageAccess(context)
+    }
+
     var editing by remember { mutableStateOf<Trigger?>(null) }
     var permissionsExpanded by remember { mutableStateOf(false) }
 
@@ -161,6 +168,12 @@ private fun SignalBoostApp() {
                         onToggleExpanded = { permissionsExpanded = !permissionsExpanded },
                         listenerEnabled = listenerEnabled,
                         postNotifGranted = postNotifGranted,
+                        usageAccess = usageAccess,
+                        onGrantUsageAccess = {
+                            usageAccessLauncher.launch(
+                                Intent(AndroidSettings.ACTION_USAGE_ACCESS_SETTINGS)
+                            )
+                        },
                         onEnableListener = {
                             listenerLauncher.launch(
                                 Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
@@ -258,11 +271,13 @@ private fun PermissionsCard(
     onToggleExpanded: () -> Unit,
     listenerEnabled: Boolean,
     postNotifGranted: Boolean,
+    usageAccess: Boolean,
+    onGrantUsageAccess: () -> Unit,
     onEnableListener: () -> Unit,
     onRequestPostNotif: () -> Unit,
 ) {
     val needsPostNotif = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-    val allGranted = listenerEnabled && (!needsPostNotif || postNotifGranted)
+    val allGranted = listenerEnabled && usageAccess && (!needsPostNotif || postNotifGranted)
     Card {
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             Row(
@@ -309,6 +324,14 @@ private fun PermissionsCard(
                         actionLabel = "Grant",
                         onAction = onRequestPostNotif,
                         hidden = !needsPostNotif,
+                    )
+                    // Lets the app see that the notifying app is already on
+                    // screen, so it can stay quiet.
+                    PermissionRow(
+                        label = "Usage access (skip when app is open)",
+                        granted = usageAccess,
+                        actionLabel = if (usageAccess) "Open settings" else "Grant",
+                        onAction = onGrantUsageAccess,
                     )
                 }
             }
@@ -531,7 +554,7 @@ private fun TriggerEditor(
                     Slider(
                         value = silentLead,
                         onValueChange = { silentLead = it },
-                        valueRange = 0f..60f,
+                        valueRange = 0f..120f,
                     )
                     Text(
                         if (silentLead.toInt() == 0)

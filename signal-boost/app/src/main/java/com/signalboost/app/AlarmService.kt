@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import android.os.SystemClock
+import org.json.JSONObject
 
 class AlarmService : Service() {
 
@@ -107,6 +108,7 @@ class AlarmService : Service() {
         silencedUntilElapsedFlow.value = 0L
         wakeLock?.takeIf { it.isHeld }?.release()
         wakeLock = null
+        if (active.value) lastStoppedElapsed = SystemClock.elapsedRealtime()
         active.value = false
         activeTriggerLabel.value = null
         currentTrigger = null
@@ -407,6 +409,9 @@ class AlarmService : Service() {
         val activeTriggerLabel = MutableStateFlow<String?>(null)
         // Elapsed-realtime ms at which silence expires; 0 = not silenced.
         val silencedUntilElapsedFlow = MutableStateFlow(0L)
+        // Elapsed-realtime ms when the last alarm was dismissed; drives the
+        // re-fire cooldown in Suppression.
+        @Volatile var lastStoppedElapsed: Long? = null
 
         fun start(context: Context, trigger: Trigger) {
             val intent = Intent(context, AlarmService::class.java)
@@ -427,44 +432,13 @@ class AlarmService : Service() {
     }
 }
 
-private const val EXTRA_ID = "trigger_id"
-private const val EXTRA_LABEL = "trigger_label"
-private const val EXTRA_PHRASE = "trigger_phrase"
-private const val EXTRA_CASE = "trigger_case"
-private const val EXTRA_RINGTONE = "alarm_ringtone"
-private const val EXTRA_VIBRATION = "alarm_vibration"
-private const val EXTRA_ESCALATION = "alarm_escalation"
-private const val EXTRA_VOLUME = "alarm_max_volume"
-private const val EXTRA_FORCE_MAX = "alarm_force_max"
+private const val EXTRA_TRIGGER = "trigger_json"
 
+// The whole trigger travels as JSON so every AlarmProfile field reaches the
+// service — a field-by-field bundle silently dropped the newer ones.
 fun Trigger.toBundle(): Bundle = Bundle().apply {
-    putString(EXTRA_ID, id)
-    putString(EXTRA_LABEL, label)
-    putString(EXTRA_PHRASE, phrase)
-    putBoolean(EXTRA_CASE, caseSensitive)
-    putString(EXTRA_RINGTONE, alarm.ringtoneUri)
-    putString(EXTRA_VIBRATION, alarm.vibration.name)
-    putInt(EXTRA_ESCALATION, alarm.escalationSeconds)
-    putInt(EXTRA_VOLUME, alarm.maxVolumePercent)
-    putBoolean(EXTRA_FORCE_MAX, alarm.forceMaxVolume)
+    putString(EXTRA_TRIGGER, toJson().toString())
 }
 
-fun Intent.getTrigger(): Trigger? {
-    val id = getStringExtra(EXTRA_ID) ?: return null
-    val phrase = getStringExtra(EXTRA_PHRASE) ?: return null
-    return Trigger(
-        id = id,
-        label = getStringExtra(EXTRA_LABEL).orEmpty(),
-        phrase = phrase,
-        caseSensitive = getBooleanExtra(EXTRA_CASE, false),
-        alarm = AlarmProfile(
-            ringtoneUri = getStringExtra(EXTRA_RINGTONE),
-            vibration = runCatching {
-                VibrationStyle.valueOf(getStringExtra(EXTRA_VIBRATION) ?: "NORMAL")
-            }.getOrDefault(VibrationStyle.NORMAL),
-            escalationSeconds = getIntExtra(EXTRA_ESCALATION, 20),
-            maxVolumePercent = getIntExtra(EXTRA_VOLUME, 100),
-            forceMaxVolume = getBooleanExtra(EXTRA_FORCE_MAX, true),
-        )
-    )
-}
+fun Intent.getTrigger(): Trigger? =
+    getStringExtra(EXTRA_TRIGGER)?.let { Trigger.fromJson(JSONObject(it)) }
