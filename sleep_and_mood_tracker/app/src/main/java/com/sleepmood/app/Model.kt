@@ -74,14 +74,14 @@ data class Entry(
 data class EmotionFamily(val name: String, val color: Long, val emotions: List<String>)
 
 val EMOTION_FAMILIES = listOf(
-    EmotionFamily("Joy", 0xFFE8C547, listOf("content", "grateful", "hopeful", "proud", "playful")),
-    EmotionFamily("Connection", 0xFFE88AA8, listOf("loving", "connected", "cared for", "trusting")),
-    EmotionFamily("Interest", 0xFF6CC3B5, listOf("curious", "inspired", "amazed", "focused")),
-    EmotionFamily("Sadness", 0xFF6F95D8, listOf("sad", "lonely", "grieving", "disappointed", "hopeless")),
-    EmotionFamily("Fear", 0xFF9E86D8, listOf("anxious", "overwhelmed", "insecure", "scared", "dread")),
-    EmotionFamily("Anger", 0xFFE0725A, listOf("irritable", "frustrated", "resentful", "angry")),
-    EmotionFamily("Shame", 0xFFC98A5B, listOf("guilty", "ashamed", "worthless", "embarrassed")),
-    EmotionFamily("Withdrawal", 0xFF8E96A3, listOf("burnt out", "wanting to hide", "numb", "apathetic", "bored")),
+    EmotionFamily("Joy", 0xFFE8C547, listOf("content", "grateful", "hopeful", "proud", "playful", "happy", "calm", "relieved", "peaceful", "amused", "satisfied")),
+    EmotionFamily("Connection", 0xFFE88AA8, listOf("loving", "connected", "cared for", "trusting", "appreciated", "accepted", "close", "safe", "compassionate", "belonging")),
+    EmotionFamily("Interest", 0xFF6CC3B5, listOf("curious", "inspired", "amazed", "focused", "excited", "engaged", "creative", "determined", "eager")),
+    EmotionFamily("Sadness", 0xFF6F95D8, listOf("sad", "lonely", "grieving", "disappointed", "hopeless", "discouraged", "heartbroken", "melancholy", "left out", "empty")),
+    EmotionFamily("Fear", 0xFF9E86D8, listOf("anxious", "overwhelmed", "insecure", "scared", "dread", "worried", "nervous", "panicky", "vulnerable", "helpless")),
+    EmotionFamily("Anger", 0xFFE0725A, listOf("irritable", "frustrated", "resentful", "angry", "annoyed", "impatient", "bitter", "jealous", "betrayed", "defensive")),
+    EmotionFamily("Shame", 0xFFC98A5B, listOf("guilty", "ashamed", "worthless", "embarrassed", "inadequate", "like a burden", "regretful", "self-critical", "exposed")),
+    EmotionFamily("Withdrawal", 0xFF8E96A3, listOf("burnt out", "wanting to hide", "numb", "apathetic", "bored", "detached", "stuck", "unmotivated", "foggy", "avoidant")),
 )
 val ALL_EMOTIONS: Set<String> = EMOTION_FAMILIES.flatMap { it.emotions }.toSet()
 
